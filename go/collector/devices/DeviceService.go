@@ -43,9 +43,9 @@ func (this *DeviceService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements 
 	exist := this.configCenter.Add(device)
 	if this.vnic != nil {
 		if !exist {
-			this.vnic.Single(common.ControllerService, this.serviceArea, ifs.POST, device)
+			this.vnic.Single(common.CollectorService, this.serviceArea, ifs.POST, device)
 		} else {
-			this.vnic.Multicast(common.ControllerService, this.serviceArea, ifs.PUT, device)
+			this.vnic.Multicast(common.CollectorService, this.serviceArea, ifs.PUT, device)
 		}
 
 	}

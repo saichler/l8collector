@@ -2,6 +2,7 @@ package tests
 
 import (
 	"github.com/saichler/l8collector/go/collector/devices"
+	"github.com/saichler/l8collector/go/collector/service"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"testing"
 )
@@ -18,4 +19,6 @@ func TestPollaris(t *testing.T) {
 	vnic.Resources().Services().Activate(pollaris.ServiceType, pollaris.ServiceName, 0, vnic.Resources(), vnic)
 	vnic.Resources().Registry().Register(devices.DeviceService{})
 	vnic.Resources().Services().Activate(devices.ServiceType, pollaris.ServiceName, 0, vnic.Resources(), vnic)
+	vnic.Resources().Registry().Register(service.CollectorService{})
+	vnic.Resources().Services().Activate(service.ServiceType, pollaris.ServiceName, 0, vnic.Resources(), vnic)
 }
