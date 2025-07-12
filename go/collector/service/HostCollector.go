@@ -124,7 +124,7 @@ func (this *HostCollector) collect() {
 			c.(common.ProtocolCollector).Exec(job)
 			MarkEnded(job)
 			if this.running {
-				this.JobComplete(job)
+				this.jobComplete(job)
 			}
 		} else {
 			this.service.vnic.Resources().Logger().Info("No more jobs, next job in ", waitTime, " seconds.")
@@ -150,6 +150,9 @@ func newProtocolCollector(config *types.Connection, resource ifs.IResources) (co
 	return protocolCollector, err
 }
 
-func (this *HostCollector) JobComplete(job *types.Job) {
-
+func (this *HostCollector) jobComplete(job *types.Job) {
+	alias, err := this.service.vnic.Single(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
+	if err != nil {
+		this.service.vnic.Resources().Logger().Error("HostCollector:", alias, " ", err.Error())
+	}
 }

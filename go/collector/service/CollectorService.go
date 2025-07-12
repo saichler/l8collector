@@ -23,7 +23,7 @@ func (this *CollectorService) Activate(serviceName string, serviceArea byte,
 	this.serviceArea = serviceArea
 	this.hostCollectors = maps.NewSyncMap()
 	vnic, ok := l.(ifs.IVNic)
-	if !ok {
+	if ok {
 		this.vnic = vnic
 		r.Registry().Register(&types.Device{})
 		this.vnic.Resources().Registry().Register(&types.CMap{})

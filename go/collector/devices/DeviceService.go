@@ -16,7 +16,6 @@ const (
 type DeviceService struct {
 	configCenter *DeviceCenter
 	serviceArea  byte
-	vnic         ifs.IVNic
 }
 
 func (this *DeviceService) Activate(serviceName string, serviceArea byte,
@@ -24,33 +23,33 @@ func (this *DeviceService) Activate(serviceName string, serviceArea byte,
 	r.Registry().Register(&types.Device{})
 	this.configCenter = newDeviceCenter(ServiceName, serviceArea, r, l)
 	this.serviceArea = serviceArea
-	vnic, ok := l.(ifs.IVNic)
-	if !ok {
-		this.vnic = vnic
-	}
 	return nil
 }
 
 func (this *DeviceService) DeActivate() error {
 	this.configCenter.Shutdown()
 	this.configCenter = nil
-	this.vnic = nil
 	return nil
 }
 
 func (this *DeviceService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	device := pb.Element().(*types.Device)
+	vnic.Resources().Logger().Info("Device Service: Added Device ", device.DeviceId)
 	exist := this.configCenter.Add(device)
-	if this.vnic != nil {
-		if !exist {
-			this.vnic.Single(common.CollectorService, this.serviceArea, ifs.POST, device)
-		} else {
-			this.vnic.Multicast(common.CollectorService, this.serviceArea, ifs.PUT, device)
+	if !exist {
+		alias, err := vnic.Single(common.CollectorService, this.serviceArea, ifs.POST, device)
+		if err != nil {
+			vnic.Resources().Logger().Error("Device Service:", alias, " ", err.Error())
 		}
-
+	} else {
+		err := vnic.Multicast(common.CollectorService, this.serviceArea, ifs.PUT, device)
+		if err != nil {
+			vnic.Resources().Logger().Error("Device Service:", " ", err.Error())
+		}
 	}
 	return object.New(nil, &types.Device{})
 }
+
 func (this *DeviceService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	return nil
 }
