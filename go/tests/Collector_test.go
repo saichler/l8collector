@@ -26,7 +26,10 @@ func TestCollector(t *testing.T) {
 		poll.Cadence = 3
 	}
 
-	device := utils_collector.CreateDevice("192.168.86.179", serviceArea)
+	//use opensim to simulate this device with this ip
+	//https://github.com/saichler/opensim
+
+	device := utils_collector.CreateDevice("10.10.10.1", serviceArea)
 
 	vnic := topo.VnicByVnetNum(2, 2)
 	vnic.Resources().Registry().Register(pollaris.PollarisService{})

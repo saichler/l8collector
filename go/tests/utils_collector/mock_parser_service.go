@@ -1,6 +1,7 @@
 package utils_collector
 
 import (
+	"fmt"
 	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8types/go/ifs"
 	"sync"
@@ -37,6 +38,7 @@ func (this *MockParsingService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElem
 		this.jobsComplete[job.PollarisName] = jp
 	}
 	jp[job.JobName]++
+	fmt.Println("Result:", string(job.Result))
 	return nil
 }
 
