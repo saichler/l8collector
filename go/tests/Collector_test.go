@@ -28,7 +28,7 @@ func TestCollector(t *testing.T) {
 
 	//use opensim to simulate this device with this ip
 	//https://github.com/saichler/opensim
-
+	//curl -X POST http://localhost:8080/api/v1/devices -H "Content-Type: application/json" -d '{"start_ip":"10.10.10.1","device_count":3,"netmask":"24"}'
 	device := utils_collector.CreateDevice("10.10.10.1", serviceArea)
 
 	vnic := topo.VnicByVnetNum(2, 2)

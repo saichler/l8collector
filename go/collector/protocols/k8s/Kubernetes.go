@@ -31,7 +31,7 @@ func (this *Kubernetes) Init(config *types.Connection, resources ifs.IResources)
 }
 
 func (this *Kubernetes) Protocol() types.Protocol {
-	return types.Protocol_K8s
+	return types.Protocol_PK8s
 }
 
 func (this *Kubernetes) Exec(job *types.Job) {

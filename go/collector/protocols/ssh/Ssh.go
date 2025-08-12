@@ -32,7 +32,7 @@ type SshCollector struct {
 }
 
 func (sshc *SshCollector) Protocol() types.Protocol {
-	return types.Protocol_SSH
+	return types.Protocol_PSSH
 }
 
 func (sshc *SshCollector) Init(conf *types.Connection, resources ifs.IResources) error {

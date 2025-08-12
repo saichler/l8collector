@@ -12,18 +12,18 @@ import (
 	"time"
 )
 
-type SNMPCollector struct {
+type SNMPv2Collector struct {
 	resources ifs.IResources
 	config    *types.Connection
 	agent     *gosnmp.GoSNMP
 	connected bool
 }
 
-func (this *SNMPCollector) Protocol() types.Protocol {
-	return types.Protocol_SNMPV2
+func (this *SNMPv2Collector) Protocol() types.Protocol {
+	return types.Protocol_PSNMPV2
 }
 
-func (this *SNMPCollector) Init(conf *types.Connection, resources ifs.IResources) error {
+func (this *SNMPv2Collector) Init(conf *types.Connection, resources ifs.IResources) error {
 	this.config = conf
 	this.resources = resources
 	this.agent = &gosnmp.GoSNMP{}
@@ -36,7 +36,7 @@ func (this *SNMPCollector) Init(conf *types.Connection, resources ifs.IResources
 	return nil
 }
 
-func (this *SNMPCollector) Connect() error {
+func (this *SNMPv2Collector) Connect() error {
 	if this == nil || this.agent == nil {
 		return nil
 	}
@@ -48,14 +48,14 @@ func (this *SNMPCollector) Connect() error {
 	return nil
 }
 
-func (this *SNMPCollector) Disconnect() error {
+func (this *SNMPv2Collector) Disconnect() error {
 	this.resources.Logger().Info("SNMP Collector for ", this.config.Addr, " is closed.")
 	this.agent = nil
 	this.connected = false
 	return nil
 }
 
-func (this *SNMPCollector) Exec(job *types.Job) {
+func (this *SNMPv2Collector) Exec(job *types.Job) {
 	this.resources.Logger().Info("Exec Job Start ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
 	if !this.connected {
 		err := this.Connect()
@@ -78,7 +78,7 @@ func (this *SNMPCollector) Exec(job *types.Job) {
 	this.resources.Logger().Info("Exec Job End ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
 }
 
-func (this *SNMPCollector) walk(job *types.Job, poll *types.Poll, encodeMap bool) *types.CMap {
+func (this *SNMPv2Collector) walk(job *types.Job, poll *types.Poll, encodeMap bool) *types.CMap {
 	if job.Timeout != 0 {
 		this.agent.Timeout = time.Second * time.Duration(job.Timeout)
 		defer func() { this.agent.Timeout = time.Second * time.Duration(this.config.Timeout) }()
@@ -110,7 +110,7 @@ func (this *SNMPCollector) walk(job *types.Job, poll *types.Poll, encodeMap bool
 	return m
 }
 
-func (this *SNMPCollector) table(job *types.Job, poll *types.Poll) {
+func (this *SNMPv2Collector) table(job *types.Job, poll *types.Poll) {
 	m := this.walk(job, poll, false)
 	if job.Error != "" {
 		return

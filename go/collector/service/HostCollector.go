@@ -137,11 +137,11 @@ func (this *HostCollector) collect() {
 
 func newProtocolCollector(config *types.Connection, resource ifs.IResources) (common.ProtocolCollector, error) {
 	var protocolCollector common.ProtocolCollector
-	if config.Protocol == types.Protocol_SSH {
+	if config.Protocol == types.Protocol_PSSH {
 		protocolCollector = &ssh.SshCollector{}
-	} else if config.Protocol == types.Protocol_SNMPV2 {
-		protocolCollector = &snmp.SNMPCollector{}
-	} else if config.Protocol == types.Protocol_K8s {
+	} else if config.Protocol == types.Protocol_PSNMPV2 {
+		protocolCollector = &snmp.SNMPv2Collector{}
+	} else if config.Protocol == types.Protocol_PK8s {
 		protocolCollector = &k8s.Kubernetes{}
 	} else {
 		return nil, errors.New("Unknown Protocol " + config.Protocol.String())

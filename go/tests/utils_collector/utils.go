@@ -23,18 +23,18 @@ func CreateDevice(ip string, serviceArea byte) *types.Device {
 	device.Hosts[device.DeviceId] = host
 
 	sshConfig := &types.Connection{}
-	sshConfig.Protocol = types.Protocol_SSH
+	sshConfig.Protocol = types.Protocol_PSSH
 	sshConfig.Port = 22
 	sshConfig.Addr = ip
-	sshConfig.Username = "admin"
-	sshConfig.Password = "admin"
+	sshConfig.Username = "simadmin"
+	sshConfig.Password = "simadmin"
 	sshConfig.Terminal = "vt100"
 	sshConfig.Timeout = 15
 
 	host.Configs[int32(sshConfig.Protocol)] = sshConfig
 
 	snmpConfig := &types.Connection{}
-	snmpConfig.Protocol = types.Protocol_SNMPV2
+	snmpConfig.Protocol = types.Protocol_PSNMPV2
 	snmpConfig.Addr = ip
 	snmpConfig.Port = 161
 	snmpConfig.Timeout = 15
