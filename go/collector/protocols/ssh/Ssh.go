@@ -233,7 +233,7 @@ func (sshc *SshCollector) exec(cmd string, timeout int64) (string, error) {
 	return result.String(), nil
 }
 
-func (sshc *SshCollector) Exec(job *types.Job) {
+func (sshc *SshCollector) Exec(job *types.CJob) {
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, sshc.resources)
 	if err != nil {
 		sshc.resources.Logger().Error("Ssh:" + err.Error())

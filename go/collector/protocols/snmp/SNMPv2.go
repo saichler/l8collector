@@ -55,7 +55,7 @@ func (this *SNMPv2Collector) Disconnect() error {
 	return nil
 }
 
-func (this *SNMPv2Collector) Exec(job *types.Job) {
+func (this *SNMPv2Collector) Exec(job *types.CJob) {
 	this.resources.Logger().Info("Exec Job Start ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
 	if !this.connected {
 		err := this.Connect()
@@ -78,7 +78,7 @@ func (this *SNMPv2Collector) Exec(job *types.Job) {
 	this.resources.Logger().Info("Exec Job End ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
 }
 
-func (this *SNMPv2Collector) walk(job *types.Job, poll *types.Poll, encodeMap bool) *types.CMap {
+func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap bool) *types.CMap {
 	if job.Timeout != 0 {
 		this.agent.Timeout = time.Second * time.Duration(job.Timeout)
 		defer func() { this.agent.Timeout = time.Second * time.Duration(this.config.Timeout) }()
@@ -110,7 +110,7 @@ func (this *SNMPv2Collector) walk(job *types.Job, poll *types.Poll, encodeMap bo
 	return m
 }
 
-func (this *SNMPv2Collector) table(job *types.Job, poll *types.Poll) {
+func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
 	m := this.walk(job, poll, false)
 	if job.Error != "" {
 		return

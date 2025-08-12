@@ -12,8 +12,8 @@ import (
 type JobsQueue struct {
 	deviceId string
 	hostId   string
-	jobs     []*types.Job
-	jobsMap  map[string]*types.Job
+	jobs     []*types.CJob
+	jobsMap  map[string]*types.CJob
 	mtx      *sync.Mutex
 	iService *types.DeviceServiceInfo
 	pService *types.DeviceServiceInfo
@@ -39,8 +39,8 @@ func NewJobsQueue(deviceId, hostId string, service *CollectorService,
 	jq := &JobsQueue{}
 	jq.service = service
 	jq.mtx = &sync.Mutex{}
-	jq.jobs = make([]*types.Job, 0)
-	jq.jobsMap = make(map[string]*types.Job)
+	jq.jobs = make([]*types.CJob, 0)
+	jq.jobsMap = make(map[string]*types.CJob)
 	jq.deviceId = deviceId
 	jq.hostId = hostId
 	jq.iService = iService
@@ -48,14 +48,14 @@ func NewJobsQueue(deviceId, hostId string, service *CollectorService,
 	return jq
 }
 
-func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, hardware, version string, cadence, timeout int64) map[string]*types.Job {
+func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, hardware, version string, cadence, timeout int64) map[string]*types.CJob {
 	p, err := pollaris.PollarisByKey(this.service.vnic.Resources(), name, vendor, series, family, software, hardware, version)
 	if err != nil {
 		return nil
 	}
-	jobs := make(map[string]*types.Job)
+	jobs := make(map[string]*types.CJob)
 	for jobName, poll := range p.Polling {
-		job := &types.Job{}
+		job := &types.CJob{}
 		job.JobName = jobName
 		job.PollarisName = p.Name
 		job.Cadence = cadence
@@ -76,15 +76,15 @@ func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, har
 	return jobs
 }
 
-func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, software, hardware, version string) []*types.Job {
+func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, software, hardware, version string) []*types.CJob {
 	polarises, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), groupName, vendor, series, family, software, hardware, version)
 	if err != nil {
 		return nil
 	}
-	jobs := make([]*types.Job, 0)
+	jobs := make([]*types.CJob, 0)
 	for _, p := range polarises {
 		for jobName, poll := range p.Polling {
-			job := &types.Job{}
+			job := &types.CJob{}
 			job.DeviceId = this.deviceId
 			job.HostId = this.hostId
 			job.JobName = jobName
@@ -126,7 +126,7 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 	return nil
 }
 
-func (this *JobsQueue) Pop() (*types.Job, int64) {
+func (this *JobsQueue) Pop() (*types.CJob, int64) {
 	if this == nil {
 		return nil, -1
 	}
@@ -138,7 +138,7 @@ func (this *JobsQueue) Pop() (*types.Job, int64) {
 	if this.shutdown {
 		return nil, -1
 	}
-	var job *types.Job
+	var job *types.CJob
 	index := -1
 	now := time.Now().Unix()
 	waitTimeTillNext := int64(999999)
@@ -161,7 +161,7 @@ func (this *JobsQueue) Pop() (*types.Job, int64) {
 
 func (this *JobsQueue) moveToLast(index int) {
 	if index != -1 {
-		swap := make([]*types.Job, 0)
+		swap := make([]*types.CJob, 0)
 		job := this.jobs[index]
 		swap = append(swap, this.jobs[0:index]...)
 		swap = append(swap, this.jobs[index+1:]...)
@@ -172,14 +172,14 @@ func (this *JobsQueue) moveToLast(index int) {
 	}
 }
 
-func MarkStart(job *types.Job) {
+func MarkStart(job *types.CJob) {
 	job.Started = time.Now().Unix()
 	job.Ended = 0
 	job.Result = nil
 	job.Error = ""
 }
 
-func MarkEnded(job *types.Job) {
+func MarkEnded(job *types.CJob) {
 	job.Ended = time.Now().Unix()
 }
 

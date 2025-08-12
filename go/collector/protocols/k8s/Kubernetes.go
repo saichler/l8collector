@@ -34,7 +34,7 @@ func (this *Kubernetes) Protocol() types.Protocol {
 	return types.Protocol_PK8s
 }
 
-func (this *Kubernetes) Exec(job *types.Job) {
+func (this *Kubernetes) Exec(job *types.CJob) {
 	this.resources.Logger().Info("K8s Job ", job.PollarisName, ":", job.JobName, " started")
 	defer this.resources.Logger().Info("K8s Job ", job.PollarisName, ":", job.JobName, " ended")
 

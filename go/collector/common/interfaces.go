@@ -14,7 +14,7 @@ const (
 type ProtocolCollector interface {
 	Init(*types.Connection, ifs.IResources) error
 	Protocol() types.Protocol
-	Exec(*types.Job)
+	Exec(*types.CJob)
 	Connect() error
 	Disconnect() error
 }
