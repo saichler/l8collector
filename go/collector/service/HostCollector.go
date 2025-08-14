@@ -151,7 +151,7 @@ func newProtocolCollector(config *types.Connection, resource ifs.IResources) (co
 }
 
 func (this *HostCollector) jobComplete(job *types.CJob) {
-	alias, err := this.service.vnic.Single(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
+	alias, err := this.service.vnic.Proximity(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("HostCollector:", alias, " ", err.Error())
 	}
