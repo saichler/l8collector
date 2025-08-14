@@ -62,6 +62,7 @@ func (this *CollectorService) DeActivate() error {
 
 func (this *CollectorService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	device := pb.Element().(*types.Device)
+	vnic.Resources().Logger().Info("Collector Service: Start polling device ", device.DeviceId)
 	this.startPolling(device)
 	return object.New(nil, &types.Device{})
 }
