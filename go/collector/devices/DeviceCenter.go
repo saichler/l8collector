@@ -20,9 +20,9 @@ func (this *DeviceCenter) Shutdown() {
 	this.devices = nil
 }
 
-func (this *DeviceCenter) Add(device *types.Device) bool {
+func (this *DeviceCenter) Add(device *types.Device, isNotification bool) bool {
 	exist := this.devices.Get(device.DeviceId)
-	this.devices.Put(device.DeviceId, device)
+	this.devices.Put(device.DeviceId, device, isNotification)
 	if exist != nil {
 		return true
 	}
