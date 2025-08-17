@@ -70,9 +70,9 @@ func (this *SNMPv2Collector) Exec(job *types.CJob) {
 		return
 	}
 
-	if poll.Operation == types.Operation_Map {
+	if poll.Operation == types.Operation_OMap {
 		this.walk(job, poll, true)
-	} else if poll.Operation == types.Operation_Table {
+	} else if poll.Operation == types.Operation_OTable {
 		this.table(job, poll)
 	}
 	this.resources.Logger().Info("Exec Job End ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
