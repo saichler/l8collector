@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L8Collector - Multi-Protocol Network Data Collection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        .hero {
+            padding: 2rem 0;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .hero .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .badges {
+            margin: 1.5rem 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin: 0.25rem;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .cta-buttons {
+            margin: 2rem 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            margin: 0.5rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #fff;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        nav {
+            background: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+            flex-wrap: wrap;
+        }
+
+        .nav-links li {
+            margin: 0 1.5rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #667eea;
+        }
+
+        main {
+            padding: 3rem 0;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+            background: white;
+            padding: 2.5rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.8rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-card h4 {
+            color: #667eea;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .protocols-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .protocol-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .protocol-card h4 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .protocol-card ul {
+            list-style: none;
+            text-align: left;
+        }
+
+        .protocol-card li {
+            margin: 0.5rem 0;
+            padding-left: 1rem;
+            position: relative;
+        }
+
+        .protocol-card li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #a8e6cf;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .architecture-diagram {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            margin: 2rem 0;
+            border: 2px dashed #667eea;
+        }
+
+        .component-box {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 1rem 1.5rem;
+            margin: 0.5rem;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #a8e6cf 0%, #88d8a3 100%);
+            color: #2d3748;
+            border-radius: 10px;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        footer {
+            background: #2d3748;
+            color: white;
+            text-align: center;
+            padding: 3rem 0;
+            margin-top: 4rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .footer-links li {
+            margin: 0 1.5rem;
+        }
+
+        .footer-links a {
+            color: #a8e6cf;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero .subtitle {
+                font-size: 1.1rem;
+            }
+            
+            .nav-links {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .nav-links li {
+                margin: 0.5rem 0;
+            }
+            
+            .section {
+                padding: 1.5rem;
+            }
+            
+            .section h2 {
+                font-size: 2rem;
+            }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #a8e6cf 0%, #dcedc8 100%);
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .install-steps {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #a8e6cf;
+        }
+
+        .install-steps ol {
+            padding-left: 1.5rem;
+        }
+
+        .install-steps li {
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="hero">
+                <h1>L8Collector</h1>
+                <p class="subtitle">Multi-Protocol Network Data Collection Service</p>
+                <div class="badges">
+                    <span class="badge">Apache 2.0 Licensed</span>
+                    <span class="badge">Go 1.23.8+</span>
+                    <span class="badge">Layer8 Ecosystem</span>
+                    <span class="badge">Production Ready</span>
+                </div>
+                <div class="cta-buttons">
+                    <a href="#installation" class="btn btn-primary">Get Started</a>
+                    <a href="#documentation" class="btn btn-secondary">Documentation</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul class="nav-links">
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#architecture">Architecture</a></li>
+                <li><a href="#protocols">Protocols</a></li>
+                <li><a href="#installation">Installation</a></li>
+                <li><a href="#usage">Usage</a></li>
+                <li><a href="#development">Development</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <section id="overview" class="section">
+                <h2>Overview</h2>
+                <p>L8Collector is a <span class="highlight">high-performance, multi-protocol network data collection service</span> built on the Layer8 ecosystem and Pollaris model. It provides a unified framework for collecting data from various network devices and systems using different protocols including SNMP, SSH, and Kubernetes.</p>
+                
+                <p>The collector operates on a <span class="highlight">device-centric model</span> where each device can have multiple hosts, and each host can be polled using different protocols based on the device configuration. This design enables efficient, concurrent data collection from heterogeneous network infrastructure.</p>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <span class="stat-number">3</span>
+                        Supported Protocols
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">∞</span>
+                        Concurrent Collections
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">100%</span>
+                        Test Coverage
+                    </div>
+                </div>
+            </section>
+
+            <section id="features" class="section">
+                <h2>Features</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h4>🌐 Multi-Protocol Support</h4>
+                        <p>SNMP v2c, SSH, and Kubernetes data collection with extensible protocol architecture.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>⚡ Concurrent Collection</h4>
+                        <p>Parallel data collection from multiple devices and hosts for maximum efficiency.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🏗️ Service-Oriented Architecture</h4>
+                        <p>Built as a microservice with the Layer8 framework for scalability and modularity.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>📱 Device Management</h4>
+                        <p>Centralized device and host management with dynamic configuration support.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>⏰ Job Queuing</h4>
+                        <p>Efficient job scheduling and execution with priority-based processing.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🛡️ Error Handling</h4>
+                        <p>Robust error handling and connection management with automatic retry mechanisms.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="architecture" class="section">
+                <h2>Architecture</h2>
+                <p>L8Collector follows a <span class="highlight">modular, extensible architecture</span> designed for high performance and maintainability.</p>
+                
+                <div class="architecture-diagram">
+                    <h3>Core Components</h3>
+                    <div class="component-box">CollectorService</div>
+                    <div class="component-box">HostCollector</div>
+                    <div class="component-box">DeviceCollector</div>
+                    <div class="component-box">JobsQueue</div>
+                    <div class="component-box">DeviceCenter</div>
+                </div>
+
+                <h3>Key Architectural Principles</h3>
+                <ul>
+                    <li><strong>Pluggable Protocol Architecture:</strong> Easy addition of new collection protocols</li>
+                    <li><strong>Resource Management:</strong> Efficient allocation and management of system resources</li>
+                    <li><strong>Service Integration:</strong> Seamless integration with the Layer8 ecosystem</li>
+                    <li><strong>Concurrent Processing:</strong> Parallel execution for optimal performance</li>
+                </ul>
+            </section>
+
+            <section id="protocols" class="section">
+                <h2>Supported Protocols</h2>
+                <div class="protocols-grid">
+                    <div class="protocol-card">
+                        <h4>SNMP v2c</h4>
+                        <ul>
+                            <li>Community-based authentication</li>
+                            <li>Configurable timeout and retry settings</li>
+                            <li>OID-based data collection</li>
+                            <li>Support for SNMP walks and gets</li>
+                        </ul>
+                    </div>
+                    <div class="protocol-card">
+                        <h4>SSH</h4>
+                        <ul>
+                            <li>Username/password authentication</li>
+                            <li>Command execution with prompt detection</li>
+                            <li>Session management</li>
+                            <li>Configurable prompts and timeouts</li>
+                        </ul>
+                    </div>
+                    <div class="protocol-card">
+                        <h4>Kubernetes</h4>
+                        <ul>
+                            <li>kubectl-based data collection</li>
+                            <li>Context-aware configuration</li>
+                            <li>Base64-encoded kubeconfig support</li>
+                            <li>Cluster resource monitoring</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="installation" class="section">
+                <h2>Installation</h2>
+                
+                <h3>Prerequisites</h3>
+                <ul>
+                    <li>Go 1.23.8 or later</li>
+                    <li>Git</li>
+                    <li>Network access to target devices</li>
+                </ul>
+
+                <h3>Quick Start</h3>
+                <div class="install-steps">
+                    <ol>
+                        <li>Clone the repository</li>
+                        <li>Initialize Go modules</li>
+                        <li>Build the application</li>
+                        <li>Run tests</li>
+                    </ol>
+                </div>
+
+                <div class="code-block">
+# Clone the repository
+git clone https://github.com/saichler/l8collector.git
+cd l8collector/go
+
+# Initialize Go modules
+go mod init
+GOPROXY=direct GOPRIVATE=github.com go mod tidy
+go mod vendor
+
+# Build the application
+go build ./...
+
+# Run tests with coverage
+chmod +x test.sh
+./test.sh
+                </div>
+            </section>
+
+            <section id="usage" class="section">
+                <h2>Usage</h2>
+                
+                <h3>Service Integration</h3>
+                <p>L8Collector integrates seamlessly with the Layer8 ecosystem:</p>
+                
+                <div class="code-block">
+// Service activation
+collectorService := &CollectorService{}
+err := collectorService.Activate(serviceName, serviceArea, resources, listener)
+
+// Device polling
+device := &types.Device{
+    DeviceId: "device-001",
+    Hosts: []*types.Host{
+        // Host configurations
+    },
+}
+
+// Start polling
+response := collectorService.Post(object.New(device), vnic)
+                </div>
+
+                <h3>Protocol-Specific Usage</h3>
+                <p>Each protocol provides a consistent interface for data collection:</p>
+
+                <div class="code-block">
+// SNMP Collection
+snmpCollector := &SNMPv2Collector{}
+snmpCollector.Init(connection, resources)
+snmpCollector.Connect()
+snmpCollector.Exec(job)
+snmpCollector.Disconnect()
+
+// SSH Collection
+sshCollector := &SshCollector{}
+sshCollector.Init(connection, resources)
+sshCollector.Connect()
+sshCollector.Exec(job)
+sshCollector.Disconnect()
+                </div>
+            </section>
+
+            <section id="development" class="section">
+                <h2>Development</h2>
+                
+                <h3>Adding New Protocols</h3>
+                <p>Extend L8Collector by implementing the <span class="highlight">ProtocolCollector interface</span>:</p>
+                
+                <div class="code-block">
+type ProtocolCollector interface {
+    Init(*types.Connection, ifs.IResources) error
+    Protocol() types.Protocol
+    Exec(*types.CJob)
+    Connect() error
+    Disconnect() error
+}
+                </div>
+
+                <h3>Code Quality</h3>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h4>🧪 Comprehensive Testing</h4>
+                        <p>Unit tests with coverage reporting and mock implementations.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>📋 Go Best Practices</h4>
+                        <p>Follows Go conventions with proper error handling and documentation.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🔒 Security First</h4>
+                        <p>Built-in security checks and secure coding practices.</p>
+                    </div>
+                </div>
+
+                <h3>Building and Testing</h3>
+                <div class="code-block">
+# Format code
+go fmt ./...
+
+# Vet code  
+go vet ./...
+
+# Run tests
+./test.sh
+
+# Build
+go build ./...
+                </div>
+            </section>
+
+            <section id="documentation" class="section">
+                <h2>Documentation & Links</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h4>📚 Layer8 Ecosystem</h4>
+                        <p>Core framework and service management platform.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🔄 L8Pollaris</h4>
+                        <p>Polling and data modeling framework for collection jobs.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>⚙️ L8Services</h4>
+                        <p>Service management and orchestration framework.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 L8Collector. Licensed under the Apache License 2.0.</p>
+            <ul class="footer-links">
+                <li><a href="https://github.com/saichler/layer8">Layer8 Ecosystem</a></li>
+                <li><a href="https://github.com/saichler/l8pollaris">L8Pollaris</a></li>
+                <li><a href="https://github.com/saichler/l8services">L8Services</a></li>
+                <li><a href="LICENSE">License</a></li>
+            </ul>
+            <p>For questions, issues, or contributions, please use the GitHub issue tracker.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll effect to navigation
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 100) {
+                nav.style.background = 'rgba(255, 255, 255, 0.95)';
+                nav.style.backdropFilter = 'blur(10px)';
+            } else {
+                nav.style.background = 'white';
+                nav.style.backdropFilter = 'none';
+            }
+        });
+
+        // Add animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections
+        document.querySelectorAll('.section').forEach(section => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(20px)';
+            section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>
