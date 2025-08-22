@@ -38,9 +38,9 @@ func (this *DeviceService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements 
 	exist := this.configCenter.Add(device, pb.Notification())
 	if !pb.Notification() {
 		if !exist {
-			alias, err := vnic.RoundRobin(common.CollectorService, this.serviceArea, ifs.POST, device)
+			err := vnic.RoundRobin(common.CollectorService, this.serviceArea, ifs.POST, device)
 			if err != nil {
-				vnic.Resources().Logger().Error("Device Service:", alias, " ", err.Error())
+				vnic.Resources().Logger().Error("Device Service:", err.Error())
 			}
 		} else {
 			err := vnic.Multicast(common.CollectorService, this.serviceArea, ifs.PUT, device)

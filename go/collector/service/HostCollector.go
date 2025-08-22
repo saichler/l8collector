@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	"time"
+
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8collector/go/collector/protocols/k8s"
 	"github.com/saichler/l8collector/go/collector/protocols/snmp"
@@ -10,7 +12,6 @@ import (
 	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/maps"
-	"time"
 )
 
 type HostCollector struct {
@@ -151,8 +152,8 @@ func newProtocolCollector(config *types.Connection, resource ifs.IResources) (co
 }
 
 func (this *HostCollector) jobComplete(job *types.CJob) {
-	alias, err := this.service.vnic.Proximity(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
+	err := this.service.vnic.Proximity(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
 	if err != nil {
-		this.service.vnic.Resources().Logger().Error("HostCollector:", alias, " ", err.Error())
+		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
 	}
 }
