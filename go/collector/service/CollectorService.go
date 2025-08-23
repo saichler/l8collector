@@ -26,8 +26,11 @@ func (this *CollectorService) Activate(serviceName string, serviceArea byte,
 	if ok {
 		this.vnic = vnic
 		r.Registry().Register(&types.Device{})
-		this.vnic.Resources().Registry().Register(&types.CMap{})
-		this.vnic.Resources().Registry().Register(&types.CTable{})
+		r.Registry().Register(&types.CMap{})
+		r.Registry().Register(&types.CTable{})
+		r.Registry().Register(&types.CJob{})
+		r.Registry().Register(&ExecuteService{})
+		r.Services().Activate("ExecuteService", "exec", serviceArea, r, nil, this)
 	}
 	return nil
 }

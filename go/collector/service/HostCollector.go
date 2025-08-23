@@ -136,6 +136,24 @@ func (this *HostCollector) collect() {
 	this.service = nil
 }
 
+func (this *HostCollector) execJob(job *types.CJob) bool {
+	pc := pollaris.Pollaris(this.service.vnic.Resources())
+	poll := pc.Poll(job.PollarisName, job.JobName)
+	if poll == nil {
+		this.service.vnic.Resources().Logger().Error("cannot find poll for device id ", this.device.DeviceId)
+		return false
+	}
+	MarkStart(job)
+	c, ok := this.collectors.Get(poll.Protocol)
+	if !ok {
+		MarkEnded(job)
+		return false
+	}
+	c.(common.ProtocolCollector).Exec(job)
+	MarkEnded(job)
+	return true
+}
+
 func newProtocolCollector(config *types.Connection, resource ifs.IResources) (common.ProtocolCollector, error) {
 	var protocolCollector common.ProtocolCollector
 	if config.Protocol == types.Protocol_PSSH {

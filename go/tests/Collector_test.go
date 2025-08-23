@@ -1,15 +1,19 @@
 package tests
 
 import (
+	"fmt"
+	"testing"
+	"time"
+
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8collector/go/collector/devices"
 	"github.com/saichler/l8collector/go/collector/service"
 	"github.com/saichler/l8collector/go/tests/utils_collector"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
+	"github.com/saichler/l8pollaris/go/types"
+	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
-	"testing"
-	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -76,4 +80,15 @@ func TestCollector(t *testing.T) {
 			}
 		}
 	}
+
+	job := &types.CJob{}
+	job.DeviceId = device.DeviceId
+	job.HostId = device.DeviceId
+	job.PollarisName = "mib2"
+	job.JobName = "systemMib"
+
+	exec := service.Exec(serviceArea, vnic.Resources())
+	ob := object.New(nil, job)
+	exec.Post(ob, vnic)
+	fmt.Println(job.Result)
 }

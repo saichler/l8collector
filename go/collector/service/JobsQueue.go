@@ -3,10 +3,11 @@ package service
 import (
 	"bytes"
 	"errors"
-	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types"
 	"sync"
 	"time"
+
+	"github.com/saichler/l8pollaris/go/pollaris"
+	"github.com/saichler/l8pollaris/go/types"
 )
 
 type JobsQueue struct {
@@ -84,6 +85,9 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 	jobs := make([]*types.CJob, 0)
 	for _, p := range polarises {
 		for jobName, poll := range p.Polling {
+			if poll.Cadence == -1 {
+				continue
+			}
 			job := &types.CJob{}
 			job.DeviceId = this.deviceId
 			job.HostId = this.hostId
