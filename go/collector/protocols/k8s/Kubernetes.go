@@ -101,6 +101,15 @@ func replaceArguments(what string, job *types.CJob, logger ifs.ILogger) string {
 			buff.WriteRune(c)
 		}
 	}
+
+	if open {
+		v, ok := job.Arguments[arg.String()]
+		if !ok {
+			return what
+		}
+		buff.WriteString(v)
+	}
+
 	logger.Info("Command Before:", what)
 	logger.Info("Command After:", buff.String())
 	return buff.String()
