@@ -432,6 +432,14 @@
                         <p>Efficient job scheduling and execution with priority-based processing.</p>
                     </div>
                     <div class="feature-card">
+                        <h4>🔄 Remote Job Execution</h4>
+                        <p>ExecuteService for distributed job processing across cluster nodes with automatic failover.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🔧 Parameter Substitution</h4>
+                        <p>Dynamic argument replacement in commands using $variable syntax for flexible configurations.</p>
+                    </div>
+                    <div class="feature-card">
                         <h4>🛡️ Error Handling</h4>
                         <p>Robust error handling and connection management with automatic retry mechanisms.</p>
                     </div>
@@ -445,6 +453,7 @@
                 <div class="architecture-diagram">
                     <h3>Core Components</h3>
                     <div class="component-box">CollectorService</div>
+                    <div class="component-box">ExecuteService</div>
                     <div class="component-box">HostCollector</div>
                     <div class="component-box">DeviceCollector</div>
                     <div class="component-box">JobsQueue</div>
@@ -488,6 +497,7 @@
                             <li>Context-aware configuration</li>
                             <li>Base64-encoded kubeconfig support</li>
                             <li>Cluster resource monitoring</li>
+                            <li>Dynamic parameter substitution ($variable)</li>
                         </ul>
                     </div>
                 </div>
@@ -572,6 +582,37 @@ sshCollector.Init(connection, resources)
 sshCollector.Connect()
 sshCollector.Exec(job)
 sshCollector.Disconnect()
+
+// Kubernetes Collection with Parameter Substitution
+k8sCollector := &Kubernetes{}
+k8sCollector.Init(connection, resources)
+job := &types.CJob{
+    Arguments: map[string]string{
+        "namespace": "kube-system",
+        "resource": "pods",
+    },
+}
+// Command: "get $resource -n $namespace" becomes "get pods -n kube-system"
+k8sCollector.Exec(job)
+                </div>
+
+                <h3>Remote Job Execution</h3>
+                <p>Execute jobs across distributed cluster nodes:</p>
+                
+                <div class="code-block">
+// Remote job execution via ExecuteService
+executeService := &ExecuteService{}
+job := &types.CJob{
+    DeviceId: "device-001",
+    HostId: "host-001", 
+    Arguments: map[string]string{
+        "namespace": "default",
+        "selector": "app=nginx",
+    },
+}
+
+// Submit job for execution (automatically routes to available nodes)
+response := executeService.Post(object.New(job), vnic)
                 </div>
             </section>
 

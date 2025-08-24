@@ -33,6 +33,8 @@ The collector operates on a device-centric model where each device can have mult
 - **Service-Oriented Architecture**: Built as a microservice with Layer8 framework
 - **Device Management**: Centralized device and host management
 - **Job Queuing**: Efficient job scheduling and execution
+- **Remote Job Execution**: ExecuteService for distributed job processing across cluster nodes
+- **Parameter Substitution**: Dynamic argument replacement in Kubernetes commands
 - **Error Handling**: Robust error handling and connection management
 - **Testing Framework**: Comprehensive unit testing with coverage reporting
 
@@ -43,6 +45,7 @@ The L8Collector follows a modular architecture with the following key components
 ### Core Components
 
 - **CollectorService**: Main service orchestrating the collection process
+- **ExecuteService**: Service for remote job execution and distribution across cluster nodes
 - **HostCollector**: Manages collection from individual hosts
 - **DeviceCollector**: Handles device-level collection logic
 - **JobsQueue**: Manages collection job scheduling and execution
@@ -80,6 +83,7 @@ The L8Collector follows a modular architecture with the following key components
 - Context-aware configuration
 - Base64-encoded kubeconfig support
 - Cluster resource monitoring
+- Dynamic parameter substitution using `$variable` syntax in commands
 
 ## Dependencies
 
@@ -194,6 +198,26 @@ device := &types.Device{
 response := collectorService.Post(object.New(device), vnic)
 ```
 
+### Remote Job Execution
+
+The ExecuteService enables distributed job execution across cluster nodes:
+
+```go
+// Execute a job remotely
+executeService := &ExecuteService{}
+job := &types.CJob{
+    DeviceId: "device-001",
+    HostId: "host-001",
+    Arguments: map[string]string{
+        "namespace": "kube-system",
+        "resource": "pods",
+    },
+}
+
+// Submit job for execution
+response := executeService.Post(object.New(job), vnic)
+```
+
 ### Protocol-Specific Usage
 
 #### SNMP Collection
@@ -218,6 +242,15 @@ sshCollector.Disconnect()
 ```go
 k8sCollector := &Kubernetes{}
 k8sCollector.Init(connection, resources)
+
+// Job with parameter substitution
+job := &types.CJob{
+    Arguments: map[string]string{
+        "namespace": "default",
+        "resource": "pods",
+    },
+}
+// Command: "get pods -n $namespace" becomes "get pods -n default"
 k8sCollector.Exec(job)
 ```
 
@@ -264,6 +297,11 @@ l8collector/
     │   │   ├── k8s/      # Kubernetes collector
     │   │   └── Utils.go  # Protocol utilities
     │   └── service/       # Core services
+    │       ├── CollectorService.go    # Main collection service
+    │       ├── ExecuteService.go      # Remote execution service
+    │       ├── DeviceCollector.go     # Device-level operations
+    │       ├── HostCollector.go       # Host-level operations
+    │       └── JobsQueue.go           # Job scheduling
     ├── tests/             # Test files
     ├── go.mod             # Go module definition
     ├── go.sum             # Go module checksums

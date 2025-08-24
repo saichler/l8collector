@@ -30,7 +30,7 @@ func (this *CollectorService) Activate(serviceName string, serviceArea byte,
 		r.Registry().Register(&types.CTable{})
 		r.Registry().Register(&types.CJob{})
 		r.Registry().Register(&ExecuteService{})
-		r.Services().Activate("ExecuteService", "exec", serviceArea, r, nil, this)
+		r.Services().Activate("ExecuteService", "exec", serviceArea, r, vnic, this)
 	}
 	return nil
 }
