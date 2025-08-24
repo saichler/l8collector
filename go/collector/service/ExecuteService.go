@@ -5,6 +5,7 @@ import (
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/web"
+	"github.com/saichler/layer8/go/overlay/health"
 )
 
 type ExecuteService struct {
@@ -32,12 +33,32 @@ func (this *ExecuteService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements
 	if ok {
 		hostController := h.(*HostCollector)
 		hostController.execJob(job)
+		return object.New(nil, job)
+	} else {
+		hc := health.Health(vnic.Resources())
+		uuids := hc.Uuids("exec", this.serviceArea)
+		delete(uuids, vnic.Resources().SysConfig().LocalUuid)
+		for uuid, _ := range uuids {
+			resp := vnic.Request(uuid, "exec", this.serviceArea, ifs.PUT, job)
+			if resp.Error() == nil {
+				return resp
+			}
+		}
 	}
+
 	return object.New(nil, job)
 }
 
 func (this *ExecuteService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	return nil
+	job := pb.Element().(*types.CJob)
+	key := hostCollectorKey(job.DeviceId, job.HostId)
+	h, ok := this.collectorService.hostCollectors.Get(key)
+	if ok {
+		hostController := h.(*HostCollector)
+		hostController.execJob(job)
+		return object.New(nil, job)
+	}
+	return object.NewError("No job was found with key: " + key)
 }
 func (this *ExecuteService) Patch(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	return nil
