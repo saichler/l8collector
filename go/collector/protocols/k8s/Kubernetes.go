@@ -51,7 +51,7 @@ func (this *Kubernetes) Exec(job *types.CJob) {
 	script.Add(" --context=")
 	script.Add(this.config.KukeContext)
 	script.Add(" ")
-	script.Add(replaceArguments(poll.What, job))
+	script.Add(replaceArguments(poll.What, job, this.resources.Logger()))
 	script.Add("\n")
 
 	id := uuid.New().String()
@@ -76,7 +76,7 @@ func (this *Kubernetes) Disconnect() error {
 	return nil
 }
 
-func replaceArguments(what string, job *types.CJob) string {
+func replaceArguments(what string, job *types.CJob, logger ifs.ILogger) string {
 	if job.Arguments == nil {
 		return what
 	}
@@ -101,5 +101,7 @@ func replaceArguments(what string, job *types.CJob) string {
 			buff.WriteRune(c)
 		}
 	}
+	logger.Info("Command Before:", what)
+	logger.Info("Command After:", buff.String())
 	return buff.String()
 }
