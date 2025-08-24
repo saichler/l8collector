@@ -1,15 +1,17 @@
 package k8s
 
 import (
+	"bytes"
 	"encoding/base64"
+	"os"
+	"os/exec"
+
 	"github.com/google/uuid"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/strings"
-	"os"
-	"os/exec"
 )
 
 type Kubernetes struct {
@@ -49,7 +51,7 @@ func (this *Kubernetes) Exec(job *types.CJob) {
 	script.Add(" --context=")
 	script.Add(this.config.KukeContext)
 	script.Add(" ")
-	script.Add(poll.What)
+	script.Add(replaceArguments(poll.What, job))
 	script.Add("\n")
 
 	id := uuid.New().String()
@@ -72,4 +74,32 @@ func (this *Kubernetes) Connect() error {
 
 func (this *Kubernetes) Disconnect() error {
 	return nil
+}
+
+func replaceArguments(what string, job *types.CJob) string {
+	if job.Arguments == nil {
+		return what
+	}
+	buff := bytes.Buffer{}
+	arg := bytes.Buffer{}
+	open := false
+	for _, c := range what {
+		if c == '$' {
+			open = true
+		} else if c == ' ' && open {
+			open = false
+			v, ok := job.Arguments[arg.String()]
+			if !ok {
+				return what
+			}
+			buff.WriteString(v)
+			buff.WriteString(" ")
+			arg.Reset()
+		} else if open {
+			arg.WriteRune(c)
+		} else {
+			buff.WriteRune(c)
+		}
+	}
+	return buff.String()
 }
