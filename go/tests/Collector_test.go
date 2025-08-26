@@ -25,9 +25,11 @@ func TestMain(m *testing.M) {
 func TestCollector(t *testing.T) {
 
 	serviceArea := byte(0)
-	snmpPolls := boot.CreateSNMPBootPolls()
-	for _, poll := range snmpPolls.Polling {
-		poll.Cadence = 3
+	snmpPolls := boot.GetAllPolarisModels()
+	for _, snmpPoll := range snmpPolls {
+		for _, poll := range snmpPoll.Polling {
+			poll.Cadence = 3
+		}
 	}
 
 	//use opensim to simulate this device with this ip
@@ -50,10 +52,12 @@ func TestCollector(t *testing.T) {
 	time.Sleep(time.Second)
 
 	p := pollaris.Pollaris(vnic.Resources())
-	err := p.Add(snmpPolls, false)
-	if err != nil {
-		vnic.Resources().Logger().Fail(t, err.Error())
-		return
+	for _, poll := range snmpPolls {
+		err := p.Add(poll, false)
+		if err != nil {
+			vnic.Resources().Logger().Fail(t, err.Error())
+			return
+		}
 	}
 
 	/*
@@ -63,7 +67,7 @@ func TestCollector(t *testing.T) {
 	*/
 
 	cl := topo.VnicByVnetNum(1, 1)
-	err = cl.Multicast(devices.ServiceName, serviceArea, ifs.POST, device)
+	err := cl.Multicast(devices.ServiceName, serviceArea, ifs.POST, device)
 	if err != nil {
 		panic(err)
 	}
