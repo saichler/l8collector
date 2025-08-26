@@ -207,10 +207,22 @@ func (this *HostCollector) loadPolls(job *types.CJob) {
 	enc = object.NewDecode(strData, 0, this.service.vnic.Resources().Registry())
 	strInterface, _ := enc.Get()
 	sysoid, ok := strInterface.(string)
+
+	if sysoid == "" {
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: sysoid is blank")
+		for k, v := range cmap.Data {
+			enc = object.NewDecode(v, 0, this.service.vnic.Resources().Registry())
+			val, _ := enc.Get()
+			this.service.vnic.Resources().Logger().Info("Key =", k, " value=", val)
+		}
+	}
+
 	plrs := boot.GetPollarisByOid(sysoid)
 	if plrs != nil {
-		this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: found pollaris by sysoid ", plrs.Name, "by systoid:", sysoid)
+		this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: found pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
 		this.loaded = true
-		//this.jobsQueue.InsertJob(plrs.Name, "", "", "", "", "", "", 0, 0)
+		if plrs.Name != "mib2" {
+			this.jobsQueue.InsertJob(plrs.Name, "", "", "", "", "", "", 0, 0)
+		}
 	}
 }
