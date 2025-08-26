@@ -184,6 +184,9 @@ func (this *HostCollector) jobComplete(job *types.CJob) {
 }
 
 func (this *HostCollector) loadPolls(job *types.CJob) {
+	if this.loaded {
+		return
+	}
 	enc := object.NewDecode(job.Result, 0, this.service.vnic.Resources().Registry())
 	data, err := enc.Get()
 	if err != nil {
@@ -206,7 +209,8 @@ func (this *HostCollector) loadPolls(job *types.CJob) {
 	sysoid, ok := strInterface.(string)
 	plrs := boot.GetPollarisByOid(sysoid)
 	if plrs != nil {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: found pollaris by sysoid", plrs.Name)
+		this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: found pollaris by sysoid", plrs.Name)
 		this.loaded = true
+		this.jobsQueue.InsertJob(plrs.Name, "", "", "", "", "", "", 0, 0)
 	}
 }
