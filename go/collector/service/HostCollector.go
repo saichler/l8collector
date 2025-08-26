@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"reflect"
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
@@ -206,11 +205,12 @@ func (this *HostCollector) loadPolls(job *types.CJob) {
 	}
 
 	enc = object.NewDecode(strData, 0, this.service.vnic.Resources().Registry())
-	strInterface, _ := enc.Get()
-	sysoid := reflect.ValueOf(strInterface).String()
+	byteInterface, _ := enc.Get()
+	sysoidBytes, ok := byteInterface.([]byte)
+	sysoid := string(sysoidBytes)
 	this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls, sysoid =", sysoid)
 	if sysoid == "" {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: sysoid is blank ", strInterface, " ", reflect.TypeOf(strInterface))
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: sysoid is blank ")
 		for k, v := range cmap.Data {
 			enc = object.NewDecode(v, 0, this.service.vnic.Resources().Registry())
 			val, _ := enc.Get()
