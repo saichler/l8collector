@@ -8,8 +8,10 @@ import (
 	"github.com/saichler/l8collector/go/collector/protocols/k8s"
 	"github.com/saichler/l8collector/go/collector/protocols/snmp"
 	"github.com/saichler/l8collector/go/collector/protocols/ssh"
+	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types"
+	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/maps"
 )
@@ -21,6 +23,7 @@ type HostCollector struct {
 	collectors *maps.SyncMap
 	jobsQueue  *JobsQueue
 	running    bool
+	loaded     bool
 }
 
 func newHostCollector(device *types.Device, hostId string, service *CollectorService) *HostCollector {
@@ -173,5 +176,37 @@ func (this *HostCollector) jobComplete(job *types.CJob) {
 	err := this.service.vnic.Proximity(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
+	}
+	if job.JobName == "systemMib" {
+		this.service.vnic.Resources().Logger().Info("SystemMib job result")
+		this.loadPolls(job)
+	}
+}
+
+func (this *HostCollector) loadPolls(job *types.CJob) {
+	enc := object.NewDecode(job.Result, 0, this.service.vnic.Resources().Registry())
+	data, err := enc.Get()
+	if err != nil {
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls:", err.Error())
+		return
+	}
+	cmap, ok := data.(*types.CMap)
+	if !ok {
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: systemMib not A CMap")
+		return
+	}
+	strData, ok := cmap.Data[".1.3.6.1.2.1.1.2.0"]
+	if !ok {
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: cannot find sysoid")
+		return
+	}
+
+	enc = object.NewDecode(strData, 0, this.service.vnic.Resources().Registry())
+	strInterface, _ := enc.Get()
+	sysoid, ok := strInterface.(string)
+	plrs := boot.GetPollarisByOid(sysoid)
+	if plrs != nil {
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: found pollaris by sysoid", plrs.Name)
+		this.loaded = true
 	}
 }
