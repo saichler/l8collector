@@ -219,6 +219,8 @@ func (this *HostCollector) loadPolls(job *types.CJob) {
 	}
 
 	plrs := boot.GetPollarisByOid(sysoid)
+	plc := pollaris.Pollaris(this.service.vnic.Resources())
+	plc.Add(plrs, false)
 	if plrs != nil {
 		this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: found pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
 		this.loaded = true
