@@ -211,6 +211,6 @@ func (this *HostCollector) loadPolls(job *types.CJob) {
 	if plrs != nil {
 		this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: found pollaris by sysoid ", plrs.Name, "by systoid:", sysoid)
 		this.loaded = true
-		this.jobsQueue.InsertJob(plrs.Name, "", "", "", "", "", "", 0, 0)
+		//this.jobsQueue.InsertJob(plrs.Name, "", "", "", "", "", "", 0, 0)
 	}
 }
