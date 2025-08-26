@@ -207,8 +207,8 @@ func (this *HostCollector) loadPolls(job *types.CJob) {
 
 	enc = object.NewDecode(strData, 0, this.service.vnic.Resources().Registry())
 	strInterface, _ := enc.Get()
-	sysoid, ok := strInterface.(string)
-
+	sysoid := reflect.ValueOf(strInterface).String()
+	this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls, sysoid =", sysoid)
 	if sysoid == "" {
 		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: sysoid is blank ", strInterface, " ", reflect.TypeOf(strInterface))
 		for k, v := range cmap.Data {
