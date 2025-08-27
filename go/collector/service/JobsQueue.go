@@ -85,7 +85,7 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 	jobs := make([]*types.CJob, 0)
 	for _, p := range polarises {
 		for jobName, poll := range p.Polling {
-			if poll.Cadence < 5 {
+			if poll.Cadence < 3 {
 				continue
 			}
 			job := &types.CJob{}
@@ -117,7 +117,7 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 		return errors.New("Job Queue is already shutdown")
 	}
 	for _, job := range jobs {
-		if job.Cadence < 5 {
+		if job.Cadence < 3 {
 			continue
 		}
 		jobKey := JobKey(job.PollarisName, job.JobName)
