@@ -1,6 +1,10 @@
 package snmp
 
 import (
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/gosnmp/gosnmp"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
@@ -8,8 +12,6 @@ import (
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	strings2 "github.com/saichler/l8utils/go/utils/strings"
-	"strconv"
-	"time"
 )
 
 type SNMPv2Collector struct {
@@ -134,4 +136,18 @@ func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
 		return
 	}
 	job.Result = enc.Data()
+}
+
+func getRowAndColName(oid string) (int32, string) {
+	index := strings.LastIndex(oid, ".")
+	if index != -1 {
+		row, _ := strconv.Atoi(oid[index+1:])
+		suboid := oid[0:index]
+		index = strings.LastIndex(suboid, ".")
+		if index != -1 {
+			col := suboid[index+1:]
+			return int32(row), col
+		}
+	}
+	return -1, ""
 }
