@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"time"
@@ -85,7 +86,28 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 		this.agent.Timeout = time.Second * time.Duration(job.Timeout)
 		defer func() { this.agent.Timeout = time.Second * time.Duration(this.config.Timeout) }()
 	}
-	pdus, e := this.agent.WalkAll(poll.What)
+	// For Entity MIB, add strict timeout to prevent hanging
+	var pdus []gosnmp.SnmpPDU
+	var e error
+	
+	if strings.Contains(poll.What, "1.3.6.1.2.1.47.1.1") {
+		// Use channel-based timeout for Entity MIB
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			pdus, e = this.agent.WalkAll(poll.What)
+		}()
+		
+		select {
+		case <-done:
+			// Walk completed normally
+		case <-time.After(15 * time.Second):
+			e = context.DeadlineExceeded
+			this.resources.Logger().Error("Entity MIB walk timed out after 15 seconds")
+		}
+	} else {
+		pdus, e = this.agent.WalkAll(poll.What)
+	}
 	if e != nil {
 		job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
 			strconv.Itoa(int(this.config.Port)), " Oid:", poll.What, e.Error()).String()
@@ -120,13 +142,14 @@ func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
 	tbl := &types.CTable{Rows: make(map[int32]*types.CRow), Columns: make(map[int32]string)}
 	var lastRowIndex int32 = -1
 	keys := protocols.Keys(m)
-	var col int32 = 0
+
 	for _, key := range keys {
 		rowIndex, colIndex := getRowAndColName(key)
 		if rowIndex > lastRowIndex {
 			lastRowIndex = rowIndex
 		}
-		protocols.SetValue(rowIndex, col, colIndex, m.Data[key], tbl)
+		colInt, _ := strconv.Atoi(colIndex)
+		protocols.SetValue(rowIndex, int32(colInt), colIndex, m.Data[key], tbl)
 	}
 
 	enc := object.NewEncode()

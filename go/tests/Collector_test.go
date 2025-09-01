@@ -28,14 +28,16 @@ func TestCollector(t *testing.T) {
 	snmpPolls := boot.GetAllPolarisModels()
 	for _, snmpPoll := range snmpPolls {
 		for _, poll := range snmpPoll.Polling {
-			poll.Cadence = 3
+			if poll.Cadence > 3 {
+				poll.Cadence = 3
+			}
 		}
 	}
 
 	//use opensim to simulate this device with this ip
 	//https://github.com/saichler/opensim
 	//curl -X POST http://localhost:8080/api/v1/devices -H "Content-Type: application/json" -d '{"start_ip":"10.10.10.1","device_count":3,"netmask":"24"}'
-	device := utils_collector.CreateDevice("10.10.10.1", serviceArea)
+	device := utils_collector.CreateDevice("10.20.30.3", serviceArea)
 
 	vnic := topo.VnicByVnetNum(2, 2)
 	vnic.Resources().Registry().Register(pollaris.PollarisService{})
@@ -89,7 +91,7 @@ func TestCollector(t *testing.T) {
 	job.DeviceId = device.DeviceId
 	job.HostId = device.DeviceId
 	job.PollarisName = "mib2"
-	job.JobName = "systemMib"
+	job.JobName = "entityMib"
 
 	exec := service.Exec(serviceArea, vnic.Resources())
 	ob := object.New(nil, job)
