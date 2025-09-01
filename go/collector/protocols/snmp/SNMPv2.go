@@ -117,7 +117,7 @@ func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
 	if job.Error != "" {
 		return
 	}
-	tbl := &types.CTable{}
+	tbl := &types.CTable{Rows: make(map[int32]*types.CRow), Columns: make(map[int32]string)}
 	var lastRowIndex int32 = -1
 	keys := protocols.Keys(m)
 	var col int32 = 0
