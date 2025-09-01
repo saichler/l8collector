@@ -33,10 +33,23 @@ func (this *DeviceService) DeActivate() error {
 }
 
 func (this *DeviceService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	device := pb.Element().(*types.Device)
+	device, ok := pb.Element().(*types.Device)
+	if ok {
+		this.addDevice(device, vnic, pb.Notification())
+	}
+	devices, ok := pb.Element().(*types.DeviceList)
+	if ok {
+		for _, device = range devices.List {
+			this.addDevice(device, vnic, pb.Notification())
+		}
+	}
+	return object.New(nil, &types.Device{})
+}
+
+func (this *DeviceService) addDevice(device *types.Device, vnic ifs.IVNic, isNotificaton bool) {
 	vnic.Resources().Logger().Info("Device Service: Added Device ", device.DeviceId)
-	exist := this.configCenter.Add(device, pb.Notification())
-	if !pb.Notification() {
+	exist := this.configCenter.Add(device, isNotificaton)
+	if !isNotificaton {
 		if !exist {
 			err := vnic.RoundRobin(common.CollectorService, this.serviceArea, ifs.POST, device)
 			if err != nil {
@@ -49,7 +62,6 @@ func (this *DeviceService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements 
 			}
 		}
 	}
-	return object.New(nil, &types.Device{})
 }
 
 func (this *DeviceService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
