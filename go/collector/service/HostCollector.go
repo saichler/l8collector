@@ -120,6 +120,22 @@ func (this *HostCollector) collect() {
 				continue
 			}
 			MarkStart(job)
+
+			if poll.What == "ipaddres" {
+				obj := object.NewEncode()
+				for _, h := range this.device.Hosts {
+					for _, c := range h.Configs {
+						obj.Add(c.Addr)
+						job.Result = obj.Data()
+						break
+					}
+					break
+				}
+				MarkEnded(job)
+				this.jobComplete(job)
+				continue
+			}
+
 			c, ok := this.collectors.Get(poll.Protocol)
 			if !ok {
 				MarkEnded(job)
