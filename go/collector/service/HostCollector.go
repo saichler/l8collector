@@ -121,7 +121,7 @@ func (this *HostCollector) collect() {
 			}
 			MarkStart(job)
 
-			if poll.What == "ipaddres" {
+			if poll.What == "ipaddress" {
 				obj := object.NewEncode()
 				for _, h := range this.device.Hosts {
 					for _, c := range h.Configs {
