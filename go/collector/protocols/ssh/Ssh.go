@@ -2,6 +2,12 @@ package ssh
 
 import (
 	"bytes"
+	"io"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8srlz/go/serialize/object"
@@ -9,11 +15,6 @@ import (
 	"github.com/saichler/l8utils/go/utils/queues"
 	strings2 "github.com/saichler/l8utils/go/utils/strings"
 	ssh2 "golang.org/x/crypto/ssh"
-	"io"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 var CR = []byte("\n")
@@ -262,4 +263,8 @@ func (sshc *SshCollector) Exec(job *types.CJob) {
 	enc := object.NewEncode()
 	enc.Add(result)
 	job.Result = enc.Data()
+}
+
+func (this *SshCollector) Online() bool {
+	return this.connected
 }

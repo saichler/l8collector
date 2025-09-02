@@ -18,6 +18,7 @@ type Kubernetes struct {
 	resources  ifs.IResources
 	config     *types.Connection
 	kubeConfig string
+	connected  bool
 }
 
 func (this *Kubernetes) Init(config *types.Connection, resources ifs.IResources) error {
@@ -74,4 +75,8 @@ func (this *Kubernetes) Connect() error {
 
 func (this *Kubernetes) Disconnect() error {
 	return nil
+}
+
+func (this *Kubernetes) Online() bool {
+	return this.connected
 }

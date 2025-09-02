@@ -17,4 +17,5 @@ type ProtocolCollector interface {
 	Exec(*types.CJob)
 	Connect() error
 	Disconnect() error
+	Online() bool
 }

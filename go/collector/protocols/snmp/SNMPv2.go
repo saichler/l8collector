@@ -89,7 +89,7 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 	// For Entity MIB, add strict timeout to prevent hanging
 	var pdus []gosnmp.SnmpPDU
 	var e error
-	
+
 	if strings.Contains(poll.What, "1.3.6.1.2.1.47.1.1") {
 		// Use channel-based timeout for Entity MIB
 		done := make(chan struct{})
@@ -97,7 +97,7 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 			defer close(done)
 			pdus, e = this.agent.WalkAll(poll.What)
 		}()
-		
+
 		select {
 		case <-done:
 			// Walk completed normally
@@ -159,6 +159,10 @@ func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
 		return
 	}
 	job.Result = enc.Data()
+}
+
+func (this *SNMPv2Collector) Online() bool {
+	return this.connected
 }
 
 func getRowAndColName(oid string) (int32, string) {

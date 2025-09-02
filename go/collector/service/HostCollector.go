@@ -121,16 +121,7 @@ func (this *HostCollector) collect() {
 			}
 			MarkStart(job)
 
-			if poll.What == "ipaddress" {
-				obj := object.NewEncode()
-				for _, h := range this.device.Hosts {
-					for _, c := range h.Configs {
-						obj.Add(c.Addr)
-						job.Result = obj.Data()
-						break
-					}
-					break
-				}
+			if this.staticJobs(job, poll) {
 				MarkEnded(job)
 				this.jobComplete(job)
 				continue
@@ -153,6 +144,33 @@ func (this *HostCollector) collect() {
 	}
 	this.service.vnic.Resources().Logger().Info("Host collection for device ", this.device.DeviceId, " host ", this.hostId, " has ended.")
 	this.service = nil
+}
+
+func (this *HostCollector) staticJobs(job *types.CJob, poll *types.Poll) bool {
+	if poll.What == "ipaddress" {
+		obj := object.NewEncode()
+		for _, h := range this.device.Hosts {
+			for _, c := range h.Configs {
+				obj.Add(c.Addr)
+				job.Result = obj.Data()
+				break
+			}
+			break
+		}
+		return true
+	} else if poll.What == "devicestatus" {
+		obj := object.NewEncode()
+		protocolState := make(map[int32]bool)
+		this.collectors.Iterate(func(k, v interface{}) {
+			key := k.(int32)
+			p := v.(common.ProtocolCollector)
+			protocolState[key] = p.Online()
+		})
+		obj.Add(protocolState)
+		job.Result = obj.Data()
+		return true
+	}
+	return false
 }
 
 func (this *HostCollector) execJob(job *types.CJob) bool {
