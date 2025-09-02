@@ -29,66 +29,67 @@ type SshCollector struct {
 	queue     *queues.Queue
 	running   bool
 	connected bool
+	pollOnce  bool
 	mtx       *sync.Mutex
 }
 
-func (sshc *SshCollector) Protocol() types.Protocol {
+func (this *SshCollector) Protocol() types.Protocol {
 	return types.Protocol_PSSH
 }
 
-func (sshc *SshCollector) Init(conf *types.Connection, resources ifs.IResources) error {
-	sshc.config = conf
-	sshc.resources = resources
-	sshc.queue = queues.NewQueue("SSh Collector", 1024)
-	sshc.running = true
+func (this *SshCollector) Init(conf *types.Connection, resources ifs.IResources) error {
+	this.config = conf
+	this.resources = resources
+	this.queue = queues.NewQueue("SSh Collector", 1024)
+	this.running = true
 	if conf.Prompt == nil || len(conf.Prompt) == 0 {
 		conf.Prompt = make([]string, 1)
 		conf.Prompt[0] = "#"
 	}
-	sshc.mtx = &sync.Mutex{}
+	this.mtx = &sync.Mutex{}
 	return nil
 }
 
-func (sshc *SshCollector) run() {
-	for sshc.running {
+func (this *SshCollector) run() {
+	for this.running {
 		buff := make([]byte, 512)
-		readBytes, err := sshc.out.Read(buff)
+		readBytes, err := this.out.Read(buff)
 		if err != nil {
 			if err.Error() != "EOF" {
-				sshc.resources.Logger().Error(err)
+				this.resources.Logger().Error(err)
 			}
 			break
 		}
 		if readBytes > 0 {
-			sshc.queue.Add(buff[0:readBytes])
+			this.queue.Add(buff[0:readBytes])
 		}
 	}
-	sshc.resources.Logger().Info("Ssh Collector for host:" + sshc.config.Addr + " is closed.")
+	this.resources.Logger().Info("Ssh Collector for host:" + this.config.Addr + " is closed.")
 }
 
-func (sshc *SshCollector) Connect() error {
+func (this *SshCollector) Connect() error {
 	sshconfig := &ssh2.ClientConfig{}
-	sshconfig.Timeout = time.Second * time.Duration(sshc.config.Timeout)
+	sshconfig.Timeout = time.Second * time.Duration(this.config.Timeout)
 	sshconfig.Config = ssh2.Config{}
-	sshconfig.User = sshc.config.Username
-	pass := ssh2.Password(sshc.config.Password)
+	sshconfig.User = this.config.Username
+	pass := ssh2.Password(this.config.Password)
 	sshconfig.Auth = make([]ssh2.AuthMethod, 1)
 	sshconfig.Auth[0] = pass
 	sshconfig.HostKeyCallback = ssh2.InsecureIgnoreHostKey()
 
-	hostport := strings2.New(sshc.config.Addr, "/", strconv.Itoa(int(sshc.config.Port))).String()
-	client, err := ssh2.Dial("tcp", sshc.config.Addr+":"+strconv.Itoa(int(sshc.config.Port)), sshconfig)
+	hostport := strings2.New(this.config.Addr, "/", strconv.Itoa(int(this.config.Port))).String()
+	client, err := ssh2.Dial("tcp", this.config.Addr+":"+strconv.Itoa(int(this.config.Port)), sshconfig)
 	if err != nil {
-		return sshc.resources.Logger().Error("Ssh Dial Error Host:", hostport, err.Error())
+		return this.resources.Logger().Error("Ssh Dial Error Host:", hostport, err.Error())
 	}
-	sshc.client = client
+	this.client = client
 	session, err := client.NewSession()
 	if err != nil {
-		return sshc.resources.Logger().Error("Ssh Session Error Host:", hostport, err.Error())
+		return this.resources.Logger().Error("Ssh Session Error Host:", hostport, err.Error())
 	}
-	sshc.session = session
+	this.session = session
 
-	if sshc.config.Terminal == "vt100" {
+	if this.config.Terminal == "vt100" {
 		terminalModes := make(map[uint8]uint32)
 		terminalModes[ssh2.TTY_OP_ISPEED] = 38400
 		terminalModes[ssh2.TTY_OP_OSPEED] = 38400
@@ -96,64 +97,64 @@ func (sshc *SshCollector) Connect() error {
 		terminalModes[ssh2.OCRNL] = 0
 		err = session.RequestPty("vt100", 0, 2048, terminalModes)
 		if err != nil {
-			return sshc.resources.Logger().Error("Ssh terminal vt100 Error Host:", hostport, err.Error())
+			return this.resources.Logger().Error("Ssh terminal vt100 Error Host:", hostport, err.Error())
 		}
 	}
 
 	in, _ := session.StdinPipe()
 	out, _ := session.StdoutPipe()
 
-	sshc.in = in
-	sshc.out = out
+	this.in = in
+	this.out = out
 	err = session.Shell()
 
 	if err != nil {
-		return sshc.resources.Logger().Error("Ssh Shell Error Host:", hostport, err.Error())
+		return this.resources.Logger().Error("Ssh Shell Error Host:", hostport, err.Error())
 	}
 
-	if sshc.config.TerminalCommands != nil {
-		for _, cmd := range sshc.config.TerminalCommands {
+	if this.config.TerminalCommands != nil {
+		for _, cmd := range this.config.TerminalCommands {
 			time.Sleep(time.Second / 4)
-			sshc.in.Write([]byte(cmd))
+			this.in.Write([]byte(cmd))
 		}
 	}
 
-	go sshc.run()
+	go this.run()
 
 	time.Sleep(time.Second)
 
 	//Flush welcome message & initial prompt
 	/*
-		data, err := sshc.exec("", 10)
+		data, err := this.exec("", 10)
 		if err != nil {
 			return errors.New(Join("Ssh Read Error Host:", hostport, err.Error()))
 		}*/
 
-	//sshc.setInitialPrompt("#")
+	//this.setInitialPrompt("#")
 
-	sshc.connected = true
+	this.connected = true
 
 	return nil
 }
 
-func (sshc *SshCollector) Disconnect() error {
-	sshc.running = false
-	if sshc.in != nil {
-		sshc.in.Close()
+func (this *SshCollector) Disconnect() error {
+	this.running = false
+	if this.in != nil {
+		this.in.Close()
 	}
-	if sshc.session != nil {
-		sshc.session.Close()
+	if this.session != nil {
+		this.session.Close()
 	}
-	if sshc.client != nil {
-		sshc.client.Close()
+	if this.client != nil {
+		this.client.Close()
 	}
-	sshc.session = nil
-	sshc.client = nil
-	sshc.connected = false
+	this.session = nil
+	this.client = nil
+	this.connected = false
 	return nil
 }
 
-func (sshc *SshCollector) setInitialPrompt(str string) {
+func (this *SshCollector) setInitialPrompt(str string) {
 	index := -1
 	size := len(str)
 	for i := size - 1; i >= 0; i-- {
@@ -164,26 +165,26 @@ func (sshc *SshCollector) setInitialPrompt(str string) {
 	}
 	if index != -1 {
 		prompt := str[index:]
-		sshc.resources.Logger().Info("Setting Prompt to:" + prompt)
-		sshc.config.Prompt[0] = prompt
+		this.resources.Logger().Info("Setting Prompt to:" + prompt)
+		this.config.Prompt[0] = prompt
 	}
 }
 
-func (sshc *SshCollector) hasPrompt(data string, count int) bool {
-	l := len(sshc.config.Prompt)
+func (this *SshCollector) hasPrompt(data string, count int) bool {
+	l := len(this.config.Prompt)
 	if l == 1 {
-		c := strings.Count(data, sshc.config.Prompt[0])
+		c := strings.Count(data, this.config.Prompt[0])
 		if c >= count {
 			return true
 		}
 	} else if l == 2 {
-		c1 := strings.Count(data, sshc.config.Prompt[0])
-		c2 := strings.Count(data, sshc.config.Prompt[1])
+		c1 := strings.Count(data, this.config.Prompt[0])
+		c2 := strings.Count(data, this.config.Prompt[1])
 		if c1 >= count || c2 >= count {
 			return true
 		}
 	} else {
-		for _, prompt := range sshc.config.Prompt {
+		for _, prompt := range this.config.Prompt {
 			c := strings.Count(data, prompt)
 			if c >= count {
 				return true
@@ -193,22 +194,23 @@ func (sshc *SshCollector) hasPrompt(data string, count int) bool {
 	return false
 }
 
-func (sshc *SshCollector) exec(cmd string, timeout int64) (string, error) {
-	if !sshc.connected {
-		err := sshc.Connect()
+func (this *SshCollector) exec(cmd string, timeout int64) (string, error) {
+	this.pollOnce = true
+	if !this.connected {
+		err := this.Connect()
 		if err != nil {
 			return err.Error(), err
 		}
 	}
 	if cmd != "" {
-		sshc.queue.Clear()
-		_, err := sshc.in.Write([]byte(cmd))
+		this.queue.Clear()
+		_, err := this.in.Write([]byte(cmd))
 		if err != nil {
-			return strings2.New("Ssh Write Error Host:", sshc.config.Addr, ":", strconv.Itoa(int(sshc.config.Port))).String(), err
+			return strings2.New("Ssh Write Error Host:", this.config.Addr, ":", strconv.Itoa(int(this.config.Port))).String(), err
 		}
-		_, err = sshc.in.Write(CR)
+		_, err = this.in.Write(CR)
 		if err != nil {
-			return err.Error(), sshc.resources.Logger().Error("Ssh Write Error Host:", sshc.config.Addr, ":", strconv.Itoa(int(sshc.config.Port)), err.Error())
+			return err.Error(), this.resources.Logger().Error("Ssh Write Error Host:", this.config.Addr, ":", strconv.Itoa(int(this.config.Port)), err.Error())
 		}
 	}
 
@@ -217,12 +219,12 @@ func (sshc *SshCollector) exec(cmd string, timeout int64) (string, error) {
 
 	cycles := 0
 	lastCycleSize := 0
-	for time.Now().Unix()-start <= int64(timeout) && !sshc.hasPrompt(result.String(), 1) && cycles < 5 {
-		for sshc.queue.Size() > 0 {
-			data := sshc.queue.Next().([]byte)
+	for time.Now().Unix()-start <= int64(timeout) && !this.hasPrompt(result.String(), 1) && cycles < 5 {
+		for this.queue.Size() > 0 {
+			data := this.queue.Next().([]byte)
 			result.Write(data)
 		}
-		if !sshc.hasPrompt(result.String(), 1) {
+		if !this.hasPrompt(result.String(), 1) {
 			time.Sleep(time.Second / 10)
 		}
 		if lastCycleSize == result.Len() {
@@ -234,13 +236,13 @@ func (sshc *SshCollector) exec(cmd string, timeout int64) (string, error) {
 	return result.String(), nil
 }
 
-func (sshc *SshCollector) Exec(job *types.CJob) {
-	poll, err := pollaris.Poll(job.PollarisName, job.JobName, sshc.resources)
+func (this *SshCollector) Exec(job *types.CJob) {
+	poll, err := pollaris.Poll(job.PollarisName, job.JobName, this.resources)
 	if err != nil {
-		sshc.resources.Logger().Error("Ssh:" + err.Error())
+		this.resources.Logger().Error("Ssh:" + err.Error())
 		return
 	}
-	result, e := sshc.exec(poll.What, job.Timeout)
+	result, e := this.exec(poll.What, job.Timeout)
 	if e != nil {
 		job.Result = nil
 		job.Error = e.Error()
@@ -253,7 +255,7 @@ func (sshc *SshCollector) Exec(job *types.CJob) {
 	result = strings.Trim(result, "\n")
 	result = strings.Trim(result, " ")
 	result = strings.Trim(result, "\r")
-	for _, prompt := range sshc.config.Prompt {
+	for _, prompt := range this.config.Prompt {
 		index = strings.Index(result, prompt)
 		if index != -1 {
 			result = result[0:index]
@@ -266,5 +268,5 @@ func (sshc *SshCollector) Exec(job *types.CJob) {
 }
 
 func (this *SshCollector) Online() bool {
-	return this.connected
+	return this.connected || !this.pollOnce
 }

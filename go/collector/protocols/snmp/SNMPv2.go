@@ -20,6 +20,7 @@ type SNMPv2Collector struct {
 	config    *types.Connection
 	agent     *gosnmp.GoSNMP
 	connected bool
+	pollOnce  bool
 }
 
 func (this *SNMPv2Collector) Protocol() types.Protocol {
@@ -59,6 +60,7 @@ func (this *SNMPv2Collector) Disconnect() error {
 }
 
 func (this *SNMPv2Collector) Exec(job *types.CJob) {
+	this.pollOnce = true
 	this.resources.Logger().Info("Exec Job Start ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
 	if !this.connected {
 		err := this.Connect()
@@ -162,7 +164,7 @@ func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
 }
 
 func (this *SNMPv2Collector) Online() bool {
-	return this.connected
+	return this.connected || !this.pollOnce
 }
 
 func getRowAndColName(oid string) (int32, string) {
