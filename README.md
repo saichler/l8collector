@@ -10,6 +10,7 @@ L8Collector is a multi-protocol network data collection service built on the Lay
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
+- [Scalability & Performance](#scalability--performance)
 - [Supported Protocols](#supported-protocols)
 - [Dependencies](#dependencies)
 - [Installation](#installation)
@@ -63,6 +64,53 @@ The L8Collector follows a modular architecture with the following key components
 - **ProtocolCollector**: Common interface for all protocol implementations
 - **IResources**: Resource management interface
 - **IVNic**: Virtual network interface for Layer8 communication
+
+## Scalability & Performance
+
+L8Collector is designed for enterprise-scale deployments with robust concurrency and resource management:
+
+### Device Capacity
+
+- **Conservative estimate**: 1,000-2,000 devices per collector instance
+- **Optimistic estimate**: 5,000-10,000 devices per collector instance
+- Scales horizontally using Layer8 service mesh for larger deployments
+
+### Concurrency Model
+
+- **1:1 Host-to-Goroutine mapping**: Each host runs in a dedicated goroutine
+- **Per-protocol collectors**: SNMP, SSH, K8s collectors created per host/device
+- **Thread-safe collections**: Uses concurrent-safe maps for device management
+- **Non-blocking execution**: Jobs run sequentially per host, hosts run in parallel
+
+### Resource Consumption
+
+Per device resource usage:
+- **Memory**: ~1-2KB overhead + job queue storage
+- **Goroutines**: 1+ per host (typically 1 host per device)
+- **Network connections**: 1 per protocol per host
+- **CPU**: Based on polling cadence (minimum 3-second intervals)
+
+### Performance Optimizations
+
+- **SNMP Timeout Protection**: 15-second timeout for Entity MIB walks prevents hanging
+- **Job Queue Optimization**: Priority-based scheduling with configurable cadences
+- **Connection Pooling**: Efficient reuse of protocol connections
+- **Resource Limits**: Configurable limits prevent resource exhaustion
+
+### Key Limiting Factors
+
+1. **Network connections**: OS file descriptor limits (typically 65K)
+2. **Memory growth**: Job queues and result storage
+3. **Polling frequency**: Minimum 3-second cadence prevents overload
+4. **SNMP complexity**: Large MIB walks (mitigated with timeouts)
+
+### Horizontal Scaling
+
+The architecture scales horizontally through:
+- Multiple collector instances handling different device sets
+- Layer8 service mesh for distributed coordination  
+- Load balancing across available collector nodes
+- Automatic failover and job redistribution
 
 ## Supported Protocols
 

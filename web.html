@@ -467,6 +467,43 @@
                     <li><strong>Service Integration:</strong> Seamless integration with the Layer8 ecosystem</li>
                     <li><strong>Concurrent Processing:</strong> Parallel execution for optimal performance</li>
                 </ul>
+
+                <h3>Scalability & Performance</h3>
+                <p>L8Collector is designed for <span class="highlight">enterprise-scale deployments</span> with robust concurrency and resource management:</p>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h4>📊 Device Capacity</h4>
+                        <p><strong>Conservative:</strong> 1,000-2,000 devices<br>
+                        <strong>Optimistic:</strong> 5,000-10,000 devices<br>
+                        <em>Per collector instance with adequate resources</em></p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>⚡ Concurrency Model</h4>
+                        <p><strong>1:1 Host-to-Goroutine mapping</strong><br>
+                        Each host runs in dedicated goroutine for optimal parallelism and resource isolation</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🔄 Resource Efficiency</h4>
+                        <p><strong>Per device:</strong> ~1-2KB memory overhead<br>
+                        <strong>Network:</strong> 1 connection per protocol/host<br>
+                        <strong>CPU:</strong> Configurable polling intervals (3s minimum)</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>📈 Horizontal Scaling</h4>
+                        <p><strong>Distributed Architecture:</strong> Multiple collector instances handle different device sets using Layer8 service mesh</p>
+                    </div>
+                </div>
+
+                <div class="install-steps">
+                    <h4>🎯 Performance Optimizations</h4>
+                    <ul>
+                        <li><strong>SNMP Timeout Protection:</strong> 15-second timeout for Entity MIB walks prevents hanging</li>
+                        <li><strong>Thread-Safe Collections:</strong> Concurrent-safe maps for high-performance device management</li>
+                        <li><strong>Job Queue Optimization:</strong> Priority-based scheduling with minimum 3-second cadence</li>
+                        <li><strong>Connection Pooling:</strong> Efficient reuse of protocol connections per host</li>
+                    </ul>
+                </div>
             </section>
 
             <section id="protocols" class="section">
