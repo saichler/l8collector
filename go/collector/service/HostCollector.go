@@ -162,9 +162,9 @@ func (this *HostCollector) staticJobs(job *types.CJob, poll *types.Poll) bool {
 		obj := object.NewEncode()
 		protocolState := make(map[int32]bool)
 		this.collectors.Iterate(func(k, v interface{}) {
-			key := k.(int32)
+			key := k.(types.Protocol)
 			p := v.(common.ProtocolCollector)
-			protocolState[key] = p.Online()
+			protocolState[int32(key)] = p.Online()
 		})
 		obj.Add(protocolState)
 		job.Result = obj.Data()
