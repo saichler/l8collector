@@ -221,6 +221,10 @@ func (this *HostCollector) loadPolls(job *types.CJob) {
 	if this.loaded {
 		return
 	}
+	if job.Result == nil || len(job.Result) < 5 {
+		this.service.vnic.Resources().Logger().Error("HostCollector.loadPolls:", job.JobName, " ", "Has empty Result")
+		return
+	}
 	enc := object.NewDecode(job.Result, 0, this.service.vnic.Resources().Registry())
 	data, err := enc.Get()
 	if err != nil {
