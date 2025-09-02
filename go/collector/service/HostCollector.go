@@ -207,7 +207,7 @@ func newProtocolCollector(config *types.Connection, resource ifs.IResources) (co
 }
 
 func (this *HostCollector) jobComplete(job *types.CJob) {
-	err := this.service.vnic.Proximity(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
+	err := this.service.vnic.RoundRobin(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
 	}
