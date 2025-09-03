@@ -19,3 +19,5 @@ type ProtocolCollector interface {
 	Disconnect() error
 	Online() bool
 }
+
+var SmoothForSimulators = false

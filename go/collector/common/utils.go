@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"math/rand"
 
 	"github.com/saichler/l8pollaris/go/types"
 )
@@ -40,4 +41,8 @@ func ReplaceArguments(what string, job *types.CJob) string {
 		buff.WriteString(v)
 	}
 	return buff.String()
+}
+
+func RandomSecondWithin5Minutes() int {
+	return rand.Intn(300)
 }
