@@ -151,12 +151,13 @@ func (this *HostCollector) collect() {
 			}
 			if job.Error != "" {
 				jobFailCount++
-				time.Sleep(time.Second * 5)
+				time.Sleep(time.Second * 10)
 			} else {
 				jobFailCount = 0
 				job = nil
 			}
-			if jobFailCount == 3 {
+			if jobFailCount >= 5 {
+				this.service.vnic.Resources().Logger().Warning("Job Fail Count: ", jobFailCount, " Disabling")
 				this.jobsQueue.DisableJob(job)
 				jobFailCount = 0
 				job = nil
