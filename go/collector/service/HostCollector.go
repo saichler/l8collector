@@ -112,12 +112,17 @@ func (this *HostCollector) collect() {
 	}
 	this.service.vnic.Resources().Logger().Info("** Starting Collection on host ", this.hostId)
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
+	var jobFailCount int
+	var job *types.CJob
+	var waitTime int64
 	for this.running {
-		job, waitTime := this.jobsQueue.Pop()
-		if job != nil {
-			this.service.vnic.Resources().Logger().Info("Poped job ", job.PollarisName, ":", job.JobName)
-		} else {
-			this.service.vnic.Resources().Logger().Info("No Job, waitTime ", waitTime)
+		if job == nil || jobFailCount == 0 {
+			job, waitTime = this.jobsQueue.Pop()
+			if job != nil {
+				this.service.vnic.Resources().Logger().Info("Poped job ", job.PollarisName, ":", job.JobName)
+			} else {
+				this.service.vnic.Resources().Logger().Info("No Job, waitTime ", waitTime)
+			}
 		}
 		if job != nil {
 			poll := pc.Poll(job.PollarisName, job.JobName)
@@ -136,12 +141,25 @@ func (this *HostCollector) collect() {
 			c, ok := this.collectors.Get(poll.Protocol)
 			if !ok {
 				MarkEnded(job)
+				this.jobsQueue.DisableJob(job)
 				continue
 			}
 			c.(common.ProtocolCollector).Exec(job)
 			MarkEnded(job)
 			if this.running {
 				this.jobComplete(job)
+			}
+			if job.Error != "" {
+				jobFailCount++
+				time.Sleep(time.Second * 5)
+			} else {
+				jobFailCount = 0
+				job = nil
+			}
+			if jobFailCount == 3 {
+				this.jobsQueue.DisableJob(job)
+				jobFailCount = 0
+				job = nil
 			}
 		} else {
 			this.service.vnic.Resources().Logger().Info("No more jobs, next job in ", waitTime, " seconds.")

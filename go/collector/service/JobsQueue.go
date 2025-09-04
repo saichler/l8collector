@@ -134,6 +134,10 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 	return nil
 }
 
+func (this *JobsQueue) DisableJob(job *types.CJob) {
+	job.Cadence = -1
+}
+
 func (this *JobsQueue) Pop() (*types.CJob, int64) {
 	if this == nil {
 		return nil, -1
@@ -152,6 +156,9 @@ func (this *JobsQueue) Pop() (*types.CJob, int64) {
 	waitTimeTillNext := int64(999999)
 	for i, j := range this.jobs {
 		timeSinceExecuted := now - j.Ended
+		if j.Cadence == -1 {
+			continue
+		}
 		if timeSinceExecuted >= j.Cadence {
 			job = j
 			index = i
