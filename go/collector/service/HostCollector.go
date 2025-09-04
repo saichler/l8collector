@@ -8,22 +8,23 @@ import (
 	"github.com/saichler/l8collector/go/collector/protocols/k8s"
 	"github.com/saichler/l8collector/go/collector/protocols/snmp"
 	"github.com/saichler/l8collector/go/collector/protocols/ssh"
-	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types"
-	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/maps"
 )
 
 type HostCollector struct {
-	service    *CollectorService
-	device     *types.Device
-	hostId     string
-	collectors *maps.SyncMap
-	jobsQueue  *JobsQueue
-	running    bool
-	loaded     bool
+	service              *CollectorService
+	device               *types.Device
+	hostId               string
+	collectors           *maps.SyncMap
+	jobsQueue            *JobsQueue
+	running              bool
+	loadedDeviceSpecific bool
+	loadedBoot           bool
+	ipDiscovered         bool
+	stateDiscovered      bool
 }
 
 func newHostCollector(device *types.Device, hostId string, service *CollectorService) *HostCollector {
@@ -52,7 +53,7 @@ func (this *HostCollector) update() error {
 		}
 	}
 
-	bootPollList, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.BOOT_GROUP,
+	bootPollList, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.PRE_BOOT_GROUP,
 		"", "", "", "", "", "")
 	if err != nil {
 		return err
@@ -89,7 +90,7 @@ func (this *HostCollector) start() error {
 		}
 	}
 
-	bootPollaris, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.BOOT_GROUP,
+	bootPollaris, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.PRE_BOOT_GROUP,
 		"", "", "", "", "", "")
 	if err != nil {
 		return err
@@ -126,7 +127,7 @@ func (this *HostCollector) collect() {
 			}
 			MarkStart(job)
 
-			if this.staticJobs(job, poll) {
+			if this.preBoot(job, poll) {
 				MarkEnded(job)
 				this.jobComplete(job)
 				continue
@@ -149,33 +150,6 @@ func (this *HostCollector) collect() {
 	}
 	this.service.vnic.Resources().Logger().Info("Host collection for device ", this.device.DeviceId, " host ", this.hostId, " has ended.")
 	this.service = nil
-}
-
-func (this *HostCollector) staticJobs(job *types.CJob, poll *types.Poll) bool {
-	if poll.What == "ipaddress" {
-		obj := object.NewEncode()
-		for _, h := range this.device.Hosts {
-			for _, c := range h.Configs {
-				obj.Add(c.Addr)
-				job.Result = obj.Data()
-				break
-			}
-			break
-		}
-		return true
-	} else if poll.What == "devicestatus" {
-		obj := object.NewEncode()
-		protocolState := make(map[int32]bool)
-		this.collectors.Iterate(func(k, v interface{}) {
-			key := k.(types.Protocol)
-			p := v.(common.ProtocolCollector)
-			protocolState[int32(key)] = p.Online()
-		})
-		obj.Add(protocolState)
-		job.Result = obj.Data()
-		return true
-	}
-	return false
 }
 
 func (this *HostCollector) execJob(job *types.CJob) bool {
@@ -218,57 +192,6 @@ func (this *HostCollector) jobComplete(job *types.CJob) {
 	}
 	if job.JobName == "systemMib" {
 		this.service.vnic.Resources().Logger().Info("SystemMib job result")
-		this.loadPolls(job)
-	}
-}
-
-func (this *HostCollector) loadPolls(job *types.CJob) {
-	if this.loaded {
-		return
-	}
-	if job.Result == nil || len(job.Result) < 5 {
-		this.service.vnic.Resources().Logger().Error("HostCollector.loadPolls:", job.JobName, " ", "Has empty Result")
-		return
-	}
-	enc := object.NewDecode(job.Result, 0, this.service.vnic.Resources().Registry())
-	data, err := enc.Get()
-	if err != nil {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls:", err.Error())
-		return
-	}
-	cmap, ok := data.(*types.CMap)
-	if !ok {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: systemMib not A CMap")
-		return
-	}
-	strData, ok := cmap.Data[".1.3.6.1.2.1.1.2.0"]
-	if !ok {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: cannot find sysoid")
-		return
-	}
-
-	enc = object.NewDecode(strData, 0, this.service.vnic.Resources().Registry())
-	byteInterface, _ := enc.Get()
-	sysoidBytes, ok := byteInterface.([]byte)
-	sysoid := string(sysoidBytes)
-	this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls, sysoid =", sysoid)
-	if sysoid == "" {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: sysoid is blank ")
-		for k, v := range cmap.Data {
-			enc = object.NewDecode(v, 0, this.service.vnic.Resources().Registry())
-			val, _ := enc.Get()
-			this.service.vnic.Resources().Logger().Info("Key =", k, " value=", val)
-		}
-	}
-
-	plrs := boot.GetPollarisByOid(sysoid)
-	plc := pollaris.Pollaris(this.service.vnic.Resources())
-	plc.Add(plrs, false)
-	if plrs != nil {
-		this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: found pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
-		this.loaded = true
-		if plrs.Name != "mib2" {
-			this.jobsQueue.InsertJob(plrs.Name, "", "", "", "", "", "", 0, 0)
-		}
+		this.bootDetailDevice(job)
 	}
 }

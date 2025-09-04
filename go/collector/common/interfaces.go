@@ -8,6 +8,7 @@ import (
 const (
 	CollectorService    = "Collector"
 	ParserServicePrefix = "P-"
+	PRE_BOOT_GROUP      = "PREBOOT"
 	BOOT_GROUP          = "BOOT"
 )
 
