@@ -33,11 +33,11 @@ func (this *SNMPv2Collector) Init(conf *types.Connection, resources ifs.IResourc
 	this.resources = resources
 	this.agent = &gosnmp.GoSNMP{}
 	this.agent.Version = gosnmp.Version2c
-	this.agent.Timeout = time.Second * time.Duration(this.config.Timeout)
+	this.agent.Timeout = time.Second * time.Duration(15)
 	this.agent.Target = this.config.Addr
 	this.agent.Port = uint16(this.config.Port)
 	this.agent.Community = this.config.ReadCommunity
-	this.agent.Retries = 1
+	this.agent.Retries = 3
 	this.mtx = &sync.Mutex{}
 	return nil
 }
