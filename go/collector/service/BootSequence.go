@@ -24,12 +24,19 @@ func (this *HostCollector) newBootState(stage int) *BootState {
 		return bs
 	}
 	for _, pollrs := range pollList {
+		hasProtocol := false
 		for _, poll := range pollrs.Polling {
-			bs.jobNames[poll.Name] = false
+			_, ok := this.collectors.Get(poll.Protocol)
+			if ok {
+				bs.jobNames[poll.Name] = false
+				hasProtocol = true
+			}
 		}
-		err = this.jobsQueue.InsertJob(pollrs.Name, "", "", "", "", "", "", 0, 0)
-		if err != nil {
-			this.service.vnic.Resources().Logger().Error("Error adding pollaris to boot: ", err)
+		if hasProtocol {
+			err = this.jobsQueue.InsertJob(pollrs.Name, "", "", "", "", "", "", 0, 0)
+			if err != nil {
+				this.service.vnic.Resources().Logger().Error("Error adding pollaris to boot: ", err)
+			}
 		}
 	}
 	return bs
