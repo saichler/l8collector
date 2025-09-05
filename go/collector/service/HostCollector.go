@@ -15,14 +15,15 @@ import (
 )
 
 type HostCollector struct {
-	service          *CollectorService
-	device           *types.Device
-	hostId           string
-	collectors       *maps.SyncMap
-	jobsQueue        *JobsQueue
-	running          bool
-	currentBootStage int
-	bootStages       []*BootState
+	service            *CollectorService
+	device             *types.Device
+	hostId             string
+	collectors         *maps.SyncMap
+	jobsQueue          *JobsQueue
+	running            bool
+	currentBootStage   int
+	bootStages         []*BootState
+	detailDeviceLoaded bool
 }
 
 func newHostCollector(device *types.Device, hostId string, service *CollectorService) *HostCollector {

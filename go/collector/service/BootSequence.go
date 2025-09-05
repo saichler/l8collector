@@ -67,24 +67,8 @@ func (this *BootState) jobComplete(job *types.CJob) {
 	this.whats[job.JobName] = true
 }
 
-func (this *HostCollector) bootState(stage int) {
-	bootPollList, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.BootStages[stage],
-		"", "", "", "", "", "")
-	if err != nil {
-		this.service.vnic.Resources().Logger().Error("Failed to boot: ", err.Error())
-		return
-	}
-	for _, pollName := range bootPollList {
-		err := this.jobsQueue.InsertJob(pollName.Name, "", "", "", "", "", "", 0, 0)
-		if err != nil {
-			this.service.vnic.Resources().Logger().Error(err)
-		}
-	}
-	this.stageCompleted[stage] = true
-}
-
 func (this *HostCollector) bootDetailDevice(job *types.CJob) {
-	if this.loadedDeviceSpecific {
+	if this.detailDeviceLoaded {
 		return
 	}
 	if job.Result == nil || len(job.Result) < 5 {
@@ -127,8 +111,8 @@ func (this *HostCollector) bootDetailDevice(job *types.CJob) {
 	plc.Add(plrs, false)
 	if plrs != nil {
 		this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: found pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
-		if plrs.Name != "mib2" {
-			this.loadedDeviceSpecific = true
+		if plrs.Name != "boot02" {
+			this.detailDeviceLoaded = true
 			this.jobsQueue.InsertJob(plrs.Name, "", "", "", "", "", "", 0, 0)
 		}
 	}
