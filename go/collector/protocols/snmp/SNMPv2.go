@@ -39,7 +39,6 @@ func (this *SNMPv2Collector) Init(conf *types.Connection, resources ifs.IResourc
 	this.agent.Port = uint16(this.config.Port)
 	this.agent.Community = this.config.ReadCommunity
 	this.agent.Retries = 3
-	this.mtx = &sync.Mutex{}
 	return nil
 }
 
