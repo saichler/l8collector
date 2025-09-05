@@ -1,9 +1,9 @@
 package snmp
 
 import (
-	"context"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
@@ -21,6 +21,7 @@ type SNMPv2Collector struct {
 	agent     *gosnmp.GoSNMP
 	connected bool
 	pollOnce  bool
+	mtx       *sync.Mutex
 }
 
 func (this *SNMPv2Collector) Protocol() types.Protocol {
@@ -37,6 +38,7 @@ func (this *SNMPv2Collector) Init(conf *types.Connection, resources ifs.IResourc
 	this.agent.Port = uint16(this.config.Port)
 	this.agent.Community = this.config.ReadCommunity
 	this.agent.Retries = 1
+	this.mtx = &sync.Mutex{}
 	return nil
 }
 
@@ -92,24 +94,10 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 	var pdus []gosnmp.SnmpPDU
 	var e error
 
-	if strings.Contains(poll.What, "1.3.6.1.2.1.47.1.1") {
-		// Use channel-based timeout for Entity MIB
-		done := make(chan struct{})
-		go func() {
-			defer close(done)
-			pdus, e = this.agent.WalkAll(poll.What)
-		}()
+	this.mtx.Lock()
+	pdus, e = this.agent.WalkAll(poll.What)
+	this.mtx.Unlock()
 
-		select {
-		case <-done:
-			// Walk completed normally
-		case <-time.After(15 * time.Second):
-			e = context.DeadlineExceeded
-			this.resources.Logger().Error("Entity MIB walk timed out after 15 seconds")
-		}
-	} else {
-		pdus, e = this.agent.WalkAll(poll.What)
-	}
 	if e != nil {
 		job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
 			strconv.Itoa(int(this.config.Port)), " Oid:", poll.What, e.Error()).String()
