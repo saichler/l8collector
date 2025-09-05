@@ -84,9 +84,7 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 	var pdus []gosnmp.SnmpPDU
 	var e error
 
-	this.resources.Logger().Error("Before polling ", poll.What)
 	pdus, e = this.agent.Walk(poll.What)
-	this.resources.Logger().Error("After polling ", poll.What)
 
 	if e != nil {
 		job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
