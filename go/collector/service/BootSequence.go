@@ -67,7 +67,7 @@ func (this *HostCollector) bootDetailDevice(job *types.CJob) {
 		return
 	}
 	if job.Result == nil || len(job.Result) < 5 {
-		this.service.vnic.Resources().Logger().Error("HostCollector.loadPolls:", job.JobName, " ", "Has empty Result")
+		this.service.vnic.Resources().Logger().Error("HostCollector.loadPolls:", job.DeviceId, " ", job.JobName, " ", "Has empty Result")
 		return
 	}
 	enc := object.NewDecode(job.Result, 0, this.service.vnic.Resources().Registry())
