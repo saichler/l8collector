@@ -3,10 +3,8 @@ package snmp
 import (
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
-	"github.com/gosnmp/gosnmp"
+	"github.com/alouca/gosnmp"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types"
@@ -14,8 +12,6 @@ import (
 	"github.com/saichler/l8types/go/ifs"
 	strings2 "github.com/saichler/l8utils/go/utils/strings"
 )
-
-var mtx = &sync.Mutex{}
 
 type SNMPv2Collector struct {
 	resources ifs.IResources
@@ -32,23 +28,21 @@ func (this *SNMPv2Collector) Protocol() types.Protocol {
 func (this *SNMPv2Collector) Init(conf *types.Connection, resources ifs.IResources) error {
 	this.config = conf
 	this.resources = resources
-	this.agent = &gosnmp.GoSNMP{}
-	this.agent.Version = gosnmp.Version2c
-	this.agent.Timeout = time.Second * time.Duration(5)
-	this.agent.Target = this.config.Addr
-	this.agent.Port = uint16(this.config.Port)
-	this.agent.Community = this.config.ReadCommunity
-	this.agent.Retries = 3
+	timeout := int64(5)
+	if conf.Timeout > 0 {
+		timeout = int64(conf.Timeout)
+	}
+	agent, err := gosnmp.NewGoSNMP(this.config.Addr, this.config.ReadCommunity, gosnmp.Version2c, timeout)
+	if err != nil {
+		return err
+	}
+	this.agent = agent
 	return nil
 }
 
 func (this *SNMPv2Collector) Connect() error {
 	if this == nil || this.agent == nil {
 		return nil
-	}
-	err := this.agent.Connect()
-	if err != nil {
-		return err
 	}
 	this.connected = true
 	return nil
@@ -86,19 +80,13 @@ func (this *SNMPv2Collector) Exec(job *types.CJob) {
 }
 
 func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap bool) *types.CMap {
-	if job.Timeout != 0 {
-		this.agent.Timeout = time.Second * time.Duration(job.Timeout)
-		defer func() { this.agent.Timeout = time.Second * time.Duration(this.config.Timeout) }()
-	}
 	// For Entity MIB, add strict timeout to prevent hanging
 	var pdus []gosnmp.SnmpPDU
 	var e error
 
-	mtx.Lock()
 	this.resources.Logger().Error("Before polling ", poll.What)
-	pdus, e = this.agent.WalkAll(poll.What)
+	pdus, e = this.agent.Walk(poll.What)
 	this.resources.Logger().Error("After polling ", poll.What)
-	mtx.Unlock()
 
 	if e != nil {
 		job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
