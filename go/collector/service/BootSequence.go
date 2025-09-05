@@ -1,8 +1,6 @@
 package service
 
 import (
-	"strconv"
-
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
@@ -61,10 +59,9 @@ func (this *BootState) doStaticJob(job *types.CJob, hostColletor *HostCollector)
 
 func (this *BootState) jobComplete(job *types.CJob) {
 	_, ok := this.jobNames[job.JobName]
-	if !ok {
-		panic("Job " + job.JobName + " is not for this Boot Stage " + strconv.Itoa(this.stage))
+	if ok {
+		this.jobNames[job.JobName] = true
 	}
-	this.jobNames[job.JobName] = true
 }
 
 func (this *HostCollector) bootDetailDevice(job *types.CJob) {

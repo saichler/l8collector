@@ -83,16 +83,6 @@ func (this *HostCollector) start() error {
 
 	this.bootStages[0] = this.newBootState(0)
 
-	/*
-		bootPollaris, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.PRE_BOOT_GROUP,
-			"", "", "", "", "", "")
-		if err != nil {
-			return err
-		}
-		for _, pr := range bootPollaris {
-			this.jobsQueue.InsertJob(pr.Name, "", "", "", "", "", "", 0, 0)
-		}*/
-
 	go this.collect()
 
 	return nil

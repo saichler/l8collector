@@ -16,7 +16,7 @@ type StaticJob interface {
 type IpAddressJob struct{}
 
 func (this *IpAddressJob) what() string {
-	return "ipaddress"
+	return "ipAddress"
 }
 
 func (this *IpAddressJob) do(job *types.CJob, hostCollector *HostCollector) {
@@ -34,7 +34,7 @@ func (this *IpAddressJob) do(job *types.CJob, hostCollector *HostCollector) {
 type DeviceStatusJob struct{}
 
 func (this *DeviceStatusJob) what() string {
-	return "devicestatus"
+	return "deviceStatus"
 }
 
 func (this *DeviceStatusJob) do(job *types.CJob, hostCollector *HostCollector) {
