@@ -11,14 +11,14 @@ import (
 )
 
 type BootState struct {
-	whats map[string]bool
-	stage int
+	jobNames map[string]bool
+	stage    int
 }
 
 func (this *HostCollector) newBootState(stage int) *BootState {
 	bs := &BootState{}
 	bs.stage = stage
-	bs.whats = make(map[string]bool)
+	bs.jobNames = make(map[string]bool)
 	pollList, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.BootStages[stage],
 		"", "", "", "", "", "")
 	if err != nil {
@@ -27,7 +27,7 @@ func (this *HostCollector) newBootState(stage int) *BootState {
 	}
 	for _, pollrs := range pollList {
 		for _, poll := range pollrs.Polling {
-			bs.whats[poll.What] = false
+			bs.jobNames[poll.Name] = false
 		}
 		err = this.jobsQueue.InsertJob(pollrs.Name, "", "", "", "", "", "", 0, 0)
 		if err != nil {
@@ -38,7 +38,7 @@ func (this *HostCollector) newBootState(stage int) *BootState {
 }
 
 func (this *BootState) isComplete() bool {
-	for _, complete := range this.whats {
+	for _, complete := range this.jobNames {
 		if !complete {
 			return false
 		}
@@ -50,9 +50,9 @@ func (this *BootState) doStaticJob(job *types.CJob, hostColletor *HostCollector)
 	sjob, ok := staticJobs[job.JobName]
 	if ok {
 		sjob.do(job, hostColletor)
-		_, ok = this.whats[job.JobName]
+		_, ok = this.jobNames[job.JobName]
 		if ok {
-			this.whats[job.JobName] = true
+			this.jobNames[job.JobName] = true
 		}
 		return true
 	}
@@ -60,11 +60,11 @@ func (this *BootState) doStaticJob(job *types.CJob, hostColletor *HostCollector)
 }
 
 func (this *BootState) jobComplete(job *types.CJob) {
-	_, ok := this.whats[job.JobName]
+	_, ok := this.jobNames[job.JobName]
 	if !ok {
 		panic("Job " + job.JobName + " is not for this Boot Stage " + strconv.Itoa(this.stage))
 	}
-	this.whats[job.JobName] = true
+	this.jobNames[job.JobName] = true
 }
 
 func (this *HostCollector) bootDetailDevice(job *types.CJob) {
