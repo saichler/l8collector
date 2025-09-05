@@ -33,7 +33,7 @@ func (this *SNMPv2Collector) Init(conf *types.Connection, resources ifs.IResourc
 	this.resources = resources
 	this.agent = &gosnmp.GoSNMP{}
 	this.agent.Version = gosnmp.Version2c
-	this.agent.Timeout = time.Second * time.Duration(15)
+	this.agent.Timeout = time.Second * time.Duration(5)
 	this.agent.Target = this.config.Addr
 	this.agent.Port = uint16(this.config.Port)
 	this.agent.Community = this.config.ReadCommunity
@@ -95,7 +95,9 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 	var e error
 
 	this.mtx.Lock()
+	this.resources.Logger().Error("Before polling ", poll.What)
 	pdus, e = this.agent.WalkAll(poll.What)
+	this.resources.Logger().Error("After polling ", poll.What)
 	this.mtx.Unlock()
 
 	if e != nil {
