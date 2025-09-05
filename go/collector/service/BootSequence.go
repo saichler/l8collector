@@ -1,6 +1,8 @@
 package service
 
 import (
+	"strconv"
+
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
@@ -8,46 +10,65 @@ import (
 	"github.com/saichler/l8srlz/go/serialize/object"
 )
 
-func (this *HostCollector) preBoot(job *types.CJob, poll *types.Poll) bool {
-	if poll.What == "ipaddress" {
-		obj := object.NewEncode()
-		for _, h := range this.device.Hosts {
-			for _, c := range h.Configs {
-				obj.Add(c.Addr)
-				job.Result = obj.Data()
-				break
-			}
-			break
+type BootState struct {
+	whats map[string]bool
+	stage int
+}
+
+func (this *HostCollector) newBootState(stage int) *BootState {
+	bs := &BootState{}
+	bs.stage = stage
+	bs.whats = make(map[string]bool)
+	pollList, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.BootStages[stage],
+		"", "", "", "", "", "")
+	if err != nil {
+		this.service.vnic.Resources().Logger().Error("Boot stage ", stage, " does not exist,skipping")
+		return bs
+	}
+	for _, pollrs := range pollList {
+		for _, poll := range pollrs.Polling {
+			bs.whats[poll.What] = false
 		}
-		this.ipDiscovered = true
-		if this.ipDiscovered && this.stateDiscovered {
-			this.boot()
+		err = this.jobsQueue.InsertJob(pollrs.Name, "", "", "", "", "", "", 0, 0)
+		if err != nil {
+			this.service.vnic.Resources().Logger().Error("Error adding pollaris to boot: ", err)
 		}
-		return true
-	} else if poll.What == "devicestatus" {
-		obj := object.NewEncode()
-		protocolState := make(map[int32]bool)
-		this.collectors.Iterate(func(k, v interface{}) {
-			key := k.(types.Protocol)
-			p := v.(common.ProtocolCollector)
-			protocolState[int32(key)] = p.Online()
-		})
-		obj.Add(protocolState)
-		job.Result = obj.Data()
-		this.stateDiscovered = true
-		if this.ipDiscovered && this.stateDiscovered {
-			this.boot()
+	}
+	return bs
+}
+
+func (this *BootState) isComplete() bool {
+	for _, complete := range this.whats {
+		if !complete {
+			return false
+		}
+	}
+	return true
+}
+
+func (this *BootState) doStaticJob(job *types.CJob, hostColletor *HostCollector) bool {
+	sjob, ok := staticJobs[job.JobName]
+	if ok {
+		sjob.do(job, hostColletor)
+		_, ok = this.whats[job.JobName]
+		if ok {
+			this.whats[job.JobName] = true
 		}
 		return true
 	}
 	return false
 }
 
-func (this *HostCollector) boot() {
-	if this.loadedBoot {
-		return
+func (this *BootState) jobComplete(job *types.CJob) {
+	_, ok := this.whats[job.JobName]
+	if !ok {
+		panic("Job " + job.JobName + " is not for this Boot Stage " + strconv.Itoa(this.stage))
 	}
-	bootPollList, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.BOOT_GROUP,
+	this.whats[job.JobName] = true
+}
+
+func (this *HostCollector) bootState(stage int) {
+	bootPollList, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.BootStages[stage],
 		"", "", "", "", "", "")
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("Failed to boot: ", err.Error())
@@ -59,7 +80,7 @@ func (this *HostCollector) boot() {
 			this.service.vnic.Resources().Logger().Error(err)
 		}
 	}
-	this.loadedBoot = true
+	this.stageCompleted[stage] = true
 }
 
 func (this *HostCollector) bootDetailDevice(job *types.CJob) {

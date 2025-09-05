@@ -15,16 +15,14 @@ import (
 )
 
 type HostCollector struct {
-	service              *CollectorService
-	device               *types.Device
-	hostId               string
-	collectors           *maps.SyncMap
-	jobsQueue            *JobsQueue
-	running              bool
-	loadedDeviceSpecific bool
-	loadedBoot           bool
-	ipDiscovered         bool
-	stateDiscovered      bool
+	service          *CollectorService
+	device           *types.Device
+	hostId           string
+	collectors       *maps.SyncMap
+	jobsQueue        *JobsQueue
+	running          bool
+	currentBootStage int
+	bootStages       []*BootState
 }
 
 func newHostCollector(device *types.Device, hostId string, service *CollectorService) *HostCollector {
@@ -35,6 +33,7 @@ func newHostCollector(device *types.Device, hostId string, service *CollectorSer
 	hc.service = service
 	hc.jobsQueue = NewJobsQueue(device.DeviceId, hostId, service, device.InventoryService, device.ParsingService)
 	hc.running = true
+	hc.bootStages = make([]*BootState, 5)
 	return hc
 }
 
@@ -53,17 +52,8 @@ func (this *HostCollector) update() error {
 		}
 	}
 
-	bootPollList, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.PRE_BOOT_GROUP,
-		"", "", "", "", "", "")
-	if err != nil {
-		return err
-	}
-	for _, pollName := range bootPollList {
-		err := this.jobsQueue.InsertJob(pollName.Name, "", "", "", "", "", "", 0, 0)
-		if err != nil {
-			this.service.vnic.Resources().Logger().Error(err)
-		}
-	}
+	this.bootStages = make([]*BootState, 5)
+	this.bootStages[0] = this.newBootState(0)
 
 	return nil
 }
@@ -90,14 +80,17 @@ func (this *HostCollector) start() error {
 		}
 	}
 
-	bootPollaris, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.PRE_BOOT_GROUP,
-		"", "", "", "", "", "")
-	if err != nil {
-		return err
-	}
-	for _, pr := range bootPollaris {
-		this.jobsQueue.InsertJob(pr.Name, "", "", "", "", "", "", 0, 0)
-	}
+	this.bootStages[0] = this.newBootState(0)
+
+	/*
+		bootPollaris, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.PRE_BOOT_GROUP,
+			"", "", "", "", "", "")
+		if err != nil {
+			return err
+		}
+		for _, pr := range bootPollaris {
+			this.jobsQueue.InsertJob(pr.Name, "", "", "", "", "", "", 0, 0)
+		}*/
 
 	go this.collect()
 
@@ -127,14 +120,18 @@ func (this *HostCollector) collect() {
 		if job != nil {
 			poll := pc.Poll(job.PollarisName, job.JobName)
 			if poll == nil {
-				this.service.vnic.Resources().Logger().Error("cannot find poll for device id ", this.device.DeviceId)
+				this.service.vnic.Resources().Logger().Error("cannot find poll "+job.PollarisName+" - "+job.JobName+" for device id ", this.device.DeviceId)
 				continue
 			}
 			MarkStart(job)
 
-			if this.preBoot(job, poll) {
+			if this.bootStages[0].doStaticJob(job, this) {
 				MarkEnded(job)
 				this.jobComplete(job)
+				if this.bootStages[0].isComplete() && this.bootStages[1] == nil {
+					this.bootStages[1] = this.newBootState(1)
+					this.currentBootStage = 1
+				}
 				continue
 			}
 
@@ -148,6 +145,16 @@ func (this *HostCollector) collect() {
 			MarkEnded(job)
 			if this.running {
 				this.jobComplete(job)
+				if this.currentBootStage < len(this.bootStages) {
+					this.bootStages[this.currentBootStage].jobComplete(job)
+					for this.bootStages[this.currentBootStage].isComplete() {
+						this.currentBootStage++
+						if this.currentBootStage >= len(this.bootStages) {
+							break
+						}
+						this.bootStages[this.currentBootStage] = this.newBootState(this.currentBootStage)
+					}
+				}
 			}
 			if job.Error != "" {
 				jobFailCount++

@@ -8,9 +8,17 @@ import (
 const (
 	CollectorService    = "Collector"
 	ParserServicePrefix = "P-"
-	PRE_BOOT_GROUP      = "PREBOOT"
-	BOOT_GROUP          = "BOOT"
 )
+
+const (
+	BOOT_STAGE_00 = "Boot_Stage_00"
+	BOOT_STAGE_01 = "Boot_Stage_01"
+	BOOT_STAGE_02 = "Boot_Stage_02"
+	BOOT_STAGE_03 = "Boot_Stage_03"
+	BOOT_STAGE_04 = "Boot_Stage_04"
+)
+
+var BootStages = []string{BOOT_STAGE_00, BOOT_STAGE_01, BOOT_STAGE_02, BOOT_STAGE_03, BOOT_STAGE_04}
 
 type ProtocolCollector interface {
 	Init(*types.Connection, ifs.IResources) error
