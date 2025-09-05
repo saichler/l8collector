@@ -15,13 +15,14 @@ import (
 	strings2 "github.com/saichler/l8utils/go/utils/strings"
 )
 
+var mtx = &sync.Mutex{}
+
 type SNMPv2Collector struct {
 	resources ifs.IResources
 	config    *types.Connection
 	agent     *gosnmp.GoSNMP
 	connected bool
 	pollOnce  bool
-	mtx       *sync.Mutex
 }
 
 func (this *SNMPv2Collector) Protocol() types.Protocol {
@@ -94,11 +95,11 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 	var pdus []gosnmp.SnmpPDU
 	var e error
 
-	this.mtx.Lock()
+	mtx.Lock()
 	this.resources.Logger().Error("Before polling ", poll.What)
 	pdus, e = this.agent.WalkAll(poll.What)
 	this.resources.Logger().Error("After polling ", poll.What)
-	this.mtx.Unlock()
+	mtx.Unlock()
 
 	if e != nil {
 		job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
