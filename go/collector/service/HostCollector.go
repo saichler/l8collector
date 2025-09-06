@@ -35,6 +35,7 @@ func newHostCollector(device *types.Device, hostId string, service *CollectorSer
 	hc.jobsQueue = NewJobsQueue(device.DeviceId, hostId, service, device.InventoryService, device.ParsingService)
 	hc.running = true
 	hc.bootStages = make([]*BootState, 5)
+	hc.service.vnic.RegisterServiceBatch(device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea), ifs.M_RoundRobin, 5)
 	return hc
 }
 
