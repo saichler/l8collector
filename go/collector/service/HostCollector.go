@@ -35,7 +35,7 @@ func newHostCollector(device *types.Device, hostId string, service *CollectorSer
 	hc.jobsQueue = NewJobsQueue(device.DeviceId, hostId, service, device.InventoryService, device.ParsingService)
 	hc.running = true
 	hc.bootStages = make([]*BootState, 5)
-	hc.service.vnic.RegisterServiceBatch(device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea), ifs.M_RoundRobin, 5)
+	hc.service.vnic.RegisterServiceBatch(device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea), ifs.M_Proximity, 5)
 	return hc
 }
 
@@ -204,7 +204,7 @@ func newProtocolCollector(config *types.Connection, resource ifs.IResources) (co
 }
 
 func (this *HostCollector) jobComplete(job *types.CJob) {
-	err := this.service.vnic.RoundRobin(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
+	err := this.service.vnic.Proximity(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
 	}
