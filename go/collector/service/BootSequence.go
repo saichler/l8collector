@@ -102,7 +102,7 @@ func (this *HostCollector) bootDetailDevice(job *types.CJob) {
 	sysoid := string(sysoidBytes)
 	this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls, sysoid =", sysoid)
 	if sysoid == "" {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: sysoid is blank ")
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " - sysoid is blank ")
 		for k, v := range cmap.Data {
 			enc = object.NewDecode(v, 0, this.service.vnic.Resources().Registry())
 			val, _ := enc.Get()
