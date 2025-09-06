@@ -87,7 +87,7 @@ func (this *CollectorService) GetCopy(pb ifs.IElements, vnic ifs.IVNic) ifs.IEle
 func (this *CollectorService) Failed(pb ifs.IElements, vnic ifs.IVNic, msg *ifs.Message) ifs.IElements {
 	return nil
 }
-func (this *CollectorService) TransactionMethod() ifs.ITransactionMethod {
+func (this *CollectorService) TransactionConfig() ifs.ITransactionConfig {
 	return nil
 }
 func (this *CollectorService) WebService() ifs.IWebService {

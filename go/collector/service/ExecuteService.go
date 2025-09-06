@@ -39,7 +39,7 @@ func (this *ExecuteService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements
 		uuids := hc.Uuids("exec", this.serviceArea)
 		delete(uuids, vnic.Resources().SysConfig().LocalUuid)
 		for uuid, _ := range uuids {
-			resp := vnic.Request(uuid, "exec", this.serviceArea, ifs.PUT, job)
+			resp := vnic.Request(uuid, "exec", this.serviceArea, ifs.PUT, job, 30)
 			if resp.Error() == nil {
 				return resp
 			}
@@ -75,7 +75,7 @@ func (this *ExecuteService) GetCopy(pb ifs.IElements, vnic ifs.IVNic) ifs.IEleme
 func (this *ExecuteService) Failed(pb ifs.IElements, vnic ifs.IVNic, msg *ifs.Message) ifs.IElements {
 	return nil
 }
-func (this *ExecuteService) TransactionMethod() ifs.ITransactionMethod {
+func (this *ExecuteService) TransactionConfig() ifs.ITransactionConfig {
 	return nil
 }
 func (this *ExecuteService) WebService() ifs.IWebService {

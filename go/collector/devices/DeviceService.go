@@ -82,7 +82,7 @@ func (this *DeviceService) GetCopy(pb ifs.IElements, vnic ifs.IVNic) ifs.IElemen
 func (this *DeviceService) Failed(pb ifs.IElements, vnic ifs.IVNic, msg *ifs.Message) ifs.IElements {
 	return nil
 }
-func (this *DeviceService) TransactionMethod() ifs.ITransactionMethod {
+func (this *DeviceService) TransactionConfig() ifs.ITransactionConfig {
 	return nil
 }
 func (this *DeviceService) WebService() ifs.IWebService {
