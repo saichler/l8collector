@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"slices"
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
@@ -237,6 +236,10 @@ func jobHasChange(job *types.CJob) bool {
 	if len(job.Result) != len(job.LastResult) {
 		return true
 	}
-	eq := slices.Equal(job.LastResult, job.Result)
-	return !eq
+	for i := 0; i < len(job.Result); i++ {
+		if job.Result[i] != job.LastResult[i] {
+			return true
+		}
+	}
+	return false
 }
