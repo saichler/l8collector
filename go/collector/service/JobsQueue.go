@@ -187,7 +187,10 @@ func (this *JobsQueue) moveToLast(index int) {
 	}
 }
 
-func MarkStart(job *types.CJob) {
+func MarkStart(job *types.CJob, failCount int) {
+	if failCount == 0 {
+		job.LastResult = job.Result
+	}
 	job.Started = time.Now().Unix()
 	job.Ended = 0
 	job.Result = nil

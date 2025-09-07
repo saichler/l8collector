@@ -3,7 +3,6 @@ package ssh
 import (
 	"bytes"
 	"io"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -64,7 +63,7 @@ func (this *SshCollector) run() {
 			this.queue.Add(buff[0:readBytes])
 		}
 	}
-	this.resources.Logger().Info("Ssh Collector for host:" + this.config.Addr + " is closed.")
+	this.resources.Logger().Info(strings2.New("Ssh Collector for host:", this.config.Addr, " is closed.").String())
 }
 
 func (this *SshCollector) Connect() error {
@@ -77,8 +76,8 @@ func (this *SshCollector) Connect() error {
 	sshconfig.Auth[0] = pass
 	sshconfig.HostKeyCallback = ssh2.InsecureIgnoreHostKey()
 
-	hostport := strings2.New(this.config.Addr, "/", strconv.Itoa(int(this.config.Port))).String()
-	client, err := ssh2.Dial("tcp", this.config.Addr+":"+strconv.Itoa(int(this.config.Port)), sshconfig)
+	hostport := strings2.New(this.config.Addr, "/", int(this.config.Port)).String()
+	client, err := ssh2.Dial("tcp", strings2.New(this.config.Addr, ":", int(this.config.Port)).String(), sshconfig)
 	if err != nil {
 		return this.resources.Logger().Error("Ssh Dial Error Host:", hostport, err.Error())
 	}
@@ -165,7 +164,7 @@ func (this *SshCollector) setInitialPrompt(str string) {
 	}
 	if index != -1 {
 		prompt := str[index:]
-		this.resources.Logger().Info("Setting Prompt to:" + prompt)
+		this.resources.Logger().Info(strings2.New("Setting Prompt to:", prompt).String())
 		this.config.Prompt[0] = prompt
 	}
 }
@@ -206,11 +205,11 @@ func (this *SshCollector) exec(cmd string, timeout int64) (string, error) {
 		this.queue.Clear()
 		_, err := this.in.Write([]byte(cmd))
 		if err != nil {
-			return strings2.New("Ssh Write Error Host:", this.config.Addr, ":", strconv.Itoa(int(this.config.Port))).String(), err
+			return strings2.New("Ssh Write Error Host:", this.config.Addr, ":", int(this.config.Port)).String(), err
 		}
 		_, err = this.in.Write(CR)
 		if err != nil {
-			return err.Error(), this.resources.Logger().Error("Ssh Write Error Host:", this.config.Addr, ":", strconv.Itoa(int(this.config.Port)), err.Error())
+			return err.Error(), this.resources.Logger().Error("Ssh Write Error Host:", this.config.Addr, ":", int(this.config.Port), err.Error())
 		}
 	}
 
@@ -239,7 +238,7 @@ func (this *SshCollector) exec(cmd string, timeout int64) (string, error) {
 func (this *SshCollector) Exec(job *types.CJob) {
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, this.resources)
 	if err != nil {
-		this.resources.Logger().Error("Ssh:" + err.Error())
+		this.resources.Logger().Error(strings2.New("Ssh:", err.Error()).String())
 		return
 	}
 	result, e := this.exec(poll.What, job.Timeout)

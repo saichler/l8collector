@@ -43,7 +43,7 @@ func (this *Kubernetes) Exec(job *types.CJob) {
 
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, this.resources)
 	if err != nil {
-		this.resources.Logger().Error("K8s:" + err.Error())
+		this.resources.Logger().Error(strings.New("K8s:", err.Error()).String())
 		return
 	}
 
@@ -56,7 +56,7 @@ func (this *Kubernetes) Exec(job *types.CJob) {
 	script.Add("\n")
 
 	id := uuid.New().String()
-	in := "./" + id + ".sh"
+	in := strings.New("./", id, ".sh").String()
 	defer os.Remove(in)
 	os.WriteFile(in, script.Bytes(), 0777)
 	c := exec.Command("bash", "-c", in, "2>&1")

@@ -73,7 +73,9 @@ func TestCollector(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+
 	time.Sleep(time.Second * 3)
+
 	mp, ok := vnic.Resources().Services().ServiceHandler(device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea))
 	if !ok {
 		panic("No mock service found")

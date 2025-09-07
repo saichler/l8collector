@@ -57,7 +57,7 @@ func (this *SNMPv2Collector) Disconnect() error {
 
 func (this *SNMPv2Collector) Exec(job *types.CJob) {
 	this.pollOnce = true
-	this.resources.Logger().Info("Exec Job Start ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
+	this.resources.Logger().Debug("Exec Job Start ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
 	if !this.connected {
 		err := this.Connect()
 		if err != nil {
@@ -67,7 +67,7 @@ func (this *SNMPv2Collector) Exec(job *types.CJob) {
 	}
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, this.resources)
 	if err != nil {
-		this.resources.Logger().Error("SNMP:" + err.Error())
+		this.resources.Logger().Error(strings2.New("SNMP:", err.Error()).String())
 		return
 	}
 
@@ -76,7 +76,7 @@ func (this *SNMPv2Collector) Exec(job *types.CJob) {
 	} else if poll.Operation == types.Operation_OTable {
 		this.table(job, poll)
 	}
-	this.resources.Logger().Info("Exec Job End ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
+	this.resources.Logger().Debug("Exec Job End  ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
 }
 
 func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap bool) *types.CMap {
@@ -88,7 +88,7 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 
 	if e != nil {
 		job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
-			strconv.Itoa(int(this.config.Port)), " Oid:", poll.What, e.Error()).String()
+			int(this.config.Port), " Oid:", poll.What, e.Error()).String()
 		return nil
 	}
 	m := &types.CMap{}

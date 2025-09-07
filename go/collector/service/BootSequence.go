@@ -75,47 +75,48 @@ func (this *HostCollector) bootDetailDevice(job *types.CJob) {
 	if this.detailDeviceLoaded {
 		return
 	}
-	if job.Result == nil || len(job.Result) < 5 {
-		this.service.vnic.Resources().Logger().Error("HostCollector.loadPolls:", job.DeviceId, " ", job.JobName, " ", "Has empty Result")
+	if job.Result == nil || len(job.Result) < 3 {
+		this.service.vnic.Resources().Logger().Error("HostCollector.loadPolls: ", job.DeviceId, " has sysmib empty Result")
 		return
 	}
 	enc := object.NewDecode(job.Result, 0, this.service.vnic.Resources().Registry())
 	data, err := enc.Get()
 	if err != nil {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls:", err.Error())
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " has sysmib error ", err.Error())
 		return
 	}
 	cmap, ok := data.(*types.CMap)
 	if !ok {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: systemMib not A CMap")
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " systemMib not A CMap")
 		return
 	}
 	strData, ok := cmap.Data[".1.3.6.1.2.1.1.2.0"]
 	if !ok {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: cannot find sysoid")
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " sysmib does not contain sysoid")
 		return
 	}
 
 	enc = object.NewDecode(strData, 0, this.service.vnic.Resources().Registry())
 	byteInterface, _ := enc.Get()
-	sysoidBytes, ok := byteInterface.([]byte)
-	sysoid := string(sysoidBytes)
-	this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls, sysoid =", sysoid)
+	sysoid := byteInterface.(string)
+	this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: ", job.DeviceId, " discovered sysoid =", sysoid)
 	if sysoid == "" {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " - sysoid is blank ")
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " - sysoid is blank!")
+		/* when there is DebugEnabled
 		for k, v := range cmap.Data {
 			enc = object.NewDecode(v, 0, this.service.vnic.Resources().Registry())
 			val, _ := enc.Get()
-			this.service.vnic.Resources().Logger().Info("Key =", k, " value=", val)
-		}
+			this.service.vnic.Resources().Logger().Debug("Key =", k, " value=", val)
+		}*/
+		return
 	}
 
 	plrs := boot.GetPollarisByOid(sysoid)
 	plc := pollaris.Pollaris(this.service.vnic.Resources())
 	plc.Add(plrs, false)
 	if plrs != nil {
-		this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: found pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
 		if plrs.Name != "boot02" {
+			this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: ", job.DeviceId, " discovered pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
 			this.detailDeviceLoaded = true
 			this.jobsQueue.InsertJob(plrs.Name, "", "", "", "", "", "", 0, 0)
 		}

@@ -37,6 +37,7 @@ The collector operates on a device-centric model where each device can have mult
 - **Remote Job Execution**: ExecuteService for distributed job processing across cluster nodes
 - **Parameter Substitution**: Dynamic argument replacement in Kubernetes commands
 - **Error Handling**: Robust error handling and connection management
+- **String Handling Optimization**: Unified string concatenation using l8utils/strings package
 - **Testing Framework**: Comprehensive unit testing with coverage reporting
 
 ## Architecture
@@ -112,6 +113,28 @@ The architecture scales horizontally through:
 - Load balancing across available collector nodes
 - Automatic failover and job redistribution
 
+### Code Quality Improvements
+
+The codebase has been optimized for maintainability and performance:
+
+#### String Handling Optimization (Latest Update)
+- **Unified String Concatenation**: All string concatenations replaced with `github.com/saichler/l8utils/go/utils/strings.String` package
+- **Raw Value Support**: Eliminated unnecessary `strconv.Itoa()` calls in string concatenations as the strings package natively supports raw integer values
+- **Performance Benefits**: Reduced memory allocations and improved string building performance
+- **Code Consistency**: Standardized approach to string manipulation across all protocol collectors
+
+#### Updated Components
+- **HostCollector**: Optimized error message construction and protocol validation
+- **SSH Collector**: Enhanced connection error handling and logging with efficient string building
+- **SNMP Collector**: Improved error reporting for walk operations and connection issues  
+- **Kubernetes Collector**: Streamlined script generation and error message formatting
+
+#### Benefits
+- **Reduced Memory Pressure**: More efficient string concatenation reduces garbage collection overhead
+- **Improved Readability**: Consistent string handling patterns across the codebase
+- **Enhanced Performance**: Native support for various data types eliminates conversion overhead
+- **Better Maintainability**: Centralized string handling logic through utility package
+
 ## Supported Protocols
 
 ### SNMP v2c
@@ -145,7 +168,7 @@ The architecture scales horizontally through:
 - **l8pollaris**: Polling and data modeling framework
 - **l8services**: Service management framework
 - **l8types**: Common type definitions
-- **l8utils**: Utility libraries
+- **l8utils**: Utility libraries (including optimized string handling)
 - **l8srlz**: Serialization framework
 - **l8parser**: Data parsing framework
 
@@ -385,6 +408,8 @@ To add a new protocol collector:
 - Add appropriate logging
 - Document public interfaces
 - Maintain test coverage
+- **String Handling**: Use `github.com/saichler/l8utils/go/utils/strings.String` for all string concatenations instead of native `+` operator
+- **Raw Values**: Leverage the strings package's support for raw integer/numeric values instead of manual conversions
 
 ### Building and Testing
 

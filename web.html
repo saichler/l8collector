@@ -443,6 +443,10 @@
                         <h4>🛡️ Error Handling</h4>
                         <p>Robust error handling and connection management with automatic retry mechanisms.</p>
                     </div>
+                    <div class="feature-card">
+                        <h4>🚀 String Handling Optimization</h4>
+                        <p>Unified string concatenation using l8utils/strings package for improved performance and memory efficiency.</p>
+                    </div>
                 </div>
             </section>
 
@@ -487,7 +491,8 @@
                         <h4>🔄 Resource Efficiency</h4>
                         <p><strong>Per device:</strong> ~1-2KB memory overhead<br>
                         <strong>Network:</strong> 1 connection per protocol/host<br>
-                        <strong>CPU:</strong> Configurable polling intervals (3s minimum)</p>
+                        <strong>CPU:</strong> Configurable polling intervals (3s minimum)<br>
+                        <strong>Memory:</strong> Optimized string handling reduces GC pressure</p>
                     </div>
                     <div class="feature-card">
                         <h4>📈 Horizontal Scaling</h4>
@@ -502,6 +507,17 @@
                         <li><strong>Thread-Safe Collections:</strong> Concurrent-safe maps for high-performance device management</li>
                         <li><strong>Job Queue Optimization:</strong> Priority-based scheduling with minimum 3-second cadence</li>
                         <li><strong>Connection Pooling:</strong> Efficient reuse of protocol connections per host</li>
+                        <li><strong>String Handling Optimization (Latest):</strong> Unified l8utils/strings package reduces memory allocations and improves string concatenation performance</li>
+                    </ul>
+                </div>
+                
+                <div class="install-steps">
+                    <h4>🔧 Code Quality Improvements (Latest Update)</h4>
+                    <ul>
+                        <li><strong>Unified String Concatenation:</strong> All string concatenations replaced with l8utils/strings.String package</li>
+                        <li><strong>Raw Value Support:</strong> Eliminated unnecessary strconv.Itoa() calls as strings package supports raw integer values</li>
+                        <li><strong>Enhanced Error Reporting:</strong> Improved error message construction across all protocol collectors</li>
+                        <li><strong>Code Consistency:</strong> Standardized string manipulation patterns throughout the codebase</li>
                     </ul>
                 </div>
             </section>
@@ -683,6 +699,33 @@ type ProtocolCollector interface {
                         <h4>🔒 Security First</h4>
                         <p>Built-in security checks and secure coding practices.</p>
                     </div>
+                    <div class="feature-card">
+                        <h4>🚀 Optimized String Handling</h4>
+                        <p>Unified string concatenation using l8utils package for better performance and maintainability.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>⚡ Memory Efficiency</h4>
+                        <p>Reduced memory allocations through efficient string building and raw value support.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🎯 Code Consistency</h4>
+                        <p>Standardized patterns across all protocol collectors for improved maintainability.</p>
+                    </div>
+                </div>
+
+                <h3>String Handling Guidelines</h3>
+                <p>Use the <span class="highlight">l8utils/strings.String</span> package for all string concatenations:</p>
+                <div class="code-block">
+// ❌ Old approach - avoid native concatenation
+errorMsg := "SNMP Error Host:" + host + ":" + strconv.Itoa(port) + " " + err.Error()
+
+// ✅ New approach - use l8utils/strings package
+errorMsg := strings.New("SNMP Error Host:", host, ":", port, " ", err.Error()).String()
+
+// Benefits:
+// - Supports raw integer values directly (no strconv.Itoa needed)  
+// - More efficient memory allocation
+// - Consistent pattern across all collectors
                 </div>
 
                 <h3>Building and Testing</h3>
