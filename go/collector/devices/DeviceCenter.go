@@ -20,13 +20,28 @@ func (this *DeviceCenter) Shutdown() {
 	this.devices = nil
 }
 
-func (this *DeviceCenter) Add(device *types.Device, isNotification bool) bool {
-	exist := this.devices.Get(device.DeviceId)
+func (this *DeviceCenter) Post(device *types.Device, isNotification bool) bool {
+	elem := this.devices.Get(device.DeviceId)
+	this.devices.Post(device.DeviceId, device, isNotification)
+	return elem != nil
+}
+
+func (this *DeviceCenter) Put(device *types.Device, isNotification bool) bool {
+	elem := this.devices.Get(device.DeviceId)
 	this.devices.Put(device.DeviceId, device, isNotification)
-	if exist != nil {
-		return true
-	}
-	return false
+	return elem != nil
+}
+
+func (this *DeviceCenter) Patch(device *types.Device, isNotification bool) bool {
+	elem := this.devices.Get(device.DeviceId)
+	this.devices.Patch(device.DeviceId, device, isNotification)
+	return elem != nil
+}
+
+func (this *DeviceCenter) Delete(device *types.Device, isNotification bool) bool {
+	elem := this.devices.Get(device.DeviceId)
+	this.devices.Delete(device.DeviceId, isNotification)
+	return elem != nil
 }
 
 func (this *DeviceCenter) DeviceById(id string) *types.Device {
