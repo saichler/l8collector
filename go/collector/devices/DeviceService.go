@@ -33,41 +33,91 @@ func (this *DeviceService) DeActivate() error {
 }
 
 func (this *DeviceService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
+	deviceList, ok := pb.Element().(*types.DeviceList)
+	if ok {
+		for _, device := range deviceList.List {
+			ok = this.configCenter.Post(device, pb.Notification())
+			if !ok {
+				this.startDevice(device, vnic, pb.Notification())
+			} else {
+				this.updateDevice(device, vnic, pb.Notification())
+			}
+		}
+	}
 	device, ok := pb.Element().(*types.Device)
-	ok = this.configCenter.Post(device, pb.Notification())
-	if !ok {
-		this.startDevice(device, vnic, pb.Notification())
-	} else {
-		this.updateDevice(device, vnic, pb.Notification())
+	if ok {
+		ok = this.configCenter.Post(device, pb.Notification())
+		if !ok {
+			this.startDevice(device, vnic, pb.Notification())
+		} else {
+			this.updateDevice(device, vnic, pb.Notification())
+		}
 	}
 	return object.New(nil, &types.Device{})
 }
 
 func (this *DeviceService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
+	deviceList, ok := pb.Element().(*types.DeviceList)
+	if ok {
+		for _, device := range deviceList.List {
+			ok = this.configCenter.Put(device, pb.Notification())
+			if !ok {
+				this.startDevice(device, vnic, pb.Notification())
+			} else {
+				this.updateDevice(device, vnic, pb.Notification())
+			}
+		}
+	}
 	device, ok := pb.Element().(*types.Device)
-	ok = this.configCenter.Put(device, pb.Notification())
-	if !ok {
-		this.startDevice(device, vnic, pb.Notification())
-	} else {
-		this.updateDevice(device, vnic, pb.Notification())
+	if ok {
+		ok = this.configCenter.Put(device, pb.Notification())
+		if !ok {
+			this.startDevice(device, vnic, pb.Notification())
+		} else {
+			this.updateDevice(device, vnic, pb.Notification())
+		}
 	}
 	return object.New(nil, &types.Device{})
 }
 func (this *DeviceService) Patch(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
+	deviceList, ok := pb.Element().(*types.DeviceList)
+	if ok {
+		for _, device := range deviceList.List {
+			ok = this.configCenter.Patch(device, pb.Notification())
+			if !ok {
+				this.startDevice(device, vnic, pb.Notification())
+			} else {
+				this.updateDevice(device, vnic, pb.Notification())
+			}
+		}
+	}
 	device, ok := pb.Element().(*types.Device)
-	ok = this.configCenter.Patch(device, pb.Notification())
-	if !ok {
-		this.startDevice(device, vnic, pb.Notification())
-	} else {
-		this.updateDevice(device, vnic, pb.Notification())
+	if ok {
+		ok = this.configCenter.Patch(device, pb.Notification())
+		if !ok {
+			this.startDevice(device, vnic, pb.Notification())
+		} else {
+			this.updateDevice(device, vnic, pb.Notification())
+		}
 	}
 	return object.New(nil, &types.Device{})
 }
 func (this *DeviceService) Delete(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	device, ok := pb.Element().(*types.Device)
-	ok = this.configCenter.Delete(device, pb.Notification())
+	deviceList, ok := pb.Element().(*types.DeviceList)
 	if ok {
-		this.stopDevice(device, vnic, pb.Notification())
+		for _, device := range deviceList.List {
+			ok = this.configCenter.Delete(device, pb.Notification())
+			if ok {
+				this.stopDevice(device, vnic, pb.Notification())
+			}
+		}
+	}
+	device, ok := pb.Element().(*types.Device)
+	if ok {
+		ok = this.configCenter.Delete(device, pb.Notification())
+		if ok {
+			this.stopDevice(device, vnic, pb.Notification())
+		}
 	}
 	return object.New(nil, &types.Device{})
 }
@@ -84,7 +134,7 @@ func (this *DeviceService) TransactionConfig() ifs.ITransactionConfig {
 	return nil
 }
 func (this *DeviceService) WebService() ifs.IWebService {
-	ws := web.New(ServiceName, this.serviceArea, &types.Device{},
+	ws := web.New(ServiceName, this.serviceArea, &types.DeviceList{},
 		&types.Device{}, nil, nil, nil, nil, nil, nil, nil, nil)
 	return ws
 }
