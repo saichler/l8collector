@@ -98,25 +98,24 @@ func (this *HostCollector) collect() {
 	}
 	this.service.vnic.Resources().Logger().Info("** Starting Collection on host ", this.hostId)
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
-	var jobFailCount int
 	var job *types.CJob
 	var waitTime int64
 	for this.running {
-		if job == nil || jobFailCount == 0 {
-			job, waitTime = this.jobsQueue.Pop()
-			if job != nil {
-				this.service.vnic.Resources().Logger().Info("Poped job ", job.PollarisName, ":", job.JobName)
-			} else {
-				this.service.vnic.Resources().Logger().Info("No Job, waitTime ", waitTime)
-			}
+
+		job, waitTime = this.jobsQueue.Pop()
+		if job != nil {
+			this.service.vnic.Resources().Logger().Debug("Poped job ", job.PollarisName, ":", job.JobName)
+		} else {
+			this.service.vnic.Resources().Logger().Debug("No Job, waitTime ", waitTime)
 		}
+
 		if job != nil {
 			poll := pc.Poll(job.PollarisName, job.JobName)
 			if poll == nil {
 				this.service.vnic.Resources().Logger().Error(strings.New("cannot find poll ", job.PollarisName, " - ", job.JobName, " for device id ").String(), this.device.DeviceId)
 				continue
 			}
-			MarkStart(job, jobFailCount)
+			MarkStart(job)
 
 			if this.bootStages[0].doStaticJob(job, this) {
 				MarkEnded(job)
@@ -150,22 +149,14 @@ func (this *HostCollector) collect() {
 					}
 				}
 			}
-			if job.Error != "" {
-				jobFailCount++
-				time.Sleep(time.Second * 5)
-			} else {
-				jobFailCount = 0
-				job = nil
-			}
-			if jobFailCount >= 5 {
+
+			if job.ErrorCount >= 5 {
 				this.service.vnic.Resources().Logger().Error("Job ", job.DeviceId, " - ", job.PollarisName, " - ",
-					job.JobName, " has failed ", jobFailCount, " in a row, not sending it.")
-				//this.jobsQueue.DisableJob(job)
-				jobFailCount = 0
-				job = nil
+					job.JobName, " has failed ", job.ErrorCount, " in a row, disabling job")
+				this.jobsQueue.DisableJob(job)
 			}
 		} else {
-			this.service.vnic.Resources().Logger().Info("No more jobs, next job in ", waitTime, " seconds.")
+			this.service.vnic.Resources().Logger().Debug("No more jobs, next job in ", waitTime, " seconds.")
 			time.Sleep(time.Second * time.Duration(waitTime))
 		}
 	}
@@ -180,7 +171,7 @@ func (this *HostCollector) execJob(job *types.CJob) bool {
 		this.service.vnic.Resources().Logger().Error("cannot find poll for device id ", this.device.DeviceId)
 		return false
 	}
-	MarkStart(job, 0)
+	MarkStart(job)
 	c, ok := this.collectors.Get(poll.Protocol)
 	if !ok {
 		MarkEnded(job)

@@ -245,7 +245,10 @@ func (this *SshCollector) Exec(job *types.CJob) {
 	if e != nil {
 		job.Result = nil
 		job.Error = e.Error()
+		job.ErrorCount++
 		return
+	} else {
+		job.ErrorCount = 0
 	}
 	index := strings.Index(result, poll.What) + len(poll.What) + 1
 	if index < len(result) {

@@ -63,6 +63,9 @@ func (this *Kubernetes) Exec(job *types.CJob) {
 	o, e := c.Output()
 	if e != nil {
 		job.Error = e.Error()
+		job.ErrorCount++
+	} else {
+		job.ErrorCount = 0
 	}
 	obj := object.NewEncode()
 	obj.Add(string(o))

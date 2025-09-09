@@ -1,8 +1,10 @@
 package snmp
 
 import (
+	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alouca/gosnmp"
 	"github.com/saichler/l8collector/go/collector/protocols"
@@ -62,6 +64,8 @@ func (this *SNMPv2Collector) Exec(job *types.CJob) {
 		err := this.Connect()
 		if err != nil {
 			job.Error = err.Error()
+			job.Result = nil
+			job.ErrorCount++
 			return
 		}
 	}
@@ -84,12 +88,41 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 	var pdus []gosnmp.SnmpPDU
 	var e error
 
-	pdus, e = this.agent.Walk(poll.What)
+	// Add timeout wrapper for SNMP walk to prevent hanging on invalid OIDs
+	timeout := time.Duration(this.config.Timeout) * time.Second
+	if timeout == 0 {
+		timeout = 10 * time.Second // Default 10 second timeout
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	done := make(chan bool)
+	go func() {
+		pdus, e = this.agent.Walk(poll.What)
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		// Walk completed normally
+	case <-ctx.Done():
+		// Timeout occurred
+		job.Error = strings2.New("SNMP Walk Timeout Host:", this.config.Addr, "/",
+			int(this.config.Port), " Oid:", poll.What, "timeout after", timeout.String()).String()
+		job.Result = nil
+		job.ErrorCount++
+		return nil
+	}
 
 	if e != nil {
 		job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
 			int(this.config.Port), " Oid:", poll.What, e.Error()).String()
+		job.Result = nil
+		job.ErrorCount++
 		return nil
+	} else {
+		job.ErrorCount = 0
 	}
 	m := &types.CMap{}
 	m.Data = make(map[string][]byte)
