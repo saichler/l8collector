@@ -21,6 +21,7 @@ type DeviceService struct {
 func (this *DeviceService) Activate(serviceName string, serviceArea byte,
 	r ifs.IResources, l ifs.IServiceCacheListener, args ...interface{}) error {
 	r.Registry().Register(&types.Device{})
+	r.Registry().Register(&types.DeviceList{})
 	this.configCenter = newDeviceCenter(ServiceName, serviceArea, r, l)
 	this.serviceArea = serviceArea
 	return nil
