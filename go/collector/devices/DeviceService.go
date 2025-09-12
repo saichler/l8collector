@@ -122,6 +122,7 @@ func (this *DeviceService) Delete(pb ifs.IElements, vnic ifs.IVNic) ifs.IElement
 	}
 	return object.New(nil, &types.Device{})
 }
+
 func (this *DeviceService) Get(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	return nil
 }
@@ -134,6 +135,7 @@ func (this *DeviceService) Failed(pb ifs.IElements, vnic ifs.IVNic, msg *ifs.Mes
 func (this *DeviceService) TransactionConfig() ifs.ITransactionConfig {
 	return nil
 }
+
 func (this *DeviceService) WebService() ifs.IWebService {
 	ws := web.New(ServiceName, this.serviceArea, &types.DeviceList{},
 		&types.Device{}, nil, nil, nil, nil, nil, nil, nil, nil)

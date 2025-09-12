@@ -4,6 +4,7 @@ import (
 	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8services/go/services/dcache"
 	"github.com/saichler/l8types/go/ifs"
+	"github.com/saichler/reflect/go/reflect/introspecting"
 )
 
 type DeviceCenter struct {
@@ -12,7 +13,10 @@ type DeviceCenter struct {
 
 func newDeviceCenter(serviceName string, serviceArea byte, resources ifs.IResources, listener ifs.IServiceCacheListener) *DeviceCenter {
 	this := &DeviceCenter{}
-	this.devices = dcache.NewDistributedCache(serviceName, serviceArea, "Device", resources.SysConfig().LocalUuid, listener, resources)
+	node, _ := resources.Introspector().Inspect(&types.Device{})
+	introspecting.AddPrimaryKeyDecorator(node, "DeviceId")
+	this.devices = dcache.NewDistributedCache(serviceName, serviceArea, &types.Device{}, nil,
+		listener, resources)
 	return this
 }
 
@@ -21,31 +25,33 @@ func (this *DeviceCenter) Shutdown() {
 }
 
 func (this *DeviceCenter) Post(device *types.Device, isNotification bool) bool {
-	elem := this.devices.Get(device.DeviceId)
-	this.devices.Post(device.DeviceId, device, isNotification)
+	elem, _ := this.devices.Get(device)
+	this.devices.Post(device, isNotification)
 	return elem != nil
 }
 
 func (this *DeviceCenter) Put(device *types.Device, isNotification bool) bool {
-	elem := this.devices.Get(device.DeviceId)
-	this.devices.Put(device.DeviceId, device, isNotification)
+	elem, _ := this.devices.Get(device)
+	this.devices.Put(device, isNotification)
 	return elem != nil
 }
 
 func (this *DeviceCenter) Patch(device *types.Device, isNotification bool) bool {
-	elem := this.devices.Get(device.DeviceId)
-	this.devices.Patch(device.DeviceId, device, isNotification)
+	elem, _ := this.devices.Get(device)
+	this.devices.Patch(device, isNotification)
 	return elem != nil
 }
 
 func (this *DeviceCenter) Delete(device *types.Device, isNotification bool) bool {
-	elem := this.devices.Get(device.DeviceId)
-	this.devices.Delete(device.DeviceId, isNotification)
+	elem, _ := this.devices.Get(device)
+	this.devices.Delete(device, isNotification)
 	return elem != nil
 }
 
 func (this *DeviceCenter) DeviceById(id string) *types.Device {
-	device, _ := this.devices.Get(id).(*types.Device)
+	filter := &types.Device{DeviceId: id}
+	d, _ := this.devices.Get(filter)
+	device, _ := d.(*types.Device)
 	return device
 }
 
@@ -53,7 +59,9 @@ func (this *DeviceCenter) HostConnection(deviceId, hostId string) map[int32]*typ
 	if this == nil {
 		panic("nil")
 	}
-	device, _ := this.devices.Get(deviceId).(*types.Device)
+	filter := &types.Device{DeviceId: deviceId}
+	d, _ := this.devices.Get(filter)
+	device, _ := d.(*types.Device)
 	if device == nil {
 		return nil
 	}
