@@ -90,8 +90,17 @@ func (this *HostCollector) start() error {
 	return nil
 }
 
-func (this *HostCollector) collect() {
+func (this *HostCollector) smoothFirstCollection() {
+	if common.SmoothFirstCollection {
+		//Sleep up to 5 minutes before starting to collect
+		//so the collection for all devices will be smoother on the simulator
+		time.Sleep(time.Second * time.Duration(common.RandomSecondWithin15Minutes()))
+	}
 	this.service.vnic.Resources().Logger().Info("** Starting Collection on host ", this.hostId)
+}
+
+func (this *HostCollector) collect() {
+	this.smoothFirstCollection()
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
 	var job *types.CJob
 	var waitTime int64
@@ -112,17 +121,12 @@ func (this *HostCollector) collect() {
 			}
 			MarkStart(job)
 
-			if this.bootStages[0].doStaticJob(job, this) {
+			if this.bootStages[this.currentBootStage].doStaticJob(job, this) {
 				MarkEnded(job)
 				this.jobComplete(job)
-				if this.bootStages[0].isComplete() && this.bootStages[1] == nil {
-					this.bootStages[1] = this.newBootState(1)
-					this.currentBootStage = 1
-					if common.SmoothForSimulators {
-						//Sleep up to 5 minutes before starting to collect
-						//so the collection for all devices will be smoother on the simulator
-						time.Sleep(time.Second * time.Duration(common.RandomSecondWithin5Minutes()))
-					}
+				if this.bootStages[this.currentBootStage].isComplete() && this.currentBootStage < len(this.bootStages)-1 {
+					this.currentBootStage++
+					this.bootStages[this.currentBootStage] = this.newBootState(this.currentBootStage)
 				}
 				continue
 			}

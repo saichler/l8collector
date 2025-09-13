@@ -43,6 +43,6 @@ func ReplaceArguments(what string, job *types.CJob) string {
 	return buff.String()
 }
 
-func RandomSecondWithin5Minutes() int {
-	return rand.Intn(300)
+func RandomSecondWithin15Minutes() int {
+	return rand.Intn(900)
 }

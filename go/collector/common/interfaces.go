@@ -29,4 +29,4 @@ type ProtocolCollector interface {
 	Online() bool
 }
 
-var SmoothForSimulators = false
+var SmoothFirstCollection = false
