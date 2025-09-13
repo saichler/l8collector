@@ -121,7 +121,7 @@ func (this *HostCollector) collect() {
 			}
 			MarkStart(job)
 
-			if this.bootStages[this.currentBootStage].doStaticJob(job, this) {
+			if this.currentBootStage < len(this.bootStages) && this.bootStages[this.currentBootStage].doStaticJob(job, this) {
 				MarkEnded(job)
 				this.jobComplete(job)
 				if this.bootStages[this.currentBootStage].isComplete() && this.currentBootStage < len(this.bootStages)-1 {
