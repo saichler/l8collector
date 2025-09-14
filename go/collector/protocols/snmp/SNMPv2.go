@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/alouca/gosnmp"
-	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types"
@@ -108,17 +107,12 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 	case <-done:
 		// Walk completed normally
 	case <-ctx.Done():
+		// Timeout occurred
+		job.Error = strings2.New("SNMP Walk Timeout Host:", this.config.Addr, "/",
+			int(this.config.Port), " Oid:", poll.What, " timeout after", timeout.String()).String()
 		job.Result = nil
 		job.ErrorCount++
-		if job.ErrorCount < 5 {
-			time.Sleep(time.Second * time.Duration(common.RandomSecondWithin3Minutes()))
-			this.walk(job, poll, encodeMap)
-		} else {
-			// Timeout occurred
-			job.Error = strings2.New("SNMP Walk Timeout Host:", this.config.Addr, "/",
-				int(this.config.Port), " Oid:", poll.What, " timeout after", timeout.String()).String()
-			return nil
-		}
+		return nil
 	}
 
 	if e != nil {
