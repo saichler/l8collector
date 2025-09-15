@@ -3,6 +3,7 @@ package snmp
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -130,33 +131,65 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 		timeout = 10 * time.Second // Default 10 second timeout
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
+	const maxRetries = 5
 	var pdus []SnmpPDU
-	var e error
+	var lastError error
 
-	done := make(chan bool)
-	go func() {
-		pdus, e = this.snmpWalk(poll.What)
-		done <- true
-	}()
+	// Try up to maxRetries times
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
-	select {
-	case <-done:
-		// Walk completed normally
-	case <-ctx.Done():
-		// Timeout occurred
-		job.Error = strings2.New("SNMP Walk Timeout Host:", this.config.Addr, "/",
-			int(this.config.Port), " Oid:", poll.What, " timeout after", timeout.String()).String()
-		job.Result = nil
-		job.ErrorCount++
-		return nil
+		var e error
+		done := make(chan bool)
+
+		go func() {
+			pdus, e = this.snmpWalk(poll.What)
+			done <- true
+		}()
+
+		select {
+		case <-done:
+			cancel()
+			// Walk completed normally
+			if e == nil {
+				// Success - break out of retry loop
+				lastError = nil
+				break
+			}
+			// Non-timeout error - don't retry
+			lastError = e
+			break
+
+		case <-ctx.Done():
+			cancel()
+			// Timeout occurred
+			lastError = fmt.Errorf("timeout after %s", timeout.String())
+
+			// If not the last retry, sleep randomly between 5-30 seconds
+			if attempt < maxRetries {
+				sleepDuration := time.Duration(rand.Intn(26)+5) * time.Second
+				if this.resources != nil && this.resources.Logger() != nil {
+					this.resources.Logger().Debug("SNMP walk timeout on attempt ", attempt,
+						" of ", maxRetries, " for OID ", poll.What,
+						". Sleeping for ", sleepDuration, " before retry.")
+				}
+				time.Sleep(sleepDuration)
+			}
+		}
 	}
 
-	if e != nil {
-		job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
-			int(this.config.Port), " Oid:", poll.What, e.Error()).String()
+	// Handle errors after all retries
+	if lastError != nil {
+		if strings.Contains(lastError.Error(), "timeout") {
+			// Timeout error after all retries
+			job.Error = strings2.New("SNMP Walk Timeout after ", maxRetries, " retries. Host:",
+				this.config.Addr, "/", int(this.config.Port), " Oid:", poll.What, " ",
+				lastError.Error()).String()
+		} else {
+			// Other SNMP error
+			job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
+				int(this.config.Port), " Oid:", poll.What, " ", lastError.Error()).String()
+		}
 		job.Result = nil
 		job.ErrorCount++
 		return nil
