@@ -201,51 +201,28 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 		return nil, fmt.Errorf("failed to parse OID %s: %v", oid, err)
 	}
 
-	// Use GetBulk for more efficient walking (SNMPv2c supports this)
+	// Perform SNMP walk using iterative GetNext calls only
 	var pdus []SnmpPDU
 	currentOid := parsedOid.Copy()
 
 	for {
-		// GetBulk with max repetitions of 50 for better performance
-		bulkResults, err := this.session.GetBulkArray(currentOid, 50)
+		nextOid, value, err := this.session.GetNext(currentOid)
 		if err != nil {
-			// Fallback to GetNext if GetBulk fails
-			nextOid, value, err := this.session.GetNext(currentOid)
-			if err != nil {
-				break // End of walk
-			}
-
-			if !nextOid.Within(parsedOid) {
-				break // Outside subtree
-			}
-
-			pdus = append(pdus, SnmpPDU{
-				Name:  nextOid.String(),
-				Value: value,
-			})
-			currentOid = *nextOid
-			continue
+			break // End of walk or error
 		}
 
-		if len(bulkResults) == 0 {
-			break // No more results
+		// Check if we're still within the requested subtree
+		if !nextOid.Within(parsedOid) {
+			break // We've walked beyond the requested subtree
 		}
 
-		foundWithinSubtree := false
-		for _, result := range bulkResults {
-			if result.Oid.Within(parsedOid) {
-				pdus = append(pdus, SnmpPDU{
-					Name:  result.Oid.String(),
-					Value: result.Value,
-				})
-				currentOid = result.Oid
-				foundWithinSubtree = true
-			}
-		}
+		pdus = append(pdus, SnmpPDU{
+			Name:  nextOid.String(),
+			Value: value,
+		})
 
-		if !foundWithinSubtree {
-			break // All results are outside the subtree
-		}
+		// Move to the next OID
+		currentOid = *nextOid
 	}
 
 	if len(pdus) == 0 {
