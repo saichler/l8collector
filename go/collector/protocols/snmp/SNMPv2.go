@@ -15,6 +15,18 @@ import (
 	strings2 "github.com/saichler/l8utils/go/utils/strings"
 )
 
+// normalizeOID converts ISO format OIDs to standard dotted decimal format
+// Example: "iso.3.6.1.2.1.1.1.0" -> ".1.3.6.1.2.1.1.1.0"
+func normalizeOID(oid string) string {
+	if strings.HasPrefix(oid, "iso.") {
+		return ".1." + oid[4:]
+	}
+	if !strings.HasPrefix(oid, ".") {
+		return "." + oid
+	}
+	return oid
+}
+
 type SNMPv2Collector struct {
 	resources ifs.IResources
 	config    *types.Connection
@@ -146,7 +158,8 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 				this.resources.Logger().Error("Object Value Error: ", err.Error())
 			}
 		}
-		m.Data[pdu.Name] = enc.Data()
+		normalizedOID := normalizeOID(pdu.Name)
+		m.Data[normalizedOID] = enc.Data()
 	}
 	if encodeMap {
 		enc := object.NewEncode()
