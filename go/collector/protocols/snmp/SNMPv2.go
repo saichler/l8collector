@@ -82,7 +82,9 @@ func (this *SNMPv2Collector) Disconnect() error {
 		this.resources.Logger().Info("SNMP Collector for ", this.config.Addr, " is closed.")
 	}
 	if this.session != nil {
-		this.session.Close()
+		if err := this.session.Close(); err != nil && this.resources != nil && this.resources.Logger() != nil {
+			this.resources.Logger().Error("Error closing SNMP session: ", err.Error())
+		}
 		this.session = nil
 	}
 	this.connected = false
@@ -199,19 +201,55 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 		return nil, fmt.Errorf("failed to parse OID %s: %v", oid, err)
 	}
 
-	// Perform SNMP walk using WapSNMP's GetTable
-	result, err := this.session.GetTable(parsedOid)
-	if err != nil {
-		return nil, fmt.Errorf("SNMP walk failed: %v", err)
+	// Use GetBulk for more efficient walking (SNMPv2c supports this)
+	var pdus []SnmpPDU
+	currentOid := parsedOid.Copy()
+
+	for {
+		// GetBulk with max repetitions of 50 for better performance
+		bulkResults, err := this.session.GetBulkArray(currentOid, 50)
+		if err != nil {
+			// Fallback to GetNext if GetBulk fails
+			nextOid, value, err := this.session.GetNext(currentOid)
+			if err != nil {
+				break // End of walk
+			}
+
+			if !nextOid.Within(parsedOid) {
+				break // Outside subtree
+			}
+
+			pdus = append(pdus, SnmpPDU{
+				Name:  nextOid.String(),
+				Value: value,
+			})
+			currentOid = *nextOid
+			continue
+		}
+
+		if len(bulkResults) == 0 {
+			break // No more results
+		}
+
+		foundWithinSubtree := false
+		for _, result := range bulkResults {
+			if result.Oid.Within(parsedOid) {
+				pdus = append(pdus, SnmpPDU{
+					Name:  result.Oid.String(),
+					Value: result.Value,
+				})
+				currentOid = result.Oid
+				foundWithinSubtree = true
+			}
+		}
+
+		if !foundWithinSubtree {
+			break // All results are outside the subtree
+		}
 	}
 
-	// Convert WapSNMP results to our SnmpPDU format
-	var pdus []SnmpPDU
-	for oidStr, value := range result {
-		pdus = append(pdus, SnmpPDU{
-			Name:  oidStr,
-			Value: value,
-		})
+	if len(pdus) == 0 {
+		return nil, fmt.Errorf("SNMP walk found no results for OID %s", oid)
 	}
 
 	return pdus, nil
