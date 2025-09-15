@@ -11,9 +11,23 @@ package snmp
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 
+// Global flag to track if SNMP library is initialized
+static int snmp_initialized = 0;
+
 // Helper function to initialize SNMP library
 void snmp_init() {
-    init_snmp("l8collector");
+    if (!snmp_initialized) {
+        init_snmp("l8collector");
+        snmp_initialized = 1;
+    }
+}
+
+// Helper function to validate session
+int validate_session(netsnmp_session* session) {
+    if (!session) return 0;
+    if (session->version < 0 || session->version > 3) return 0;
+    if (!session->peername) return 0;
+    return 1;
 }
 
 // Helper function to create a session
@@ -46,6 +60,11 @@ int snmp_walk_helper(netsnmp_session* session, char* oid_str, char** result_json
     // Initialize result pointer
     *result_json = NULL;
 
+    // Validate session pointer more thoroughly
+    if (!validate_session(session)) {
+        return -6; // Invalid session
+    }
+
     oid name[MAX_OID_LEN];
     size_t name_len = MAX_OID_LEN;
 
@@ -60,15 +79,16 @@ int snmp_walk_helper(netsnmp_session* session, char* oid_str, char** result_json
     netsnmp_variable_list *vars;
     int status;
     int count = 0;
-    int max_iterations = 10000; // Prevent infinite loops
-    size_t buffer_size = 262144; // Start with 256KB buffer
+    int max_iterations = 1000; // Reduced from 10000 to be more conservative
+    size_t buffer_size = 65536; // Start with 64KB buffer (reduced from 256KB)
     char *json_result = malloc(buffer_size);
     if (!json_result) return -3; // Memory allocation error
 
-    // Initialize buffer
+    // Initialize buffer safely
     memset(json_result, 0, buffer_size);
     size_t current_pos = 0;
-    strcpy(json_result, "[");
+    json_result[0] = '[';
+    json_result[1] = '\0';
     current_pos = 1;
 
     pdu = snmp_pdu_create(SNMP_MSG_GETNEXT);
@@ -83,6 +103,11 @@ int snmp_walk_helper(netsnmp_session* session, char* oid_str, char** result_json
 
         if (status == STAT_SUCCESS && response && response->errstat == SNMP_ERR_NOERROR) {
             for (vars = response->variables; vars; vars = vars->next_variable) {
+                // Additional safety checks for vars pointer
+                if (!vars || !vars->name || vars->name_length == 0 || vars->name_length > MAX_OID_LEN) {
+                    continue;
+                }
+
                 // Check if we've walked past our subtree
                 if (snmp_oid_compare(name, name_len, vars->name, vars->name_length) > 0) {
                     goto done; // Walked past our subtree
@@ -96,11 +121,6 @@ int snmp_walk_helper(netsnmp_session* session, char* oid_str, char** result_json
                 // Check if we got the same OID as before (infinite loop detection)
                 if (snmp_oid_compare(name, name_len, vars->name, vars->name_length) == 0) {
                     goto done; // Same OID returned, stop to prevent infinite loop
-                }
-
-                // Null check for variable data
-                if (!vars->name || vars->name_length == 0) {
-                    continue;
                 }
 
                 // Convert OID to string
@@ -124,38 +144,50 @@ int snmp_walk_helper(netsnmp_session* session, char* oid_str, char** result_json
                     goto done; // End of MIB walk detected in value
                 }
 
-                // Escape special characters in value for JSON
-                char escaped_val[4096];  // Increased size for escaped content
+                // Escape special characters in value for JSON with safer bounds checking
+                char escaped_val[2048];  // Reduced size to be more conservative
                 memset(escaped_val, 0, sizeof(escaped_val));
-                int j = 0;
+                size_t j = 0;
                 size_t val_len = strlen(val_buf);
-                for (size_t i = 0; i < val_len && j < sizeof(escaped_val)-3; i++) {
+                size_t max_escaped = sizeof(escaped_val) - 10; // Leave safety margin
+
+                for (size_t i = 0; i < val_len && j < max_escaped; i++) {
                     char c = val_buf[i];
+                    if (j >= max_escaped - 6) break; // Ensure we have room for escape sequences
+
                     if (c == '"' || c == '\\') {
-                        escaped_val[j++] = '\\';
-                        escaped_val[j++] = c;
+                        if (j < max_escaped - 1) {
+                            escaped_val[j++] = '\\';
+                            escaped_val[j++] = c;
+                        }
                     } else if (c == '\n') {
-                        escaped_val[j++] = '\\';
-                        escaped_val[j++] = 'n';
+                        if (j < max_escaped - 1) {
+                            escaped_val[j++] = '\\';
+                            escaped_val[j++] = 'n';
+                        }
                     } else if (c == '\r') {
-                        escaped_val[j++] = '\\';
-                        escaped_val[j++] = 'r';
+                        if (j < max_escaped - 1) {
+                            escaped_val[j++] = '\\';
+                            escaped_val[j++] = 'r';
+                        }
                     } else if (c == '\t') {
-                        escaped_val[j++] = '\\';
-                        escaped_val[j++] = 't';
-                    } else if (c == '\b') {
-                        escaped_val[j++] = '\\';
-                        escaped_val[j++] = 'b';
-                    } else if (c == '\f') {
-                        escaped_val[j++] = '\\';
-                        escaped_val[j++] = 'f';
+                        if (j < max_escaped - 1) {
+                            escaped_val[j++] = '\\';
+                            escaped_val[j++] = 't';
+                        }
                     } else if ((unsigned char)c < 32) {
                         // Escape other control characters as \uXXXX
-                        j += snprintf(escaped_val + j, sizeof(escaped_val) - j - 1, "\\u%04x", (unsigned char)c);
+                        if (j < max_escaped - 6) {
+                            int written = snprintf(escaped_val + j, max_escaped - j, "\\u%04x", (unsigned char)c);
+                            if (written > 0 && written < (int)(max_escaped - j)) {
+                                j += written;
+                            }
+                        }
                     } else {
                         escaped_val[j++] = c;
                     }
                 }
+                escaped_val[j] = '\0'; // Ensure null termination
 
                 // Calculate needed space for this entry
                 size_t entry_needed = strlen(oid_buf) + strlen(escaped_val) + 50; // Extra space for JSON formatting
@@ -242,6 +274,14 @@ import (
 	"unsafe"
 )
 
+// Global initialization mutex to ensure SNMP library is initialized only once
+// Also used to serialize all SNMP operations due to thread safety issues in net-snmp
+var (
+	initMutex    sync.Mutex
+	initDone     bool
+	globalSNMPMutex sync.Mutex // Serialize all SNMP operations globally
+)
+
 // SNMPSession represents a net-snmp session
 type SNMPSession struct {
 	session   unsafe.Pointer
@@ -256,10 +296,30 @@ type snmpResult struct {
 	Value string `json:"value"`
 }
 
+// initSNMP ensures SNMP library is initialized exactly once
+func initSNMP() {
+	initMutex.Lock()
+	defer initMutex.Unlock()
+
+	if !initDone {
+		C.snmp_init()
+		initDone = true
+	}
+}
+
 // NewSNMPSession creates a new SNMP session using net-snmp library
 func NewSNMPSession(host, community string) (*SNMPSession, error) {
-	// Initialize SNMP library
-	C.snmp_init()
+	// Serialize session creation due to net-snmp thread safety issues
+	globalSNMPMutex.Lock()
+	defer globalSNMPMutex.Unlock()
+
+	// Validate input parameters
+	if host == "" || community == "" {
+		return nil, fmt.Errorf("host and community cannot be empty")
+	}
+
+	// Initialize SNMP library exactly once
+	initSNMP()
 
 	hostCStr := C.CString(host)
 	defer C.free(unsafe.Pointer(hostCStr))
@@ -285,7 +345,11 @@ func (s *SNMPSession) Walk(oid string) ([]SnmpPDU, error) {
 		return nil, fmt.Errorf("session is nil")
 	}
 
-	// Lock the session for thread safety
+	// Serialize all SNMP operations globally due to net-snmp thread safety issues
+	globalSNMPMutex.Lock()
+	defer globalSNMPMutex.Unlock()
+
+	// Also lock the session for additional safety
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -315,6 +379,8 @@ func (s *SNMPSession) Walk(oid string) ([]SnmpPDU, error) {
 		return nil, fmt.Errorf("SNMP walk failed: memory reallocation error")
 	case -5:
 		return nil, fmt.Errorf("SNMP walk failed: PDU creation error")
+	case -6:
+		return nil, fmt.Errorf("SNMP walk failed: invalid session version")
 	}
 
 	if count < 0 {
@@ -354,6 +420,10 @@ func (s *SNMPSession) Close() error {
 	if s == nil {
 		return nil // Closing a nil session is a no-op
 	}
+
+	// Serialize close operations as well
+	globalSNMPMutex.Lock()
+	defer globalSNMPMutex.Unlock()
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
