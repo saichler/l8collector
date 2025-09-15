@@ -66,14 +66,21 @@ int snmp_walk_helper(netsnmp_session* session, char* oid_str, char** result_json
     }
 
     oid name[MAX_OID_LEN];
+    oid root_oid[MAX_OID_LEN]; // Preserve original OID for subtree checking
     size_t name_len = MAX_OID_LEN;
+    size_t root_oid_len;
 
-    // Clear the OID array
+    // Clear the OID arrays
     memset(name, 0, sizeof(name));
+    memset(root_oid, 0, sizeof(root_oid));
 
     if (!snmp_parse_oid(oid_str, name, &name_len)) {
         return -2; // OID parse error
     }
+
+    // Save the original OID for subtree boundary checking
+    memmove(root_oid, name, name_len * sizeof(oid));
+    root_oid_len = name_len;
 
     netsnmp_pdu *pdu = NULL, *response = NULL;
     netsnmp_variable_list *vars;
@@ -109,7 +116,9 @@ int snmp_walk_helper(netsnmp_session* session, char* oid_str, char** result_json
                 }
 
                 // Check if we've walked past our subtree
-                if (snmp_oid_compare(name, name_len, vars->name, vars->name_length) > 0) {
+                // The returned OID must be within the original requested subtree
+                if (vars->name_length < root_oid_len ||
+                    snmp_oid_compare(root_oid, root_oid_len, vars->name, root_oid_len) != 0) {
                     goto done; // Walked past our subtree
                 }
 
