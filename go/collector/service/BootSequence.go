@@ -117,7 +117,7 @@ func (this *HostCollector) bootDetailDevice(job *types.CJob) {
 	plc := pollaris.Pollaris(this.service.vnic.Resources())
 	plc.Add(plrs, false)
 	if plrs != nil {
-		if plrs.Name != "boot02" {
+		if plrs.Name != "boot03" {
 			this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: ", job.DeviceId, " discovered pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
 			this.detailDeviceLoaded = true
 			go this.insertCustomJobs(plrs.Name)
