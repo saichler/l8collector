@@ -2,11 +2,11 @@ package snmp
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/alouca/gosnmp"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types"
@@ -18,9 +18,14 @@ import (
 type SNMPv2Collector struct {
 	resources ifs.IResources
 	config    *types.Connection
-	agent     *gosnmp.GoSNMP
+	session   *SNMPSession
 	connected bool
 	pollOnce  bool
+}
+
+type SnmpPDU struct {
+	Name  string
+	Value interface{}
 }
 
 func (this *SNMPv2Collector) Protocol() types.Protocol {
@@ -30,29 +35,29 @@ func (this *SNMPv2Collector) Protocol() types.Protocol {
 func (this *SNMPv2Collector) Init(conf *types.Connection, resources ifs.IResources) error {
 	this.config = conf
 	this.resources = resources
-	timeout := int64(5)
-	if conf.Timeout > 0 {
-		timeout = int64(conf.Timeout)
-	}
-	agent, err := gosnmp.NewGoSNMP(this.config.Addr, this.config.ReadCommunity, gosnmp.Version2c, timeout)
-	if err != nil {
-		return err
-	}
-	this.agent = agent
 	return nil
 }
 
 func (this *SNMPv2Collector) Connect() error {
-	if this == nil || this.agent == nil {
+	if this == nil {
 		return nil
 	}
+	// Create SNMP session using net-snmp library
+	session, err := NewSNMPSession(this.config.Addr, this.config.ReadCommunity)
+	if err != nil {
+		return err
+	}
+	this.session = session
 	this.connected = true
 	return nil
 }
 
 func (this *SNMPv2Collector) Disconnect() error {
 	this.resources.Logger().Info("SNMP Collector for ", this.config.Addr, " is closed.")
-	this.agent = nil
+	if this.session != nil {
+		this.session.Close()
+		this.session = nil
+	}
 	this.connected = false
 	return nil
 }
@@ -84,10 +89,6 @@ func (this *SNMPv2Collector) Exec(job *types.CJob) {
 }
 
 func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap bool) *types.CMap {
-	// For Entity MIB, add strict timeout to prevent hanging
-	var pdus []gosnmp.SnmpPDU
-	var e error
-
 	// Add timeout wrapper for SNMP walk to prevent hanging on invalid OIDs
 	timeout := time.Duration(this.config.Timeout) * time.Second
 	if timeout == 0 {
@@ -97,9 +98,12 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	var pdus []SnmpPDU
+	var e error
+
 	done := make(chan bool)
 	go func() {
-		pdus, e = this.agent.Walk(poll.What)
+		pdus, e = this.snmpWalk(poll.What)
 		done <- true
 	}()
 
@@ -143,6 +147,20 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 		job.Result = enc.Data()
 	}
 	return m
+}
+
+func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
+	if this.session == nil {
+		return nil, errors.New("SNMP session is not initialized")
+	}
+
+	// Use the net-snmp library session to perform the walk
+	pdus, err := this.session.Walk(oid)
+	if err != nil {
+		return nil, err
+	}
+
+	return pdus, nil
 }
 
 func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
