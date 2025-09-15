@@ -53,7 +53,9 @@ func (this *SNMPv2Collector) Connect() error {
 }
 
 func (this *SNMPv2Collector) Disconnect() error {
-	this.resources.Logger().Info("SNMP Collector for ", this.config.Addr, " is closed.")
+	if this.resources != nil && this.resources.Logger() != nil {
+		this.resources.Logger().Info("SNMP Collector for ", this.config.Addr, " is closed.")
+	}
 	if this.session != nil {
 		this.session.Close()
 		this.session = nil
@@ -64,7 +66,9 @@ func (this *SNMPv2Collector) Disconnect() error {
 
 func (this *SNMPv2Collector) Exec(job *types.CJob) {
 	this.pollOnce = true
-	this.resources.Logger().Debug("Exec Job Start ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
+	if this.resources != nil && this.resources.Logger() != nil {
+		this.resources.Logger().Debug("Exec Job Start ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
+	}
 	if !this.connected {
 		err := this.Connect()
 		if err != nil {
@@ -76,7 +80,9 @@ func (this *SNMPv2Collector) Exec(job *types.CJob) {
 	}
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, this.resources)
 	if err != nil {
-		this.resources.Logger().Error(strings2.New("SNMP:", err.Error()).String())
+		if this.resources != nil && this.resources.Logger() != nil {
+			this.resources.Logger().Error(strings2.New("SNMP:", err.Error()).String())
+		}
 		return
 	}
 
@@ -85,7 +91,9 @@ func (this *SNMPv2Collector) Exec(job *types.CJob) {
 	} else if poll.Operation == types.Operation_OTable {
 		this.table(job, poll)
 	}
-	this.resources.Logger().Debug("Exec Job End  ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
+	if this.resources != nil && this.resources.Logger() != nil {
+		this.resources.Logger().Debug("Exec Job End  ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
+	}
 }
 
 func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap bool) *types.CMap {
@@ -134,7 +142,9 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 		enc := object.NewEncode()
 		err := enc.Add(pdu.Value)
 		if err != nil {
-			this.resources.Logger().Error("Object Value Error: ", err.Error())
+			if this.resources != nil && this.resources.Logger() != nil {
+				this.resources.Logger().Error("Object Value Error: ", err.Error())
+			}
 		}
 		m.Data[pdu.Name] = enc.Data()
 	}
@@ -142,7 +152,9 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 		enc := object.NewEncode()
 		err := enc.Add(m)
 		if err != nil {
-			this.resources.Logger().Error("Object Table Error: ", err)
+			if this.resources != nil && this.resources.Logger() != nil {
+				this.resources.Logger().Error("Object Table Error: ", err)
+			}
 		}
 		job.Result = enc.Data()
 	}
@@ -184,7 +196,9 @@ func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
 	enc := object.NewEncode()
 	err := enc.Add(tbl)
 	if err != nil {
-		this.resources.Logger().Error("Object Table Error: ", err)
+		if this.resources != nil && this.resources.Logger() != nil {
+			this.resources.Logger().Error("Object Table Error: ", err)
+		}
 		return
 	}
 	job.Result = enc.Data()
