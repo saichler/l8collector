@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gosnmp/gosnmp"
+	wapsnmp "github.com/cdevr/WapSNMP"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types"
@@ -31,7 +31,7 @@ func normalizeOID(oid string) string {
 type SNMPv2Collector struct {
 	resources ifs.IResources
 	config    *types.Connection
-	session   *gosnmp.GoSNMP
+	session   *wapsnmp.WapSNMP
 	connected bool
 	pollOnce  bool
 }
@@ -56,28 +56,23 @@ func (this *SNMPv2Collector) Connect() error {
 		return nil
 	}
 
-	// Create GoSNMP instance
-	this.session = &gosnmp.GoSNMP{
-		Target:    this.config.Addr,
-		Port:      uint16(this.config.Port),
-		Community: this.config.ReadCommunity,
-		Version:   gosnmp.Version2c,
-		Timeout:   time.Duration(this.config.Timeout) * time.Second,
-		Retries:   3,
-	}
+	// Create WapSNMP instance using the NewWapSNMP constructor
+	target := this.config.Addr
+	community := this.config.ReadCommunity
+	version := wapsnmp.SNMPv2c
+	timeout := time.Duration(this.config.Timeout) * time.Second
 
 	// Default timeout if not specified
-	if this.session.Timeout == 0 {
-		this.session.Timeout = 10 * time.Second
+	if timeout == 0 {
+		timeout = 10 * time.Second
 	}
 
-	// Connect to the target
-	err := this.session.Connect()
+	session, err := wapsnmp.NewWapSNMP(target, community, version, timeout, 3)
 	if err != nil {
-		return fmt.Errorf("failed to connect to SNMP target %s:%d: %v",
-			this.config.Addr, this.config.Port, err)
+		return fmt.Errorf("failed to create SNMP session for %s: %v", target, err)
 	}
 
+	this.session = session
 	this.connected = true
 	return nil
 }
@@ -87,7 +82,7 @@ func (this *SNMPv2Collector) Disconnect() error {
 		this.resources.Logger().Info("SNMP Collector for ", this.config.Addr, " is closed.")
 	}
 	if this.session != nil {
-		this.session.Conn.Close()
+		this.session.Close()
 		this.session = nil
 	}
 	this.connected = false
@@ -198,18 +193,24 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 		return nil, fmt.Errorf("SNMP session is not initialized")
 	}
 
-	// Perform SNMP walk using gosnmp
-	result, err := this.session.BulkWalkAll(oid)
+	// Parse OID string to WapSNMP Oid format
+	parsedOid, err := wapsnmp.ParseOid(oid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse OID %s: %v", oid, err)
+	}
+
+	// Perform SNMP walk using WapSNMP's GetTable
+	result, err := this.session.GetTable(parsedOid)
 	if err != nil {
 		return nil, fmt.Errorf("SNMP walk failed: %v", err)
 	}
 
-	// Convert gosnmp.SnmpPDU to our SnmpPDU format
+	// Convert WapSNMP results to our SnmpPDU format
 	var pdus []SnmpPDU
-	for _, pdu := range result {
+	for oidStr, value := range result {
 		pdus = append(pdus, SnmpPDU{
-			Name:  pdu.Name,
-			Value: pdu.Value,
+			Name:  oidStr,
+			Value: value,
 		})
 	}
 
