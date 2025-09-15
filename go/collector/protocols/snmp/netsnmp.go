@@ -88,6 +88,16 @@ int snmp_walk_helper(netsnmp_session* session, char* oid_str, char** result_json
                     goto done; // Walked past our subtree
                 }
 
+                // Check if this is the end of MIB view or no such object
+                if (vars->type == SNMP_ENDOFMIBVIEW || vars->type == SNMP_NOSUCHOBJECT || vars->type == SNMP_NOSUCHINSTANCE) {
+                    goto done; // End of MIB walk
+                }
+
+                // Check if we got the same OID as before (infinite loop detection)
+                if (snmp_oid_compare(name, name_len, vars->name, vars->name_length) == 0) {
+                    goto done; // Same OID returned, stop to prevent infinite loop
+                }
+
                 // Null check for variable data
                 if (!vars->name || vars->name_length == 0) {
                     continue;
@@ -107,16 +117,44 @@ int snmp_walk_helper(netsnmp_session* session, char* oid_str, char** result_json
                     strcpy(val_buf, ""); // Use empty string if value conversion fails
                 }
 
-                // Escape quotes in value
-                char escaped_val[2048];
+                // Check for end-of-MIB indicators in the value string
+                if (strstr(val_buf, "No more variables left") != NULL ||
+                    strstr(val_buf, "End of MIB") != NULL ||
+                    strstr(val_buf, "past the end of the MIB tree") != NULL) {
+                    goto done; // End of MIB walk detected in value
+                }
+
+                // Escape special characters in value for JSON
+                char escaped_val[4096];  // Increased size for escaped content
                 memset(escaped_val, 0, sizeof(escaped_val));
                 int j = 0;
                 size_t val_len = strlen(val_buf);
-                for (size_t i = 0; i < val_len && j < sizeof(escaped_val)-2; i++) {
-                    if (val_buf[i] == '"' || val_buf[i] == '\\') {
+                for (size_t i = 0; i < val_len && j < sizeof(escaped_val)-3; i++) {
+                    char c = val_buf[i];
+                    if (c == '"' || c == '\\') {
                         escaped_val[j++] = '\\';
+                        escaped_val[j++] = c;
+                    } else if (c == '\n') {
+                        escaped_val[j++] = '\\';
+                        escaped_val[j++] = 'n';
+                    } else if (c == '\r') {
+                        escaped_val[j++] = '\\';
+                        escaped_val[j++] = 'r';
+                    } else if (c == '\t') {
+                        escaped_val[j++] = '\\';
+                        escaped_val[j++] = 't';
+                    } else if (c == '\b') {
+                        escaped_val[j++] = '\\';
+                        escaped_val[j++] = 'b';
+                    } else if (c == '\f') {
+                        escaped_val[j++] = '\\';
+                        escaped_val[j++] = 'f';
+                    } else if ((unsigned char)c < 32) {
+                        // Escape other control characters as \uXXXX
+                        j += snprintf(escaped_val + j, sizeof(escaped_val) - j - 1, "\\u%04x", (unsigned char)c);
+                    } else {
+                        escaped_val[j++] = c;
                     }
-                    escaped_val[j++] = val_buf[i];
                 }
 
                 // Calculate needed space for this entry
