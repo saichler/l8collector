@@ -2,11 +2,12 @@ package snmp
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types"
@@ -30,7 +31,7 @@ func normalizeOID(oid string) string {
 type SNMPv2Collector struct {
 	resources ifs.IResources
 	config    *types.Connection
-	session   *SNMPSession
+	session   *gosnmp.GoSNMP
 	connected bool
 	pollOnce  bool
 }
@@ -54,12 +55,29 @@ func (this *SNMPv2Collector) Connect() error {
 	if this == nil {
 		return nil
 	}
-	// Create SNMP session using net-snmp library
-	session, err := NewSNMPSession(this.config.Addr, this.config.ReadCommunity)
-	if err != nil {
-		return err
+
+	// Create GoSNMP instance
+	this.session = &gosnmp.GoSNMP{
+		Target:    this.config.Addr,
+		Port:      uint16(this.config.Port),
+		Community: this.config.ReadCommunity,
+		Version:   gosnmp.Version2c,
+		Timeout:   time.Duration(this.config.Timeout) * time.Second,
+		Retries:   3,
 	}
-	this.session = session
+
+	// Default timeout if not specified
+	if this.session.Timeout == 0 {
+		this.session.Timeout = 10 * time.Second
+	}
+
+	// Connect to the target
+	err := this.session.Connect()
+	if err != nil {
+		return fmt.Errorf("failed to connect to SNMP target %s:%d: %v",
+			this.config.Addr, this.config.Port, err)
+	}
+
 	this.connected = true
 	return nil
 }
@@ -69,7 +87,7 @@ func (this *SNMPv2Collector) Disconnect() error {
 		this.resources.Logger().Info("SNMP Collector for ", this.config.Addr, " is closed.")
 	}
 	if this.session != nil {
-		this.session.Close()
+		this.session.Conn.Close()
 		this.session = nil
 	}
 	this.connected = false
@@ -148,6 +166,7 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 	} else {
 		job.ErrorCount = 0
 	}
+
 	m := &types.CMap{}
 	m.Data = make(map[string][]byte)
 	for _, pdu := range pdus {
@@ -176,13 +195,22 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 
 func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	if this.session == nil {
-		return nil, errors.New("SNMP session is not initialized")
+		return nil, fmt.Errorf("SNMP session is not initialized")
 	}
 
-	// Use the net-snmp library session to perform the walk
-	pdus, err := this.session.Walk(oid)
+	// Perform SNMP walk using gosnmp
+	result, err := this.session.BulkWalkAll(oid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("SNMP walk failed: %v", err)
+	}
+
+	// Convert gosnmp.SnmpPDU to our SnmpPDU format
+	var pdus []SnmpPDU
+	for _, pdu := range result {
+		pdus = append(pdus, SnmpPDU{
+			Name:  pdu.Name,
+			Value: pdu.Value,
+		})
 	}
 
 	return pdus, nil
