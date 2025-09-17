@@ -3,7 +3,6 @@ package snmp
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -30,11 +29,11 @@ func normalizeOID(oid string) string {
 }
 
 type SNMPv2Collector struct {
-	resources ifs.IResources
-	config    *types.Connection
-	session   *wapsnmp.WapSNMP
-	connected bool
-	pollOnce  bool
+	resources   ifs.IResources
+	config      *types.Connection
+	session     *wapsnmp.WapSNMP
+	connected   bool
+	pollSuccess bool
 }
 
 type SnmpPDU struct {
@@ -93,7 +92,6 @@ func (this *SNMPv2Collector) Disconnect() error {
 }
 
 func (this *SNMPv2Collector) Exec(job *types.CJob) {
-	this.pollOnce = true
 	if this.resources != nil && this.resources.Logger() != nil {
 		this.resources.Logger().Debug("Exec Job Start ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
 	}
@@ -131,58 +129,44 @@ func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap b
 		timeout = 10 * time.Second // Default 10 second timeout
 	}
 
-	const maxRetries = 5
 	var pdus []SnmpPDU
 	var lastError error
 
-	// Try up to maxRetries times
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	// Try once with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
-		var e error
-		done := make(chan bool)
+	var e error
+	done := make(chan bool)
 
-		go func() {
-			pdus, e = this.snmpWalk(poll.What)
-			done <- true
-		}()
+	go func() {
+		pdus, e = this.snmpWalk(poll.What)
+		done <- true
+	}()
 
-		select {
-		case <-done:
-			cancel()
-			// Walk completed normally
-			if e == nil {
-				// Success - break out of retry loop
-				lastError = nil
-				break
-			}
-			// Non-timeout error - don't retry
+	select {
+	case <-done:
+		this.pollSuccess = true
+		cancel()
+		// Walk completed normally
+		if e == nil {
+			// Success
+			lastError = nil
+		} else {
+			// Error occurred
 			lastError = e
-			break
-
-		case <-ctx.Done():
-			cancel()
-			// Timeout occurred
-			lastError = fmt.Errorf("timeout after %s", timeout.String())
-
-			// If not the last retry, sleep randomly between 5-30 seconds
-			if attempt < maxRetries {
-				sleepDuration := time.Duration(rand.Intn(26)+5) * time.Second
-				if this.resources != nil && this.resources.Logger() != nil {
-					this.resources.Logger().Debug("SNMP walk timeout on attempt ", attempt,
-						" of ", maxRetries, " for OID ", poll.What,
-						". Sleeping for ", sleepDuration, " before retry.")
-				}
-				time.Sleep(sleepDuration)
-			}
 		}
+
+	case <-ctx.Done():
+		cancel()
+		// Timeout occurred
+		lastError = fmt.Errorf("timeout after %s", timeout.String())
 	}
 
-	// Handle errors after all retries
+	// Handle errors
 	if lastError != nil {
 		if strings.Contains(lastError.Error(), "timeout") {
-			// Timeout error after all retries
-			job.Error = strings2.New("SNMP Walk Timeout after ", maxRetries, " retries. Host:",
+			// Timeout error
+			job.Error = strings2.New("SNMP Walk Timeout. Host:",
 				this.config.Addr, "/", int(this.config.Port), " Oid:", poll.What, " ",
 				lastError.Error()).String()
 		} else {
@@ -295,7 +279,7 @@ func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
 }
 
 func (this *SNMPv2Collector) Online() bool {
-	return this.connected || !this.pollOnce
+	return this.connected && this.pollSuccess
 }
 
 func getRowAndColName(oid string) (int32, string) {

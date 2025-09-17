@@ -28,8 +28,8 @@ func TestCollector(t *testing.T) {
 	snmpPolls := boot.GetAllPolarisModels()
 	for _, snmpPoll := range snmpPolls {
 		for _, poll := range snmpPoll.Polling {
-			if poll.Cadence > 3 {
-				poll.Cadence = 3
+			if poll.Cadence.Enabled {
+				poll.Cadence.Cadences[0] = 3
 			}
 		}
 	}
@@ -107,8 +107,8 @@ func testJobDisable(t *testing.T) {
 	snmpPolls := boot.GetAllPolarisModels()
 	for _, snmpPoll := range snmpPolls {
 		for _, poll := range snmpPoll.Polling {
-			if poll.Cadence > 3 {
-				poll.Cadence = 3
+			if poll.Cadence.Enabled {
+				poll.Cadence.Cadences[0] = 3
 			}
 			if poll.Name == "entityMib" {
 				poll.What = ".1.3.6.6.6"

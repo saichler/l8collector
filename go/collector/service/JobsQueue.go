@@ -49,7 +49,7 @@ func NewJobsQueue(deviceId, hostId string, service *CollectorService,
 	return jq
 }
 
-func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, hardware, version string, cadence, timeout int64) map[string]*types.CJob {
+func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, hardware, version string) map[string]*types.CJob {
 	p, err := pollaris.PollarisByKey(this.service.vnic.Resources(), name, vendor, series, family, software, hardware, version)
 	if err != nil {
 		return nil
@@ -59,16 +59,13 @@ func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, har
 		job := &types.CJob{}
 		job.JobName = jobName
 		job.PollarisName = p.Name
-		job.Cadence = cadence
-		job.Timeout = timeout
+		job.Cadence = poll.Cadence
+		job.Timeout = poll.Timeout
 		job.DeviceId = this.deviceId
 		job.HostId = this.hostId
 		job.IService = this.iService
 		job.PService = this.pService
 
-		if job.Cadence == 0 {
-			job.Cadence = poll.Cadence
-		}
 		if job.Timeout == 0 {
 			job.Timeout = poll.Timeout
 		}
@@ -85,9 +82,11 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 	jobs := make([]*types.CJob, 0)
 	for _, p := range polarises {
 		for jobName, poll := range p.Polling {
-			if poll.Cadence < 3 {
+
+			if !poll.Cadence.Enabled {
 				continue
 			}
+
 			job := &types.CJob{}
 			job.DeviceId = this.deviceId
 			job.HostId = this.hostId
@@ -107,7 +106,7 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 	if this == nil {
 		return errors.New("Job Queue is already shutdown")
 	}
-	jobs := this.newJobsForKey(polarisName, vendor, series, family, software, hardware, version, cadence, timeout)
+	jobs := this.newJobsForKey(polarisName, vendor, series, family, software, hardware, version)
 	if jobs == nil {
 		return errors.New("cannot find pollaris to create jobs")
 	}
@@ -117,7 +116,7 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 		return errors.New("Job Queue is already shutdown")
 	}
 	for _, job := range jobs {
-		if job.Cadence < 3 {
+		if !job.Cadence.Enabled {
 			continue
 		}
 		jobKey := JobKey(job.PollarisName, job.JobName)
@@ -135,7 +134,7 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 }
 
 func (this *JobsQueue) DisableJob(job *types.CJob) {
-	job.Cadence = -1
+	job.Cadence.Enabled = false
 }
 
 func (this *JobsQueue) Pop() (*types.CJob, int64) {
@@ -155,16 +154,18 @@ func (this *JobsQueue) Pop() (*types.CJob, int64) {
 	now := time.Now().Unix()
 	waitTimeTillNext := int64(999999)
 	for i, j := range this.jobs {
-		timeSinceExecuted := now - j.Ended
-		if j.Cadence == -1 {
+		if !j.Cadence.Enabled {
 			continue
 		}
-		if timeSinceExecuted >= j.Cadence {
+		timeSinceExecuted := now - j.Ended
+		jobCadence := JobCadence(j)
+
+		if timeSinceExecuted >= jobCadence {
 			job = j
 			index = i
 			break
 		} else {
-			timeTillNextExecution := j.Cadence - timeSinceExecuted
+			timeTillNextExecution := jobCadence - timeSinceExecuted
 			if timeTillNextExecution < waitTimeTillNext {
 				waitTimeTillNext = timeTillNextExecution
 			}

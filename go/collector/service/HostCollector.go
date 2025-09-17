@@ -90,17 +90,7 @@ func (this *HostCollector) start() error {
 	return nil
 }
 
-func (this *HostCollector) smoothFirstCollection() {
-	if common.SmoothFirstCollection {
-		//Sleep up to 5 minutes before starting to collect
-		//so the collection for all devices will be smoother on the simulator
-		time.Sleep(time.Second * time.Duration(common.RandomSecondWithin15Minutes()))
-	}
-	this.service.vnic.Resources().Logger().Info("** Starting Collection on host ", this.hostId)
-}
-
 func (this *HostCollector) collect() {
-	this.smoothFirstCollection()
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
 	var job *types.CJob
 	var waitTime int64
@@ -156,8 +146,7 @@ func (this *HostCollector) collect() {
 
 			if job.ErrorCount >= 5 {
 				this.service.vnic.Resources().Logger().Error("Job ", job.DeviceId, " - ", job.PollarisName, " - ",
-					job.JobName, " has failed ", job.ErrorCount, " in a row, disabling job")
-				this.jobsQueue.DisableJob(job)
+					job.JobName, " has failed ", job.ErrorCount, " in a row.")
 			}
 		} else {
 			this.service.vnic.Resources().Logger().Debug("No more jobs, next job in ", waitTime, " seconds.")
@@ -221,6 +210,9 @@ func (this *HostCollector) jobComplete(job *types.CJob) {
 }
 
 func jobHasChange(job *types.CJob) bool {
+	if job.Result != nil && job.Cadence.Current < int32(len(job.Cadence.Cadences)-1) {
+		job.Cadence.Current++
+	}
 	if job.LastResult == nil && job.Result == nil {
 		return false
 	} else if job.LastResult == nil && job.Result != nil {
