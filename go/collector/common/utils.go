@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"math/rand"
 
-	"github.com/saichler/l8pollaris/go/types"
 )
 
-func ReplaceArguments(what string, job *types.CJob) string {
+func ReplaceArguments(what string, job *l8poll.CJob) string {
 	if job.Arguments == nil {
 		return what
 	}

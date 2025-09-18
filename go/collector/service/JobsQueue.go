@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types"
 )
 
 type JobsQueue struct {

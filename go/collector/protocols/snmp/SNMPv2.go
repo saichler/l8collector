@@ -10,7 +10,6 @@ import (
 	wapsnmp "github.com/cdevr/WapSNMP"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	strings2 "github.com/saichler/l8utils/go/utils/strings"

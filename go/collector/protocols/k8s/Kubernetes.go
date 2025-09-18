@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/strings"

@@ -2,7 +2,6 @@ package utils_collector
 
 import (
 	"github.com/saichler/l8collector/go/collector/common"
-	"github.com/saichler/l8pollaris/go/types"
 )
 
 const (

@@ -3,7 +3,6 @@ package utils_collector
 import (
 	"sync"
 
-	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8types/go/ifs"
 )
 

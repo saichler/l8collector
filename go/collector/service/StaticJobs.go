@@ -2,7 +2,6 @@ package service
 
 import (
 	"github.com/saichler/l8collector/go/collector/common"
-	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8srlz/go/serialize/object"
 )
 

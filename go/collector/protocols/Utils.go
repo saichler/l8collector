@@ -1,6 +1,5 @@
 package protocols
 
-import "github.com/saichler/l8pollaris/go/types"
 
 func SetValue(row, col int32, colName string, value []byte, tbl *types.CTable) {
 	if tbl == nil {

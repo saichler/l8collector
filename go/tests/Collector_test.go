@@ -11,7 +11,6 @@ import (
 	"github.com/saichler/l8collector/go/tests/utils_collector"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 )
@@ -42,8 +41,8 @@ func TestCollector(t *testing.T) {
 	vnic := topo.VnicByVnetNum(2, 2)
 	vnic.Resources().Registry().Register(pollaris.PollarisService{})
 	vnic.Resources().Services().Activate(pollaris.ServiceType, pollaris.ServiceName, serviceArea, vnic.Resources(), vnic)
-	vnic.Resources().Registry().Register(devices.DeviceService{})
-	vnic.Resources().Services().Activate(devices.ServiceType, devices.ServiceName, serviceArea, vnic.Resources(), vnic)
+	vnic.Resources().Registry().Register(targets.DeviceService{})
+	vnic.Resources().Services().Activate(targets.ServiceType, targets.ServiceName, serviceArea, vnic.Resources(), vnic)
 	vnic.Resources().Registry().Register(service.CollectorService{})
 	vnic.Resources().Services().Activate(service.ServiceType, common.CollectorService, serviceArea, vnic.Resources(), vnic)
 
@@ -69,7 +68,7 @@ func TestCollector(t *testing.T) {
 	*/
 
 	cl := topo.VnicByVnetNum(1, 1)
-	err := cl.Multicast(devices.ServiceName, serviceArea, ifs.POST, device)
+	err := cl.Multicast(targets.ServiceName, serviceArea, ifs.POST, device)
 	if err != nil {
 		panic(err)
 	}
@@ -124,8 +123,8 @@ func testJobDisable(t *testing.T) {
 	vnic := topo.VnicByVnetNum(2, 2)
 	vnic.Resources().Registry().Register(pollaris.PollarisService{})
 	vnic.Resources().Services().Activate(pollaris.ServiceType, pollaris.ServiceName, serviceArea, vnic.Resources(), vnic)
-	vnic.Resources().Registry().Register(devices.DeviceService{})
-	vnic.Resources().Services().Activate(devices.ServiceType, devices.ServiceName, serviceArea, vnic.Resources(), vnic)
+	vnic.Resources().Registry().Register(targets.DeviceService{})
+	vnic.Resources().Services().Activate(targets.ServiceType, targets.ServiceName, serviceArea, vnic.Resources(), vnic)
 	vnic.Resources().Registry().Register(service.CollectorService{})
 	vnic.Resources().Services().Activate(service.ServiceType, common.CollectorService, serviceArea, vnic.Resources(), vnic)
 
@@ -145,7 +144,7 @@ func testJobDisable(t *testing.T) {
 	}
 
 	cl := topo.VnicByVnetNum(1, 1)
-	err := cl.Multicast(devices.ServiceName, serviceArea, ifs.POST, device)
+	err := cl.Multicast(targets.ServiceName, serviceArea, ifs.POST, device)
 	if err != nil {
 		panic(err)
 	}

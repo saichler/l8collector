@@ -9,7 +9,6 @@ import (
 	"github.com/saichler/l8collector/go/collector/protocols/snmp"
 	"github.com/saichler/l8collector/go/collector/protocols/ssh"
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/maps"
 	"github.com/saichler/l8utils/go/utils/strings"

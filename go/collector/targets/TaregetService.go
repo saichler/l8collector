@@ -1,8 +1,7 @@
-package devices
+package targets
 
 import (
 	"github.com/saichler/l8collector/go/collector/common"
-	"github.com/saichler/l8pollaris/go/types"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/web"
@@ -10,31 +9,31 @@ import (
 
 const (
 	ServiceName = "Devices"
-	ServiceType = "DeviceService"
+	ServiceType = "TargetService"
 )
 
-type DeviceService struct {
-	configCenter *DeviceCenter
+type TargetService struct {
+	configCenter *TargetCenter
 	serviceArea  byte
 }
 
-func (this *DeviceService) Activate(serviceName string, serviceArea byte,
+func (this *TargetService) Activate(serviceName string, serviceArea byte,
 	r ifs.IResources, l ifs.IServiceCacheListener, args ...interface{}) error {
-	r.Registry().Register(&types.Device{})
-	r.Registry().Register(&types.DeviceList{})
+	r.Registry().Register(&l8poll.L8C_Target{})
+	r.Registry().Register(&l8poll.L8C_TargetList{})
 	this.configCenter = newDeviceCenter(ServiceName, serviceArea, r, l)
 	this.serviceArea = serviceArea
 	return nil
 }
 
-func (this *DeviceService) DeActivate() error {
+func (this *TargetService) DeActivate() error {
 	this.configCenter.Shutdown()
 	this.configCenter = nil
 	return nil
 }
 
-func (this *DeviceService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	deviceList, ok := pb.Element().(*types.DeviceList)
+func (this *TargetService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
+	deviceList, ok := pb.Element().(*l8poll.L8C_TargetList)
 	if ok {
 		for _, device := range deviceList.List {
 			ok = this.configCenter.Post(device, pb.Notification())
@@ -45,7 +44,7 @@ func (this *DeviceService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements 
 			}
 		}
 	}
-	device, ok := pb.Element().(*types.Device)
+	device, ok := pb.Element().(*l8poll.L8C_Target)
 	if ok {
 		ok = this.configCenter.Post(device, pb.Notification())
 		if !ok {
@@ -54,11 +53,11 @@ func (this *DeviceService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements 
 			this.updateDevice(device, vnic, pb.Notification())
 		}
 	}
-	return object.New(nil, &types.Device{})
+	return object.New(nil, &l8poll.L8C_Target{})
 }
 
-func (this *DeviceService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	deviceList, ok := pb.Element().(*types.DeviceList)
+func (this *TargetService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
+	deviceList, ok := pb.Element().(*l8poll.L8C_TargetList)
 	if ok {
 		for _, device := range deviceList.List {
 			ok = this.configCenter.Put(device, pb.Notification())
@@ -69,7 +68,7 @@ func (this *DeviceService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 			}
 		}
 	}
-	device, ok := pb.Element().(*types.Device)
+	device, ok := pb.Element().(*l8poll.L8C_Target)
 	if ok {
 		ok = this.configCenter.Put(device, pb.Notification())
 		if !ok {
@@ -78,10 +77,10 @@ func (this *DeviceService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 			this.updateDevice(device, vnic, pb.Notification())
 		}
 	}
-	return object.New(nil, &types.Device{})
+	return object.New(nil, &l8poll.L8C_Target{})
 }
-func (this *DeviceService) Patch(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	deviceList, ok := pb.Element().(*types.DeviceList)
+func (this *TargetService) Patch(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
+	deviceList, ok := pb.Element().(*l8poll.L8C_TargetList)
 	if ok {
 		for _, device := range deviceList.List {
 			ok = this.configCenter.Patch(device, pb.Notification())
@@ -92,7 +91,7 @@ func (this *DeviceService) Patch(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements
 			}
 		}
 	}
-	device, ok := pb.Element().(*types.Device)
+	device, ok := pb.Element().(*l8poll.L8C_Target)
 	if ok {
 		ok = this.configCenter.Patch(device, pb.Notification())
 		if !ok {
@@ -101,10 +100,10 @@ func (this *DeviceService) Patch(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements
 			this.updateDevice(device, vnic, pb.Notification())
 		}
 	}
-	return object.New(nil, &types.Device{})
+	return object.New(nil, &l8poll.L8C_Target{})
 }
-func (this *DeviceService) Delete(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	deviceList, ok := pb.Element().(*types.DeviceList)
+func (this *TargetService) Delete(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
+	deviceList, ok := pb.Element().(*l8poll.L8C_TargetList)
 	if ok {
 		for _, device := range deviceList.List {
 			ok = this.configCenter.Delete(device, pb.Notification())
@@ -113,37 +112,37 @@ func (this *DeviceService) Delete(pb ifs.IElements, vnic ifs.IVNic) ifs.IElement
 			}
 		}
 	}
-	device, ok := pb.Element().(*types.Device)
+	device, ok := pb.Element().(*l8poll.L8C_Target)
 	if ok {
 		ok = this.configCenter.Delete(device, pb.Notification())
 		if ok {
 			this.stopDevice(device, vnic, pb.Notification())
 		}
 	}
-	return object.New(nil, &types.Device{})
+	return object.New(nil, &l8poll.L8C_Target{})
 }
 
-func (this *DeviceService) Get(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
+func (this *TargetService) Get(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	return nil
 }
-func (this *DeviceService) GetCopy(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
+func (this *TargetService) GetCopy(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	return nil
 }
-func (this *DeviceService) Failed(pb ifs.IElements, vnic ifs.IVNic, msg *ifs.Message) ifs.IElements {
+func (this *TargetService) Failed(pb ifs.IElements, vnic ifs.IVNic, msg *ifs.Message) ifs.IElements {
 	return nil
 }
-func (this *DeviceService) TransactionConfig() ifs.ITransactionConfig {
+func (this *TargetService) TransactionConfig() ifs.ITransactionConfig {
 	return nil
 }
 
-func (this *DeviceService) WebService() ifs.IWebService {
-	ws := web.New(ServiceName, this.serviceArea, &types.DeviceList{},
-		&types.Device{}, nil, nil, nil, nil, nil, nil, nil, nil)
+func (this *TargetService) WebService() ifs.IWebService {
+	ws := web.New(ServiceName, this.serviceArea, &l8poll.L8C_TargetList{},
+		&l8poll.L8C_Target{}, nil, nil, nil, nil, nil, nil, nil, nil)
 	return ws
 }
 
-func (this *DeviceService) startDevice(device *types.Device, vnic ifs.IVNic, isNotificaton bool) {
-	vnic.Resources().Logger().Info("DeviceService.startDevice: ", device.DeviceId)
+func (this *TargetService) startDevice(device *l8poll.L8C_Target, vnic ifs.IVNic, isNotificaton bool) {
+	vnic.Resources().Logger().Info("TargetService.startDevice: ", device.DeviceId)
 	if !isNotificaton {
 		err := vnic.RoundRobin(common.CollectorService, this.serviceArea, ifs.POST, device)
 		if err != nil {
@@ -152,8 +151,8 @@ func (this *DeviceService) startDevice(device *types.Device, vnic ifs.IVNic, isN
 	}
 }
 
-func (this *DeviceService) updateDevice(device *types.Device, vnic ifs.IVNic, isNotificaton bool) {
-	vnic.Resources().Logger().Info("DeviceService.startDevice: ", device.DeviceId)
+func (this *TargetService) updateDevice(device *l8poll.L8C_Target, vnic ifs.IVNic, isNotificaton bool) {
+	vnic.Resources().Logger().Info("TargetService.startDevice: ", device.DeviceId)
 	if !isNotificaton {
 		err := vnic.Multicast(common.CollectorService, this.serviceArea, ifs.PUT, device)
 		if err != nil {
@@ -162,7 +161,7 @@ func (this *DeviceService) updateDevice(device *types.Device, vnic ifs.IVNic, is
 	}
 }
 
-func (this *DeviceService) stopDevice(device *types.Device, vnic ifs.IVNic, isNotificaton bool) {
+func (this *TargetService) stopDevice(device *l8poll.L8C_Target, vnic ifs.IVNic, isNotificaton bool) {
 	if !isNotificaton {
 		err := vnic.Multicast(common.CollectorService, this.serviceArea, ifs.DELETE, device)
 		if err != nil {
