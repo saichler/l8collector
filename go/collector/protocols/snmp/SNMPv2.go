@@ -8,7 +8,6 @@ import (
 	"time"
 
 	wapsnmp "github.com/cdevr/WapSNMP"
-	"github.com/saichler/collect/go/types"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types/l8poll"
@@ -123,7 +122,7 @@ func (this *SNMPv2Collector) Exec(job *l8poll.CJob) {
 	}
 }
 
-func (this *SNMPv2Collector) walk(job *l8poll.CJob, poll *l8poll.L8Poll, encodeMap bool) *types.CMap {
+func (this *SNMPv2Collector) walk(job *l8poll.CJob, poll *l8poll.L8Poll, encodeMap bool) *l8poll.CMap {
 	// Add timeout wrapper for SNMP walk to prevent hanging on invalid OIDs
 	timeout := time.Duration(this.config.Timeout) * time.Second
 	if timeout == 0 {
@@ -182,7 +181,7 @@ func (this *SNMPv2Collector) walk(job *l8poll.CJob, poll *l8poll.L8Poll, encodeM
 		job.ErrorCount = 0
 	}
 
-	m := &types.CMap{}
+	m := &l8poll.CMap{}
 	m.Data = make(map[string][]byte)
 	for _, pdu := range pdus {
 		enc := object.NewEncode()

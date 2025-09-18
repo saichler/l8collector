@@ -177,7 +177,7 @@ func (this *HostCollector) execJob(job *l8poll.CJob) bool {
 
 func newProtocolCollector(config *l8poll.L8T_Connection, resource ifs.IResources) (common.ProtocolCollector, error) {
 	var protocolCollector common.ProtocolCollector
-	if config.Protocol == types.Protocol_PSSH {
+	if config.Protocol == l8poll.L8C_Protocol_L8P_SSH {
 		protocolCollector = &ssh.SshCollector{}
 	} else if config.Protocol == l8poll.L8C_Protocol_L8P_PSNMPV2 {
 		protocolCollector = &snmp.SNMPv2Collector{}

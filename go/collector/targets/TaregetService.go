@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	ServiceName = "Devices"
+	ServiceName = "Target"
 	ServiceType = "TargetService"
 )
 

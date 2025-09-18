@@ -1,7 +1,6 @@
 package protocols
 
 import (
-	"github.com/saichler/collect/go/types"
 	"github.com/saichler/l8pollaris/go/types/l8poll"
 )
 
@@ -24,7 +23,7 @@ func SetValue(row, col int32, colName string, value []byte, tbl *l8poll.CTable) 
 	}
 }
 
-func Keys(m *types.CMap) []string {
+func Keys(m *l8poll.CMap) []string {
 	if m == nil || m.Data == nil {
 		return []string{}
 	}

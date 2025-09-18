@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/saichler/collect/go/types"
 	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
@@ -27,7 +26,7 @@ func (this *CollectorService) Activate(serviceName string, serviceArea byte,
 	if ok {
 		this.vnic = vnic
 		r.Registry().Register(&l8poll.L8C_Target{})
-		r.Registry().Register(&types.CMap{})
+		r.Registry().Register(&l8poll.CMap{})
 		r.Registry().Register(&l8poll.CTable{})
 		r.Registry().Register(&l8poll.CJob{})
 		r.Registry().Register(&ExecuteService{})

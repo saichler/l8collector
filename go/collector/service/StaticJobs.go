@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/saichler/collect/go/types"
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8srlz/go/serialize/object"
@@ -42,7 +41,7 @@ func (this *DeviceStatusJob) do(job *l8poll.CJob, hostCollector *HostCollector) 
 	obj := object.NewEncode()
 	protocolState := make(map[int32]bool)
 	hostCollector.collectors.Iterate(func(k, v interface{}) {
-		key := k.(types.Protocol)
+		key := k.(l8poll.L8C_Protocol)
 		p := v.(common.ProtocolCollector)
 		protocolState[int32(key)] = p.Online()
 	})

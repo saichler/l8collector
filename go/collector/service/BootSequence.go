@@ -3,7 +3,6 @@ package service
 import (
 	"time"
 
-	"github.com/saichler/collect/go/types"
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
@@ -88,7 +87,7 @@ func (this *HostCollector) bootDetailDevice(job *l8poll.CJob) {
 		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.TargetId, " has sysmib error ", err.Error())
 		return
 	}
-	cmap, ok := data.(*types.CMap)
+	cmap, ok := data.(*l8poll.CMap)
 	if !ok {
 		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.TargetId, " systemMib not A CMap")
 		return

@@ -1,6 +1,7 @@
 package targets
 
 import (
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8services/go/services/dcache"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/reflect/go/reflect/introspecting"
@@ -72,5 +73,5 @@ func Configs(resource ifs.IResources, serviceArea byte) *TargetCenter {
 	if !ok {
 		return nil
 	}
-	return (sp.(*DeviceService)).configCenter
+	return (sp.(*TargetService)).configCenter
 }
