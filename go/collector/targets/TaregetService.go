@@ -2,6 +2,7 @@ package targets
 
 import (
 	"github.com/saichler/l8collector/go/collector/common"
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/web"
@@ -142,7 +143,7 @@ func (this *TargetService) WebService() ifs.IWebService {
 }
 
 func (this *TargetService) startDevice(device *l8poll.L8C_Target, vnic ifs.IVNic, isNotificaton bool) {
-	vnic.Resources().Logger().Info("TargetService.startDevice: ", device.DeviceId)
+	vnic.Resources().Logger().Info("TargetService.startDevice: ", device.TargetId)
 	if !isNotificaton {
 		err := vnic.RoundRobin(common.CollectorService, this.serviceArea, ifs.POST, device)
 		if err != nil {
@@ -152,7 +153,7 @@ func (this *TargetService) startDevice(device *l8poll.L8C_Target, vnic ifs.IVNic
 }
 
 func (this *TargetService) updateDevice(device *l8poll.L8C_Target, vnic ifs.IVNic, isNotificaton bool) {
-	vnic.Resources().Logger().Info("TargetService.startDevice: ", device.DeviceId)
+	vnic.Resources().Logger().Info("TargetService.startDevice: ", device.TargetId)
 	if !isNotificaton {
 		err := vnic.Multicast(common.CollectorService, this.serviceArea, ifs.PUT, device)
 		if err != nil {

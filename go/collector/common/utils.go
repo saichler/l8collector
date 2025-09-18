@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"math/rand"
 
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 )
 
 func ReplaceArguments(what string, job *l8poll.CJob) string {

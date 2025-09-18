@@ -1,6 +1,8 @@
 package service
 
 import (
+	"github.com/saichler/collect/go/types"
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/maps"
@@ -24,26 +26,26 @@ func (this *CollectorService) Activate(serviceName string, serviceArea byte,
 	vnic, ok := l.(ifs.IVNic)
 	if ok {
 		this.vnic = vnic
-		r.Registry().Register(&types.Device{})
+		r.Registry().Register(&l8poll.L8C_Target{})
 		r.Registry().Register(&types.CMap{})
-		r.Registry().Register(&types.CTable{})
-		r.Registry().Register(&types.CJob{})
+		r.Registry().Register(&l8poll.CTable{})
+		r.Registry().Register(&l8poll.CJob{})
 		r.Registry().Register(&ExecuteService{})
 		r.Services().Activate("ExecuteService", "exec", serviceArea, r, vnic, this)
 	}
 	return nil
 }
 
-func (this *CollectorService) startPolling(device *types.Device) error {
+func (this *CollectorService) startPolling(device *l8poll.L8C_Target) error {
 	for _, host := range device.Hosts {
-		hostCol, _ := this.hostCollector(host.DeviceId, device)
+		hostCol, _ := this.hostCollector(host.TargetId, device)
 		hostCol.start()
 	}
 	return nil
 }
 
-func (this *CollectorService) hostCollector(hostId string, device *types.Device) (*HostCollector, bool) {
-	key := hostCollectorKey(device.DeviceId, hostId)
+func (this *CollectorService) hostCollector(hostId string, device *l8poll.L8C_Target) (*HostCollector, bool) {
+	key := hostCollectorKey(device.TargetId, hostId)
 	h, ok := this.hostCollectors.Get(key)
 	if ok {
 		return h.(*HostCollector), ok
@@ -63,10 +65,10 @@ func (this *CollectorService) DeActivate() error {
 }
 
 func (this *CollectorService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	device := pb.Element().(*types.Device)
-	vnic.Resources().Logger().Info("Collector Service: Start polling device ", device.DeviceId)
+	device := pb.Element().(*l8poll.L8C_Target)
+	vnic.Resources().Logger().Info("Collector Service: Start polling device ", device.TargetId)
 	this.startPolling(device)
-	return object.New(nil, &types.Device{})
+	return object.New(nil, &l8poll.L8C_Target{})
 }
 func (this *CollectorService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	return nil

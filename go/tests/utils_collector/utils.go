@@ -2,6 +2,7 @@ package utils_collector
 
 import (
 	"github.com/saichler/l8collector/go/collector/common"
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 )
 
 const (
@@ -9,20 +10,20 @@ const (
 	K8sServiceName = "Cluster"
 )
 
-func CreateDevice(ip string, serviceArea byte) *types.Device {
-	device := &types.Device{}
-	device.DeviceId = ip
-	device.InventoryService = &types.DeviceServiceInfo{ServiceName: InvServiceName, ServiceArea: int32(serviceArea)}
-	device.ParsingService = &types.DeviceServiceInfo{ServiceName: common.ParserServicePrefix + InvServiceName, ServiceArea: int32(serviceArea)}
-	device.Hosts = make(map[string]*types.Host)
-	host := &types.Host{}
-	host.DeviceId = device.DeviceId
+func CreateDevice(ip string, serviceArea byte) *l8poll.L8C_Target {
+	device := &l8poll.L8C_Target{}
+	device.TargetId = ip
+	device.InventoryService = &l8poll.L8ServiceInfo{ServiceName: InvServiceName, ServiceArea: int32(serviceArea)}
+	device.ParsingService = &l8poll.L8ServiceInfo{ServiceName: common.ParserServicePrefix + InvServiceName, ServiceArea: int32(serviceArea)}
+	device.Hosts = make(map[string]*l8poll.L8C_Host)
+	host := &l8poll.L8C_Host{}
+	host.TargetId = device.TargetId
 
-	host.Configs = make(map[int32]*types.Connection)
-	device.Hosts[device.DeviceId] = host
+	host.Configs = make(map[int32]*l8poll.L8T_Connection)
+	device.Hosts[device.TargetId] = host
 
-	sshConfig := &types.Connection{}
-	sshConfig.Protocol = types.Protocol_PSSH
+	sshConfig := &l8poll.L8T_Connection{}
+	sshConfig.Protocol = l8poll.L8C_Protocol_L8P_SSH
 	sshConfig.Port = 22
 	sshConfig.Addr = ip
 	sshConfig.Username = "simadmin"
@@ -32,8 +33,8 @@ func CreateDevice(ip string, serviceArea byte) *types.Device {
 
 	host.Configs[int32(sshConfig.Protocol)] = sshConfig
 
-	snmpConfig := &types.Connection{}
-	snmpConfig.Protocol = types.Protocol_PSNMPV2
+	snmpConfig := &l8poll.L8T_Connection{}
+	snmpConfig.Protocol = l8poll.L8C_Protocol_L8P_PSNMPV2
 	snmpConfig.Addr = ip
 	snmpConfig.Port = 161
 	snmpConfig.Timeout = 15

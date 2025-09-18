@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
-	"github.com/saichler/l8collector/go/collector/devices"
 	"github.com/saichler/l8collector/go/collector/service"
+	"github.com/saichler/l8collector/go/collector/targets"
 	"github.com/saichler/l8collector/go/tests/utils_collector"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 )
@@ -34,7 +35,7 @@ func TestEntityMib(t *testing.T) {
 	vnic := topo.VnicByVnetNum(2, 2)
 	vnic.Resources().Registry().Register(pollaris.PollarisService{})
 	vnic.Resources().Services().Activate(pollaris.ServiceType, pollaris.ServiceName, serviceArea, vnic.Resources(), vnic)
-	vnic.Resources().Registry().Register(targets.DeviceService{})
+	vnic.Resources().Registry().Register(targets.TargetService{})
 	vnic.Resources().Services().Activate(targets.ServiceType, targets.ServiceName, serviceArea, vnic.Resources(), vnic)
 	vnic.Resources().Registry().Register(service.CollectorService{})
 	vnic.Resources().Services().Activate(service.ServiceType, common.CollectorService, serviceArea, vnic.Resources(), vnic)
@@ -59,9 +60,9 @@ func TestEntityMib(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	job := &types.CJob{}
-	job.DeviceId = device.DeviceId
-	job.HostId = device.DeviceId
+	job := &l8poll.CJob{}
+	job.TargetId = device.TargetId
+	job.HostId = device.TargetId
 	job.PollarisName = "mib2"
 	job.JobName = "entityMib"
 

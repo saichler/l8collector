@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8pollaris/go/pollaris"
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/strings"
@@ -15,12 +16,12 @@ import (
 
 type Kubernetes struct {
 	resources  ifs.IResources
-	config     *types.Connection
+	config     *l8poll.L8T_Connection
 	kubeConfig string
 	connected  bool
 }
 
-func (this *Kubernetes) Init(config *types.Connection, resources ifs.IResources) error {
+func (this *Kubernetes) Init(config *l8poll.L8T_Connection, resources ifs.IResources) error {
 	this.resources = resources
 	this.config = config
 	this.kubeConfig = ".kubeadm-" + config.KukeContext
@@ -32,11 +33,11 @@ func (this *Kubernetes) Init(config *types.Connection, resources ifs.IResources)
 	return err
 }
 
-func (this *Kubernetes) Protocol() types.Protocol {
-	return types.Protocol_PK8s
+func (this *Kubernetes) Protocol() l8poll.L8C_Protocol {
+	return l8poll.L8C_Protocol_L8P_Kubectl
 }
 
-func (this *Kubernetes) Exec(job *types.CJob) {
+func (this *Kubernetes) Exec(job *l8poll.CJob) {
 	this.resources.Logger().Info("K8s Job ", job.PollarisName, ":", job.JobName, " started")
 	defer this.resources.Logger().Info("K8s Job ", job.PollarisName, ":", job.JobName, " ended")
 

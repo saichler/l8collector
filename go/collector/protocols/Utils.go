@@ -1,16 +1,20 @@
 package protocols
 
+import (
+	"github.com/saichler/collect/go/types"
+	"github.com/saichler/l8pollaris/go/types/l8poll"
+)
 
-func SetValue(row, col int32, colName string, value []byte, tbl *types.CTable) {
+func SetValue(row, col int32, colName string, value []byte, tbl *l8poll.CTable) {
 	if tbl == nil {
 		return
 	}
 	if tbl.Rows == nil {
-		tbl.Rows = make(map[int32]*types.CRow)
+		tbl.Rows = make(map[int32]*l8poll.CRow)
 	}
 	rowData, ok := tbl.Rows[row]
 	if !ok {
-		rowData = &types.CRow{}
+		rowData = &l8poll.CRow{}
 		rowData.Data = make(map[int32][]byte)
 		tbl.Rows[row] = rowData
 	}

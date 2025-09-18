@@ -9,6 +9,7 @@ import (
 	"github.com/saichler/l8collector/go/collector/protocols/snmp"
 	"github.com/saichler/l8collector/go/collector/protocols/ssh"
 	"github.com/saichler/l8pollaris/go/pollaris"
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/maps"
 	"github.com/saichler/l8utils/go/utils/strings"
@@ -16,7 +17,7 @@ import (
 
 type HostCollector struct {
 	service            *CollectorService
-	device             *types.Device
+	device             *l8poll.L8C_Target
 	hostId             string
 	collectors         *maps.SyncMap
 	jobsQueue          *JobsQueue
@@ -26,13 +27,13 @@ type HostCollector struct {
 	detailDeviceLoaded bool
 }
 
-func newHostCollector(device *types.Device, hostId string, service *CollectorService) *HostCollector {
+func newHostCollector(device *l8poll.L8C_Target, hostId string, service *CollectorService) *HostCollector {
 	hc := &HostCollector{}
 	hc.device = device
 	hc.hostId = hostId
 	hc.collectors = maps.NewSyncMap()
 	hc.service = service
-	hc.jobsQueue = NewJobsQueue(device.DeviceId, hostId, service, device.InventoryService, device.ParsingService)
+	hc.jobsQueue = NewJobsQueue(device.TargetId, hostId, service, device.InventoryService, device.ParsingService)
 	hc.running = true
 	hc.bootStages = make([]*BootState, 5)
 	hc.service.vnic.RegisterServiceBatch(device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea), ifs.M_Proximity, 5)
@@ -91,7 +92,7 @@ func (this *HostCollector) start() error {
 
 func (this *HostCollector) collect() {
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
-	var job *types.CJob
+	var job *l8poll.CJob
 	var waitTime int64
 	for this.running {
 
@@ -105,7 +106,7 @@ func (this *HostCollector) collect() {
 		if job != nil {
 			poll := pc.Poll(job.PollarisName, job.JobName)
 			if poll == nil {
-				this.service.vnic.Resources().Logger().Error(strings.New("cannot find poll ", job.PollarisName, " - ", job.JobName, " for device id ").String(), this.device.DeviceId)
+				this.service.vnic.Resources().Logger().Error(strings.New("cannot find poll ", job.PollarisName, " - ", job.JobName, " for device id ").String(), this.device.TargetId)
 				continue
 			}
 			MarkStart(job)
@@ -144,7 +145,7 @@ func (this *HostCollector) collect() {
 			}
 
 			if job.ErrorCount >= 5 {
-				this.service.vnic.Resources().Logger().Error("Job ", job.DeviceId, " - ", job.PollarisName, " - ",
+				this.service.vnic.Resources().Logger().Error("Job ", job.TargetId, " - ", job.PollarisName, " - ",
 					job.JobName, " has failed ", job.ErrorCount, " in a row.")
 			}
 		} else {
@@ -152,15 +153,15 @@ func (this *HostCollector) collect() {
 			time.Sleep(time.Second * time.Duration(waitTime))
 		}
 	}
-	this.service.vnic.Resources().Logger().Info("Host collection for device ", this.device.DeviceId, " host ", this.hostId, " has ended.")
+	this.service.vnic.Resources().Logger().Info("Host collection for device ", this.device.TargetId, " host ", this.hostId, " has ended.")
 	this.service = nil
 }
 
-func (this *HostCollector) execJob(job *types.CJob) bool {
+func (this *HostCollector) execJob(job *l8poll.CJob) bool {
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
 	poll := pc.Poll(job.PollarisName, job.JobName)
 	if poll == nil {
-		this.service.vnic.Resources().Logger().Error("cannot find poll for device id ", this.device.DeviceId)
+		this.service.vnic.Resources().Logger().Error("cannot find poll for device id ", this.device.TargetId)
 		return false
 	}
 	MarkStart(job)
@@ -174,13 +175,13 @@ func (this *HostCollector) execJob(job *types.CJob) bool {
 	return true
 }
 
-func newProtocolCollector(config *types.Connection, resource ifs.IResources) (common.ProtocolCollector, error) {
+func newProtocolCollector(config *l8poll.L8T_Connection, resource ifs.IResources) (common.ProtocolCollector, error) {
 	var protocolCollector common.ProtocolCollector
 	if config.Protocol == types.Protocol_PSSH {
 		protocolCollector = &ssh.SshCollector{}
-	} else if config.Protocol == types.Protocol_PSNMPV2 {
+	} else if config.Protocol == l8poll.L8C_Protocol_L8P_PSNMPV2 {
 		protocolCollector = &snmp.SNMPv2Collector{}
-	} else if config.Protocol == types.Protocol_PK8s {
+	} else if config.Protocol == l8poll.L8C_Protocol_L8P_Kubectl {
 		protocolCollector = &k8s.Kubernetes{}
 	} else {
 		return nil, errors.New(strings.New("Unknown Protocol ", config.Protocol.String()).String())
@@ -189,11 +190,11 @@ func newProtocolCollector(config *types.Connection, resource ifs.IResources) (co
 	return protocolCollector, err
 }
 
-func (this *HostCollector) jobComplete(job *types.CJob) {
+func (this *HostCollector) jobComplete(job *l8poll.CJob) {
 	if !jobHasChange(job) {
 		this.service.vnic.Resources().Logger().Info("Job", job.JobName, " has no change")
 		if job.Error != "" {
-			this.service.vnic.Resources().Logger().Error("Job ", job.DeviceId, " - ", job.PollarisName,
+			this.service.vnic.Resources().Logger().Error("Job ", job.TargetId, " - ", job.PollarisName,
 				" - ", job.JobName, " has an error:", job.Error)
 		}
 		return
@@ -203,12 +204,12 @@ func (this *HostCollector) jobComplete(job *types.CJob) {
 		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
 	}
 	if job.JobName == "systemMib" {
-		this.service.vnic.Resources().Logger().Debug("SystemMib for ", job.DeviceId, " was received")
+		this.service.vnic.Resources().Logger().Debug("SystemMib for ", job.TargetId, " was received")
 		this.bootDetailDevice(job)
 	}
 }
 
-func jobHasChange(job *types.CJob) bool {
+func jobHasChange(job *l8poll.CJob) bool {
 	if job.Result != nil && job.Cadence.Current < int32(len(job.Cadence.Cadences)-1) {
 		job.Cadence.Current++
 	}

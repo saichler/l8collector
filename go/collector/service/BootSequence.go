@@ -3,9 +3,11 @@ package service
 import (
 	"time"
 
+	"github.com/saichler/collect/go/types"
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8srlz/go/serialize/object"
 )
 
@@ -52,7 +54,7 @@ func (this *BootState) isComplete() bool {
 	return true
 }
 
-func (this *BootState) doStaticJob(job *types.CJob, hostColletor *HostCollector) bool {
+func (this *BootState) doStaticJob(job *l8poll.CJob, hostColletor *HostCollector) bool {
 	sjob, ok := staticJobs[job.JobName]
 	if ok {
 		sjob.do(job, hostColletor)
@@ -65,44 +67,44 @@ func (this *BootState) doStaticJob(job *types.CJob, hostColletor *HostCollector)
 	return false
 }
 
-func (this *BootState) jobComplete(job *types.CJob) {
+func (this *BootState) jobComplete(job *l8poll.CJob) {
 	_, ok := this.jobNames[job.JobName]
 	if ok {
 		this.jobNames[job.JobName] = true
 	}
 }
 
-func (this *HostCollector) bootDetailDevice(job *types.CJob) {
+func (this *HostCollector) bootDetailDevice(job *l8poll.CJob) {
 	if this.detailDeviceLoaded {
 		return
 	}
 	if job.Result == nil || len(job.Result) < 3 {
-		this.service.vnic.Resources().Logger().Error("HostCollector.loadPolls: ", job.DeviceId, " has sysmib empty Result")
+		this.service.vnic.Resources().Logger().Error("HostCollector.loadPolls: ", job.TargetId, " has sysmib empty Result")
 		return
 	}
 	enc := object.NewDecode(job.Result, 0, this.service.vnic.Resources().Registry())
 	data, err := enc.Get()
 	if err != nil {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " has sysmib error ", err.Error())
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.TargetId, " has sysmib error ", err.Error())
 		return
 	}
 	cmap, ok := data.(*types.CMap)
 	if !ok {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " systemMib not A CMap")
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.TargetId, " systemMib not A CMap")
 		return
 	}
 	strData, ok := cmap.Data[".1.3.6.1.2.1.1.2.0"]
 	if !ok {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " sysmib does not contain sysoid")
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.TargetId, " sysmib does not contain sysoid")
 		return
 	}
 
 	enc = object.NewDecode(strData, 0, this.service.vnic.Resources().Registry())
 	byteInterface, _ := enc.Get()
 	sysoid, _ := byteInterface.(string)
-	this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: ", job.DeviceId, " discovered sysoid =", sysoid)
+	this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: ", job.TargetId, " discovered sysoid =", sysoid)
 	if sysoid == "" {
-		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.DeviceId, " - sysoid is blank!")
+		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.TargetId, " - sysoid is blank!")
 		/* when there is DebugEnabled
 		for k, v := range cmap.Data {
 			enc = object.NewDecode(v, 0, this.service.vnic.Resources().Registry())
@@ -117,7 +119,7 @@ func (this *HostCollector) bootDetailDevice(job *types.CJob) {
 	plc.Add(plrs, false)
 	if plrs != nil {
 		if plrs.Name != "boot03" {
-			this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: ", job.DeviceId, " discovered pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
+			this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: ", job.TargetId, " discovered pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
 			this.detailDeviceLoaded = true
 			go this.insertCustomJobs(plrs.Name)
 		}

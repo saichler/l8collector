@@ -8,8 +8,10 @@ import (
 	"time"
 
 	wapsnmp "github.com/cdevr/WapSNMP"
+	"github.com/saichler/collect/go/types"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
+	"github.com/saichler/l8pollaris/go/types/l8poll"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	strings2 "github.com/saichler/l8utils/go/utils/strings"
@@ -29,7 +31,7 @@ func normalizeOID(oid string) string {
 
 type SNMPv2Collector struct {
 	resources   ifs.IResources
-	config      *types.Connection
+	config      *l8poll.L8T_Connection
 	session     *wapsnmp.WapSNMP
 	connected   bool
 	pollSuccess bool
@@ -40,11 +42,11 @@ type SnmpPDU struct {
 	Value interface{}
 }
 
-func (this *SNMPv2Collector) Protocol() types.Protocol {
-	return types.Protocol_PSNMPV2
+func (this *SNMPv2Collector) Protocol() l8poll.L8C_Protocol {
+	return l8poll.L8C_Protocol_L8P_PSNMPV2
 }
 
-func (this *SNMPv2Collector) Init(conf *types.Connection, resources ifs.IResources) error {
+func (this *SNMPv2Collector) Init(conf *l8poll.L8T_Connection, resources ifs.IResources) error {
 	this.config = conf
 	this.resources = resources
 	return nil
@@ -90,9 +92,9 @@ func (this *SNMPv2Collector) Disconnect() error {
 	return nil
 }
 
-func (this *SNMPv2Collector) Exec(job *types.CJob) {
+func (this *SNMPv2Collector) Exec(job *l8poll.CJob) {
 	if this.resources != nil && this.resources.Logger() != nil {
-		this.resources.Logger().Debug("Exec Job Start ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
+		this.resources.Logger().Debug("Exec Job Start ", job.TargetId, " ", job.PollarisName, ":", job.JobName)
 	}
 	if !this.connected {
 		err := this.Connect()
@@ -111,17 +113,17 @@ func (this *SNMPv2Collector) Exec(job *types.CJob) {
 		return
 	}
 
-	if poll.Operation == types.Operation_OMap {
+	if poll.Operation == l8poll.L8C_Operation_L8C_Map {
 		this.walk(job, poll, true)
-	} else if poll.Operation == types.Operation_OTable {
+	} else if poll.Operation == l8poll.L8C_Operation_L8C_Table {
 		this.table(job, poll)
 	}
 	if this.resources != nil && this.resources.Logger() != nil {
-		this.resources.Logger().Debug("Exec Job End  ", job.DeviceId, " ", job.PollarisName, ":", job.JobName)
+		this.resources.Logger().Debug("Exec Job End  ", job.TargetId, " ", job.PollarisName, ":", job.JobName)
 	}
 }
 
-func (this *SNMPv2Collector) walk(job *types.CJob, poll *types.Poll, encodeMap bool) *types.CMap {
+func (this *SNMPv2Collector) walk(job *l8poll.CJob, poll *l8poll.L8Poll, encodeMap bool) *types.CMap {
 	// Add timeout wrapper for SNMP walk to prevent hanging on invalid OIDs
 	timeout := time.Duration(this.config.Timeout) * time.Second
 	if timeout == 0 {
@@ -248,12 +250,12 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	return pdus, nil
 }
 
-func (this *SNMPv2Collector) table(job *types.CJob, poll *types.Poll) {
+func (this *SNMPv2Collector) table(job *l8poll.CJob, poll *l8poll.L8Poll) {
 	m := this.walk(job, poll, false)
 	if job.Error != "" {
 		return
 	}
-	tbl := &types.CTable{Rows: make(map[int32]*types.CRow), Columns: make(map[int32]string)}
+	tbl := &l8poll.CTable{Rows: make(map[int32]*l8poll.CRow), Columns: make(map[int32]string)}
 	var lastRowIndex int32 = -1
 	keys := protocols.Keys(m)
 

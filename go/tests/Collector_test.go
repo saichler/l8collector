@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
-	"github.com/saichler/l8collector/go/collector/devices"
 	"github.com/saichler/l8collector/go/collector/service"
 	"github.com/saichler/l8collector/go/tests/utils_collector"
 	"github.com/saichler/l8parser/go/parser/boot"
@@ -88,9 +87,9 @@ func TestCollector(t *testing.T) {
 		}
 	}
 
-	job := &types.CJob{}
-	job.DeviceId = device.DeviceId
-	job.HostId = device.DeviceId
+	job := &l8poll.CJob{}
+	job.TargetId = device.TargetId
+	job.HostId = device.TargetId
 	job.PollarisName = "mib2"
 	job.JobName = "entityMib"
 
