@@ -11,13 +11,11 @@ import (
 )
 
 type JobsQueue struct {
-	deviceId string
+	target   *l8poll.L8C_Target
 	hostId   string
 	jobs     []*l8poll.CJob
 	jobsMap  map[string]*l8poll.CJob
 	mtx      *sync.Mutex
-	iService *l8poll.L8ServiceInfo
-	pService *l8poll.L8ServiceInfo
 	shutdown bool
 	service  *CollectorService
 }
@@ -29,23 +27,18 @@ func (this *JobsQueue) Shutdown() {
 	this.jobs = nil
 	this.jobsMap = nil
 	this.service = nil
-	this.iService = nil
-	this.pService = nil
 	this.hostId = ""
-	this.deviceId = ""
+	this.target = nil
 }
 
-func NewJobsQueue(deviceId, hostId string, service *CollectorService,
-	iService *l8poll.L8ServiceInfo, pService *l8poll.L8ServiceInfo) *JobsQueue {
+func NewJobsQueue(target *l8poll.L8C_Target, hostId string, service *CollectorService) *JobsQueue {
 	jq := &JobsQueue{}
 	jq.service = service
 	jq.mtx = &sync.Mutex{}
 	jq.jobs = make([]*l8poll.CJob, 0)
 	jq.jobsMap = make(map[string]*l8poll.CJob)
-	jq.deviceId = deviceId
+	jq.target = target
 	jq.hostId = hostId
-	jq.iService = iService
-	jq.pService = pService
 	return jq
 }
 
@@ -61,10 +54,10 @@ func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, har
 		job.PollarisName = p.Name
 		job.Cadence = poll.Cadence
 		job.Timeout = poll.Timeout
-		job.TargetId = this.deviceId
+		job.TargetId = this.target.TargetId
 		job.HostId = this.hostId
-		job.IService = this.iService
-		job.PService = this.pService
+		job.LinkP = this.target.LinkP
+		job.LinkD = this.target.LinkD
 
 		if job.Timeout == 0 {
 			job.Timeout = poll.Timeout
@@ -88,14 +81,14 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 			}
 
 			job := &l8poll.CJob{}
-			job.TargetId = this.deviceId
+			job.TargetId = this.target.TargetId
 			job.HostId = this.hostId
 			job.JobName = jobName
 			job.PollarisName = p.Name
 			job.Cadence = poll.Cadence
 			job.Timeout = poll.Timeout
-			job.IService = this.iService
-			job.PService = this.pService
+			job.LinkP = this.target.LinkP
+			job.LinkD = this.target.LinkD
 			jobs = append(jobs, job)
 		}
 	}

@@ -48,7 +48,7 @@ func TestCollector(t *testing.T) {
 	vnic.Resources().Services().Activate(service.ServiceType, common.CollectorService, serviceArea, vnic.Resources(), vnic)
 
 	vnic.Resources().Registry().Register(utils_collector.MockParsingService{})
-	vnic.Resources().Services().Activate(utils_collector.ServiceType, device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea),
+	vnic.Resources().Services().Activate(utils_collector.ServiceType, device.LinkP.ZsideServiceName, byte(device.LinkP.ZsideServiceArea),
 		vnic.Resources(), vnic)
 
 	time.Sleep(time.Second)
@@ -76,7 +76,7 @@ func TestCollector(t *testing.T) {
 
 	time.Sleep(time.Second * 3)
 
-	mp, ok := vnic.Resources().Services().ServiceHandler(device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea))
+	mp, ok := vnic.Resources().Services().ServiceHandler(device.LinkP.ZsideServiceName, byte(device.LinkP.ZsideServiceArea))
 	if !ok {
 		panic("No mock service found")
 	}
@@ -130,7 +130,7 @@ func testJobDisable(t *testing.T) {
 	vnic.Resources().Services().Activate(service.ServiceType, common.CollectorService, serviceArea, vnic.Resources(), vnic)
 
 	vnic.Resources().Registry().Register(utils_collector.MockParsingService{})
-	vnic.Resources().Services().Activate(utils_collector.ServiceType, device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea),
+	vnic.Resources().Services().Activate(utils_collector.ServiceType, device.LinkP.ZsideServiceName, byte(device.LinkP.ZsideServiceArea),
 		vnic.Resources(), vnic)
 
 	time.Sleep(time.Second)

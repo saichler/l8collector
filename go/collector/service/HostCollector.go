@@ -17,7 +17,7 @@ import (
 
 type HostCollector struct {
 	service            *CollectorService
-	device             *l8poll.L8C_Target
+	target             *l8poll.L8C_Target
 	hostId             string
 	collectors         *maps.SyncMap
 	jobsQueue          *JobsQueue
@@ -27,23 +27,23 @@ type HostCollector struct {
 	detailDeviceLoaded bool
 }
 
-func newHostCollector(device *l8poll.L8C_Target, hostId string, service *CollectorService) *HostCollector {
+func newHostCollector(target *l8poll.L8C_Target, hostId string, service *CollectorService) *HostCollector {
+	target.LinkP.Mode = int32(ifs.M_Proximity)
+	target.LinkP.Interval = 5
 	hc := &HostCollector{}
-	hc.device = device
+	hc.target = target
 	hc.hostId = hostId
 	hc.collectors = maps.NewSyncMap()
 	hc.service = service
-	hc.jobsQueue = NewJobsQueue(device.TargetId, hostId, service, device.InventoryService, device.ParsingService)
+	hc.jobsQueue = NewJobsQueue(target, hostId, service)
 	hc.running = true
 	hc.bootStages = make([]*BootState, 5)
-	link := ifs.NewServiceLink("", device.ParsingService.ServiceName,
-		service.serviceArea, byte(device.ParsingService.ServiceArea), ifs.M_Proximity, 5, false)
-	hc.service.vnic.RegisterServiceLink(link)
+	hc.service.vnic.RegisterServiceLink(target.LinkP)
 	return hc
 }
 
 func (this *HostCollector) update() error {
-	host := this.device.Hosts[this.hostId]
+	host := this.target.Hosts[this.hostId]
 	for _, config := range host.Configs {
 		exist := this.collectors.Contains(config.Protocol)
 		if !exist {
@@ -74,7 +74,7 @@ func (this *HostCollector) stop() {
 }
 
 func (this *HostCollector) start() error {
-	host := this.device.Hosts[this.hostId]
+	host := this.target.Hosts[this.hostId]
 	for _, config := range host.Configs {
 		col, err := newProtocolCollector(config, this.service.vnic.Resources())
 		if err != nil {
@@ -108,7 +108,7 @@ func (this *HostCollector) collect() {
 		if job != nil {
 			poll := pc.Poll(job.PollarisName, job.JobName)
 			if poll == nil {
-				this.service.vnic.Resources().Logger().Error(strings.New("cannot find poll ", job.PollarisName, " - ", job.JobName, " for device id ").String(), this.device.TargetId)
+				this.service.vnic.Resources().Logger().Error(strings.New("cannot find poll ", job.PollarisName, " - ", job.JobName, " for device id ").String(), this.target.TargetId)
 				continue
 			}
 			MarkStart(job)
@@ -155,7 +155,7 @@ func (this *HostCollector) collect() {
 			time.Sleep(time.Second * time.Duration(waitTime))
 		}
 	}
-	this.service.vnic.Resources().Logger().Info("Host collection for device ", this.device.TargetId, " host ", this.hostId, " has ended.")
+	this.service.vnic.Resources().Logger().Info("Host collection for device ", this.target.TargetId, " host ", this.hostId, " has ended.")
 	this.service = nil
 }
 
@@ -163,7 +163,7 @@ func (this *HostCollector) execJob(job *l8poll.CJob) bool {
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
 	poll := pc.Poll(job.PollarisName, job.JobName)
 	if poll == nil {
-		this.service.vnic.Resources().Logger().Error("cannot find poll for device id ", this.device.TargetId)
+		this.service.vnic.Resources().Logger().Error("cannot find poll for device id ", this.target.TargetId)
 		return false
 	}
 	MarkStart(job)
@@ -201,7 +201,7 @@ func (this *HostCollector) jobComplete(job *l8poll.CJob) {
 		}
 		return
 	}
-	err := this.service.vnic.Proximity(job.PService.ServiceName, byte(job.PService.ServiceArea), ifs.POST, job)
+	err := this.service.vnic.Proximity(job.LinkP.ZsideServiceName, byte(job.LinkP.ZsideServiceArea), ifs.POST, job)
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
 	}

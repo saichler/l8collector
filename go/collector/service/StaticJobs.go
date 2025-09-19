@@ -21,7 +21,7 @@ func (this *IpAddressJob) what() string {
 
 func (this *IpAddressJob) do(job *l8poll.CJob, hostCollector *HostCollector) {
 	obj := object.NewEncode()
-	for _, h := range hostCollector.device.Hosts {
+	for _, h := range hostCollector.target.Hosts {
 		for _, c := range h.Configs {
 			obj.Add(c.Addr)
 			job.Result = obj.Data()

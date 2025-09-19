@@ -43,13 +43,13 @@ func (this *CollectorService) startPolling(device *l8poll.L8C_Target) error {
 	return nil
 }
 
-func (this *CollectorService) hostCollector(hostId string, device *l8poll.L8C_Target) (*HostCollector, bool) {
-	key := hostCollectorKey(device.TargetId, hostId)
+func (this *CollectorService) hostCollector(hostId string, target *l8poll.L8C_Target) (*HostCollector, bool) {
+	key := hostCollectorKey(target.TargetId, hostId)
 	h, ok := this.hostCollectors.Get(key)
 	if ok {
 		return h.(*HostCollector), ok
 	}
-	hc := newHostCollector(device, hostId, this)
+	hc := newHostCollector(target, hostId, this)
 	this.hostCollectors.Put(key, hc)
 	return hc, ok
 }

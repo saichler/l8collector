@@ -41,7 +41,7 @@ func TestEntityMib(t *testing.T) {
 	vnic.Resources().Services().Activate(service.ServiceType, common.CollectorService, serviceArea, vnic.Resources(), vnic)
 
 	vnic.Resources().Registry().Register(utils_collector.MockParsingService{})
-	vnic.Resources().Services().Activate(utils_collector.ServiceType, device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea),
+	vnic.Resources().Services().Activate(utils_collector.ServiceType, device.LinkP.ZsideServiceName, byte(device.LinkP.ZsideServiceArea),
 		vnic.Resources(), vnic)
 
 	time.Sleep(time.Second)
