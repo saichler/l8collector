@@ -36,7 +36,9 @@ func newHostCollector(device *l8poll.L8C_Target, hostId string, service *Collect
 	hc.jobsQueue = NewJobsQueue(device.TargetId, hostId, service, device.InventoryService, device.ParsingService)
 	hc.running = true
 	hc.bootStages = make([]*BootState, 5)
-	hc.service.vnic.RegisterServiceBatch(device.ParsingService.ServiceName, byte(device.ParsingService.ServiceArea), ifs.M_Proximity, 5)
+	link := ifs.NewServiceLink("", device.ParsingService.ServiceName,
+		service.serviceArea, byte(device.ParsingService.ServiceArea), ifs.M_Proximity, 5, false)
+	hc.service.vnic.RegisterServiceLink(link)
 	return hc
 }
 
