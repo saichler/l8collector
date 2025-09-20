@@ -16,15 +16,15 @@ import (
 )
 
 type HostCollector struct {
-	service            *CollectorService
-	target             *l8poll.L8C_Target
-	hostId             string
-	collectors         *maps.SyncMap
-	jobsQueue          *JobsQueue
-	running            bool
-	currentBootStage   int
-	bootStages         []*BootState
-	detailDeviceLoaded bool
+	service          *CollectorService
+	target           *l8poll.L8C_Target
+	hostId           string
+	collectors       *maps.SyncMap
+	jobsQueue        *JobsQueue
+	running          bool
+	currentBootStage int
+	bootStages       []*BootState
+	pollarisName     string
 }
 
 func newHostCollector(target *l8poll.L8C_Target, hostId string, service *CollectorService) *HostCollector {

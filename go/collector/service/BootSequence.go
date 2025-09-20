@@ -1,8 +1,6 @@
 package service
 
 import (
-	"time"
-
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
@@ -74,7 +72,7 @@ func (this *BootState) jobComplete(job *l8poll.CJob) {
 }
 
 func (this *HostCollector) bootDetailDevice(job *l8poll.CJob) {
-	if this.detailDeviceLoaded {
+	if this.pollarisName != "" {
 		return
 	}
 	if job.Result == nil || len(job.Result) < 3 {
@@ -118,14 +116,11 @@ func (this *HostCollector) bootDetailDevice(job *l8poll.CJob) {
 	plc.Add(plrs, false)
 	if plrs != nil {
 		if plrs.Name != "boot03" {
-			this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: ", job.TargetId, " discovered pollaris by sysoid ", plrs.Name, " by systoid:", sysoid)
-			this.detailDeviceLoaded = true
-			go this.insertCustomJobs(plrs.Name)
+			this.pollarisName = plrs.Name
 		}
 	}
 }
 
 func (this *HostCollector) insertCustomJobs(pollarisName string) {
-	time.Sleep(time.Second * 300)
 	this.jobsQueue.InsertJob(pollarisName, "", "", "", "", "", "", 0, 0)
 }
