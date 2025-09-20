@@ -194,7 +194,7 @@ func newProtocolCollector(config *l8poll.L8T_Connection, resource ifs.IResources
 
 func (this *HostCollector) jobComplete(job *l8poll.CJob) {
 	if !jobHasChange(job) {
-		this.service.vnic.Resources().Logger().Info("Job", job.JobName, " has no change")
+		this.service.vnic.Resources().Logger().Debug("Job", job.JobName, " has no change")
 		if job.Error != "" {
 			this.service.vnic.Resources().Logger().Error("Job ", job.TargetId, " - ", job.PollarisName,
 				" - ", job.JobName, " has an error:", job.Error)
