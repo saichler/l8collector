@@ -30,7 +30,7 @@ func (n *NetSNMPCollector) snmpWalk(oid string) ([]SnmpPDU, error) {
 
 	timeout := n.config.Timeout
 	if timeout == 0 {
-		timeout = 10 // Default 10 seconds
+		timeout = 60 // Default 60 seconds
 	}
 
 	args := []string{

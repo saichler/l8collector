@@ -65,7 +65,7 @@ func (this *SNMPv2Collector) Connect() error {
 
 	// Default timeout if not specified
 	if timeout == 0 {
-		timeout = 10 * time.Second
+		timeout = 60 * time.Second
 	}
 
 	session, err := wapsnmp.NewWapSNMP(target, community, version, timeout, 3)
