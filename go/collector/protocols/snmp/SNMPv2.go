@@ -127,7 +127,7 @@ func (this *SNMPv2Collector) walk(job *l8poll.CJob, poll *l8poll.L8Poll, encodeM
 	// Add timeout wrapper for SNMP walk to prevent hanging on invalid OIDs
 	timeout := time.Duration(this.config.Timeout) * time.Second
 	if timeout == 0 {
-		timeout = 10 * time.Second // Default 10 second timeout
+		timeout = 60 * time.Second // Default 60 second timeout
 	}
 
 	var pdus []SnmpPDU
