@@ -3,6 +3,7 @@ package snmp
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -179,7 +180,10 @@ func (this *SNMPv2Collector) walk(job *l8poll.CJob, poll *l8poll.L8Poll, encodeM
 		} else {
 			lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)
 			if this.resources != nil && this.resources.Logger() != nil {
-				this.resources.Logger().Error("net-snmp fallback failed for OID: ", poll.What, " error: ", fallbackErr.Error())
+				this.resources.Logger().Error("net-snmp fallback failed for OID: ", poll.What, " error: ",
+					job.TargetId, " ",
+					os.Getenv("HOSTNAME")," "
+					fallbackErr.Error())
 			}
 		}
 	}
