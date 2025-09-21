@@ -182,7 +182,7 @@ func (this *SNMPv2Collector) walk(job *l8poll.CJob, poll *l8poll.L8Poll, encodeM
 			if this.resources != nil && this.resources.Logger() != nil {
 				this.resources.Logger().Error("net-snmp fallback failed for OID: ", poll.What, " error: ",
 					job.TargetId, " ",
-					os.Getenv("HOSTNAME")," "
+					os.Getenv("HOSTNAME"), " ",
 					fallbackErr.Error())
 			}
 		}
