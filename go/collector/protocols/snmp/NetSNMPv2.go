@@ -33,6 +33,10 @@ func (n *NetSNMPCollector) snmpWalk(oid string) ([]SnmpPDU, error) {
 		timeout = 60 // Default 60 seconds
 	}
 
+	if n.resources != nil && n.resources.Logger() != nil {
+		n.resources.Logger().Debug("net-snmp timeout configured to: ", timeout, " seconds")
+	}
+
 	args := []string{
 		"-v", "2c",
 		"-c", n.config.ReadCommunity,
