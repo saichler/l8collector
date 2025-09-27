@@ -166,11 +166,8 @@ func (this *SNMPv2Collector) walk(job *l8poll.CJob, poll *l8poll.L8Poll, encodeM
 
 		netSnmp := NewNetSNMPCollector(this.config, this.resources)
 		// Remove leading "." for net-snmp compatibility
-		oid := poll.What
-		if strings.HasPrefix(oid, ".") {
-			oid = oid[1:]
-		}
-		fallbackPdus, fallbackErr := netSnmp.snmpWalk(oid)
+		fallbackPdus, fallbackErr := netSnmp.snmpWalk(poll.What)
+
 		if fallbackErr == nil {
 			pdus = fallbackPdus
 			lastError = nil

@@ -1,7 +1,7 @@
 # L8Collector
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.23.8-blue.svg)](https://golang.org/dl/)
+[![Go Version](https://img.shields.io/badge/Go-1.24.0-blue.svg)](https://golang.org/dl/)
 
 L8Collector is a multi-protocol network data collection service built on the Layer8 ecosystem and Pollaris model. It provides a unified framework for collecting data from various network devices and systems using different protocols including SNMP, SSH, and Kubernetes.
 
@@ -93,10 +93,12 @@ Per device resource usage:
 
 ### Performance Optimizations
 
-- **SNMP Timeout Protection**: 15-second timeout for Entity MIB walks prevents hanging
+- **Enhanced SNMP Timeout Protection**: Configurable timeout with net-snmp fallback mechanism for robust OID collection
+- **Net-SNMP Fallback**: Automatic fallback to net-snmp when WapSNMP timeouts occur
 - **Job Queue Optimization**: Priority-based scheduling with configurable cadences
 - **Connection Pooling**: Efficient reuse of protocol connections
 - **Resource Limits**: Configurable limits prevent resource exhaustion
+- **Improved Error Recovery**: Enhanced timeout handling and connection resilience
 
 ### Key Limiting Factors
 
@@ -123,10 +125,10 @@ The codebase has been optimized for maintainability and performance:
 - **Performance Benefits**: Reduced memory allocations and improved string building performance
 - **Code Consistency**: Standardized approach to string manipulation across all protocol collectors
 
-#### Updated Components
-- **HostCollector**: Optimized error message construction and protocol validation
+#### Updated Components (Latest)
+- **SNMP Collector**: Enhanced timeout handling with net-snmp fallback, improved error recovery and connection resilience
+- **HostCollector**: Optimized error message construction and protocol validation using l8utils/strings
 - **SSH Collector**: Enhanced connection error handling and logging with efficient string building
-- **SNMP Collector**: Improved error reporting for walk operations and connection issues  
 - **Kubernetes Collector**: Streamlined script generation and error message formatting
 
 #### Benefits
@@ -159,7 +161,7 @@ The codebase has been optimized for maintainability and performance:
 ## Dependencies
 
 ### Core Dependencies
-- **Go 1.23.8+**: Programming language runtime
+- **Go 1.24.0+**: Programming language runtime
 - **github.com/gosnmp/gosnmp**: SNMP protocol implementation
 - **golang.org/x/crypto/ssh**: SSH client implementation
 - **github.com/google/uuid**: UUID generation
@@ -175,7 +177,7 @@ The codebase has been optimized for maintainability and performance:
 ## Installation
 
 ### Prerequisites
-- Go 1.23.8 or later
+- Go 1.24.0 or later
 - Git
 - Network access to target devices
 
@@ -452,6 +454,24 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - [Layer8 Ecosystem](https://github.com/saichler/layer8)
 - [L8Pollaris](https://github.com/saichler/l8pollaris)
 - [L8Services](https://github.com/saichler/l8services)
+
+## Latest Updates
+
+### Recent Improvements (2024)
+
+#### Enhanced SNMP Resilience
+- **Net-SNMP Fallback**: Automatic fallback to net-snmp when WapSNMP timeouts occur for improved OID collection reliability
+- **Configurable Timeouts**: Enhanced timeout handling with contextual cancellation for better resource management
+- **Error Recovery**: Improved connection resilience and error reporting for SNMP operations
+
+#### Performance & Stability
+- **Go 1.24.0**: Updated to latest Go version for improved performance and security
+- **Enhanced Logging**: Better error context and debugging information across all collectors
+- **Memory Optimization**: Continued string handling improvements reducing garbage collection pressure
+
+#### Dependencies Updates
+- Updated Layer8 ecosystem dependencies with latest security patches and performance improvements
+- Enhanced WapSNMP integration with fallback mechanisms
 
 ---
 
