@@ -3,7 +3,7 @@ package utils_collector
 import (
 	"sync"
 
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8types/go/ifs"
 )
 
@@ -18,7 +18,7 @@ type MockParsingService struct {
 
 func (this *MockParsingService) Activate(serviceName string, serviceArea byte,
 	r ifs.IResources, l ifs.IServiceCacheListener, args ...interface{}) error {
-	r.Registry().Register(&l8poll.CJob{})
+	r.Registry().Register(&l8tpollaris.CJob{})
 	this.jobsComplete = make(map[string]map[string]int)
 	this.mtx = &sync.Mutex{}
 	return nil
@@ -31,7 +31,7 @@ func (this *MockParsingService) DeActivate() error {
 func (this *MockParsingService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	this.mtx.Lock()
 	defer this.mtx.Unlock()
-	job := pb.Element().(*l8poll.CJob)
+	job := pb.Element().(*l8tpollaris.CJob)
 	jp, ok := this.jobsComplete[job.PollarisName]
 	if !ok {
 		jp = make(map[string]int)

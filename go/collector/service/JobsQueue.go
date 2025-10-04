@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 )
 
 type JobsQueue struct {
-	target   *l8poll.L8C_Target
+	target   *l8tpollaris.L8PTarget
 	hostId   string
-	jobs     []*l8poll.CJob
-	jobsMap  map[string]*l8poll.CJob
+	jobs     []*l8tpollaris.CJob
+	jobsMap  map[string]*l8tpollaris.CJob
 	mtx      *sync.Mutex
 	shutdown bool
 	service  *CollectorService
@@ -31,33 +31,33 @@ func (this *JobsQueue) Shutdown() {
 	this.target = nil
 }
 
-func NewJobsQueue(target *l8poll.L8C_Target, hostId string, service *CollectorService) *JobsQueue {
+func NewJobsQueue(target *l8tpollaris.L8PTarget, hostId string, service *CollectorService) *JobsQueue {
 	jq := &JobsQueue{}
 	jq.service = service
 	jq.mtx = &sync.Mutex{}
-	jq.jobs = make([]*l8poll.CJob, 0)
-	jq.jobsMap = make(map[string]*l8poll.CJob)
+	jq.jobs = make([]*l8tpollaris.CJob, 0)
+	jq.jobsMap = make(map[string]*l8tpollaris.CJob)
 	jq.target = target
 	jq.hostId = hostId
 	return jq
 }
 
-func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, hardware, version string) map[string]*l8poll.CJob {
+func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, hardware, version string) map[string]*l8tpollaris.CJob {
 	p, err := pollaris.PollarisByKey(this.service.vnic.Resources(), name, vendor, series, family, software, hardware, version)
 	if err != nil {
 		return nil
 	}
-	jobs := make(map[string]*l8poll.CJob)
+	jobs := make(map[string]*l8tpollaris.CJob)
 	for jobName, poll := range p.Polling {
-		job := &l8poll.CJob{}
+		job := &l8tpollaris.CJob{}
 		job.JobName = jobName
 		job.PollarisName = p.Name
 		job.Cadence = poll.Cadence
 		job.Timeout = poll.Timeout
 		job.TargetId = this.target.TargetId
 		job.HostId = this.hostId
-		job.LinkP = this.target.LinkP
-		job.LinkD = this.target.LinkD
+		job.LinkParser = this.target.LinkParser
+		job.LinkData = this.target.LinkData
 
 		if job.Timeout == 0 {
 			job.Timeout = poll.Timeout
@@ -67,12 +67,12 @@ func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, har
 	return jobs
 }
 
-func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, software, hardware, version string) []*l8poll.CJob {
+func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, software, hardware, version string) []*l8tpollaris.CJob {
 	polarises, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), groupName, vendor, series, family, software, hardware, version)
 	if err != nil {
 		return nil
 	}
-	jobs := make([]*l8poll.CJob, 0)
+	jobs := make([]*l8tpollaris.CJob, 0)
 	for _, p := range polarises {
 		for jobName, poll := range p.Polling {
 
@@ -80,15 +80,15 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 				continue
 			}
 
-			job := &l8poll.CJob{}
+			job := &l8tpollaris.CJob{}
 			job.TargetId = this.target.TargetId
 			job.HostId = this.hostId
 			job.JobName = jobName
 			job.PollarisName = p.Name
 			job.Cadence = poll.Cadence
 			job.Timeout = poll.Timeout
-			job.LinkP = this.target.LinkP
-			job.LinkD = this.target.LinkD
+			job.LinkParser = this.target.LinkParser
+			job.LinkData = this.target.LinkData
 			jobs = append(jobs, job)
 		}
 	}
@@ -126,11 +126,11 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 	return nil
 }
 
-func (this *JobsQueue) DisableJob(job *l8poll.CJob) {
+func (this *JobsQueue) DisableJob(job *l8tpollaris.CJob) {
 	job.Cadence.Enabled = false
 }
 
-func (this *JobsQueue) Pop() (*l8poll.CJob, int64) {
+func (this *JobsQueue) Pop() (*l8tpollaris.CJob, int64) {
 	if this == nil {
 		return nil, -1
 	}
@@ -142,7 +142,7 @@ func (this *JobsQueue) Pop() (*l8poll.CJob, int64) {
 	if this.shutdown {
 		return nil, -1
 	}
-	var job *l8poll.CJob
+	var job *l8tpollaris.CJob
 	index := -1
 	now := time.Now().Unix()
 	waitTimeTillNext := int64(999999)
@@ -170,7 +170,7 @@ func (this *JobsQueue) Pop() (*l8poll.CJob, int64) {
 
 func (this *JobsQueue) moveToLast(index int) {
 	if index != -1 {
-		swap := make([]*l8poll.CJob, 0)
+		swap := make([]*l8tpollaris.CJob, 0)
 		job := this.jobs[index]
 		swap = append(swap, this.jobs[0:index]...)
 		swap = append(swap, this.jobs[index+1:]...)
@@ -181,7 +181,7 @@ func (this *JobsQueue) moveToLast(index int) {
 	}
 }
 
-func MarkStart(job *l8poll.CJob) {
+func MarkStart(job *l8tpollaris.CJob) {
 	if job.ErrorCount == 0 {
 		job.LastResult = job.Result
 	}
@@ -191,7 +191,7 @@ func MarkStart(job *l8poll.CJob) {
 	job.Error = ""
 }
 
-func MarkEnded(job *l8poll.CJob) {
+func MarkEnded(job *l8tpollaris.CJob) {
 	job.Ended = time.Now().Unix()
 }
 

@@ -9,7 +9,7 @@ import (
 	"github.com/saichler/l8collector/go/collector/protocols/snmp"
 	"github.com/saichler/l8collector/go/collector/protocols/ssh"
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/maps"
 	"github.com/saichler/l8utils/go/utils/strings"
@@ -17,7 +17,7 @@ import (
 
 type HostCollector struct {
 	service          *CollectorService
-	target           *l8poll.L8C_Target
+	target           *l8tpollaris.L8PTarget
 	hostId           string
 	collectors       *maps.SyncMap
 	jobsQueue        *JobsQueue
@@ -27,9 +27,9 @@ type HostCollector struct {
 	pollarisName     string
 }
 
-func newHostCollector(target *l8poll.L8C_Target, hostId string, service *CollectorService) *HostCollector {
-	target.LinkP.Mode = int32(ifs.M_Proximity)
-	target.LinkP.Interval = 5
+func newHostCollector(target *l8tpollaris.L8PTarget, hostId string, service *CollectorService) *HostCollector {
+	target.LinkParser.Mode = int32(ifs.M_Proximity)
+	target.LinkParser.Interval = 5
 	hc := &HostCollector{}
 	hc.target = target
 	hc.hostId = hostId
@@ -38,7 +38,7 @@ func newHostCollector(target *l8poll.L8C_Target, hostId string, service *Collect
 	hc.jobsQueue = NewJobsQueue(target, hostId, service)
 	hc.running = true
 	hc.bootStages = make([]*BootState, 5)
-	hc.service.vnic.RegisterServiceLink(target.LinkP)
+	hc.service.vnic.RegisterServiceLink(target.LinkParser)
 	return hc
 }
 
@@ -94,7 +94,7 @@ func (this *HostCollector) start() error {
 
 func (this *HostCollector) collect() {
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
-	var job *l8poll.CJob
+	var job *l8tpollaris.CJob
 	var waitTime int64
 	for this.running {
 
@@ -159,7 +159,7 @@ func (this *HostCollector) collect() {
 	this.service = nil
 }
 
-func (this *HostCollector) execJob(job *l8poll.CJob) bool {
+func (this *HostCollector) execJob(job *l8tpollaris.CJob) bool {
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
 	poll := pc.Poll(job.PollarisName, job.JobName)
 	if poll == nil {
@@ -177,13 +177,13 @@ func (this *HostCollector) execJob(job *l8poll.CJob) bool {
 	return true
 }
 
-func newProtocolCollector(config *l8poll.L8T_Connection, resource ifs.IResources) (common.ProtocolCollector, error) {
+func newProtocolCollector(config *l8tpollaris.L8PHostProtocol, resource ifs.IResources) (common.ProtocolCollector, error) {
 	var protocolCollector common.ProtocolCollector
-	if config.Protocol == l8poll.L8C_Protocol_L8P_SSH {
+	if config.Protocol == l8tpollaris.L8PProtocolL8PSSH {
 		protocolCollector = &ssh.SshCollector{}
-	} else if config.Protocol == l8poll.L8C_Protocol_L8P_PSNMPV2 {
+	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PPSNMPV2 {
 		protocolCollector = &snmp.SNMPv2Collector{}
-	} else if config.Protocol == l8poll.L8C_Protocol_L8P_Kubectl {
+	} else if config.Protocol == l8tpollaris.L8PProtocol_L8P_Kubectl {
 		protocolCollector = &k8s.Kubernetes{}
 	} else {
 		return nil, errors.New(strings.New("Unknown Protocol ", config.Protocol.String()).String())
@@ -192,7 +192,7 @@ func newProtocolCollector(config *l8poll.L8T_Connection, resource ifs.IResources
 	return protocolCollector, err
 }
 
-func (this *HostCollector) jobComplete(job *l8poll.CJob) {
+func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
 	if job.Error != "" {
 		this.service.vnic.Resources().Logger().Error("Job ", job.TargetId, " - ", job.PollarisName,
 			" - ", job.JobName, " has an error:", job.Error)
@@ -205,7 +205,7 @@ func (this *HostCollector) jobComplete(job *l8poll.CJob) {
 		return
 	}
 
-	err := this.service.vnic.Proximity(job.LinkP.ZsideServiceName, byte(job.LinkP.ZsideServiceArea), ifs.POST, job)
+	err := this.service.vnic.Proximity(job.LinkParser.ZsideServiceName, byte(job.LinkParser.ZsideServiceArea), ifs.POST, job)
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
 	}
@@ -215,7 +215,7 @@ func (this *HostCollector) jobComplete(job *l8poll.CJob) {
 	}
 }
 
-func jobHasChange(job *l8poll.CJob) bool {
+func jobHasChange(job *l8tpollaris.CJob) bool {
 	if job.Result != nil && job.Cadence.Current < int32(len(job.Cadence.Cadences)-1) {
 		job.Cadence.Current++
 	}

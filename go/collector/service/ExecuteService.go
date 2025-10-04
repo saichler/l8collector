@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/web"
@@ -15,7 +15,7 @@ type ExecuteService struct {
 
 func (this *ExecuteService) Activate(serviceName string, serviceArea byte,
 	r ifs.IResources, l ifs.IServiceCacheListener, args ...interface{}) error {
-	r.Registry().Register(&l8poll.CJob{})
+	r.Registry().Register(&l8tpollaris.CJob{})
 	this.collectorService = args[0].(*CollectorService)
 	this.serviceArea = serviceArea
 	return nil
@@ -27,7 +27,7 @@ func (this *ExecuteService) DeActivate() error {
 }
 
 func (this *ExecuteService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	job := pb.Element().(*l8poll.CJob)
+	job := pb.Element().(*l8tpollaris.CJob)
 	key := hostCollectorKey(job.TargetId, job.HostId)
 	h, ok := this.collectorService.hostCollectors.Get(key)
 	if ok {
@@ -50,7 +50,7 @@ func (this *ExecuteService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements
 }
 
 func (this *ExecuteService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
-	job := pb.Element().(*l8poll.CJob)
+	job := pb.Element().(*l8tpollaris.CJob)
 	key := hostCollectorKey(job.TargetId, job.HostId)
 	h, ok := this.collectorService.hostCollectors.Get(key)
 	if ok {
@@ -79,8 +79,8 @@ func (this *ExecuteService) TransactionConfig() ifs.ITransactionConfig {
 	return nil
 }
 func (this *ExecuteService) WebService() ifs.IWebService {
-	ws := web.New("exec", this.serviceArea, &l8poll.CJob{},
-		&l8poll.CJob{}, nil, nil, nil, nil, nil, nil, nil, nil)
+	ws := web.New("exec", this.serviceArea, &l8tpollaris.CJob{},
+		&l8tpollaris.CJob{}, nil, nil, nil, nil, nil, nil, nil, nil)
 	return ws
 }
 

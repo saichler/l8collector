@@ -1,19 +1,19 @@
 package protocols
 
 import (
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 )
 
-func SetValue(row, col int32, colName string, value []byte, tbl *l8poll.CTable) {
+func SetValue(row, col int32, colName string, value []byte, tbl *l8tpollaris.CTable) {
 	if tbl == nil {
 		return
 	}
 	if tbl.Rows == nil {
-		tbl.Rows = make(map[int32]*l8poll.CRow)
+		tbl.Rows = make(map[int32]*l8tpollaris.CRow)
 	}
 	rowData, ok := tbl.Rows[row]
 	if !ok {
-		rowData = &l8poll.CRow{}
+		rowData = &l8tpollaris.CRow{}
 		rowData.Data = make(map[int32][]byte)
 		tbl.Rows[row] = rowData
 	}
@@ -23,7 +23,7 @@ func SetValue(row, col int32, colName string, value []byte, tbl *l8poll.CTable) 
 	}
 }
 
-func Keys(m *l8poll.CMap) []string {
+func Keys(m *l8tpollaris.CMap) []string {
 	if m == nil || m.Data == nil {
 		return []string{}
 	}

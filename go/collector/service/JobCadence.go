@@ -4,10 +4,10 @@ import (
 	"math/rand"
 
 	"github.com/saichler/l8collector/go/collector/common"
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 )
 
-func JobCadence(job *l8poll.CJob) int64 {
+func JobCadence(job *l8tpollaris.CJob) int64 {
 	if common.SmoothFirstCollection && job.Cadence.Startups == nil {
 		job.Cadence.Startups = make([]int64, len(job.Cadence.Cadences))
 		for i := 0; i < len(job.Cadence.Startups); i++ {

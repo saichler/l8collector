@@ -11,7 +11,7 @@ import (
 	"github.com/saichler/l8collector/go/tests/utils_collector"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 )
@@ -41,7 +41,7 @@ func TestEntityMib(t *testing.T) {
 	vnic.Resources().Services().Activate(service.ServiceType, common.CollectorService, serviceArea, vnic.Resources(), vnic)
 
 	vnic.Resources().Registry().Register(utils_collector.MockParsingService{})
-	vnic.Resources().Services().Activate(utils_collector.ServiceType, device.LinkP.ZsideServiceName, byte(device.LinkP.ZsideServiceArea),
+	vnic.Resources().Services().Activate(utils_collector.ServiceType, device.LinkParser.ZsideServiceName, byte(device.LinkParser.ZsideServiceArea),
 		vnic.Resources(), vnic)
 
 	time.Sleep(time.Second)
@@ -60,7 +60,7 @@ func TestEntityMib(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	job := &l8poll.CJob{}
+	job := &l8tpollaris.CJob{}
 	job.TargetId = device.TargetId
 	job.HostId = device.TargetId
 	job.PollarisName = "mib2"

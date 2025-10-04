@@ -2,7 +2,7 @@ package service
 
 import (
 	"github.com/saichler/l8collector/go/collector/common"
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
 )
 
@@ -10,7 +10,7 @@ var staticJobs = map[string]StaticJob{(&IpAddressJob{}).what(): &IpAddressJob{},
 
 type StaticJob interface {
 	what() string
-	do(job *l8poll.CJob, hostCollector *HostCollector)
+	do(job *l8tpollaris.CJob, hostCollector *HostCollector)
 }
 
 type IpAddressJob struct{}
@@ -19,7 +19,7 @@ func (this *IpAddressJob) what() string {
 	return "ipAddress"
 }
 
-func (this *IpAddressJob) do(job *l8poll.CJob, hostCollector *HostCollector) {
+func (this *IpAddressJob) do(job *l8tpollaris.CJob, hostCollector *HostCollector) {
 	obj := object.NewEncode()
 	for _, h := range hostCollector.target.Hosts {
 		for _, c := range h.Configs {
@@ -37,11 +37,11 @@ func (this *DeviceStatusJob) what() string {
 	return "deviceStatus"
 }
 
-func (this *DeviceStatusJob) do(job *l8poll.CJob, hostCollector *HostCollector) {
+func (this *DeviceStatusJob) do(job *l8tpollaris.CJob, hostCollector *HostCollector) {
 	obj := object.NewEncode()
 	protocolState := make(map[int32]bool)
 	hostCollector.collectors.Iterate(func(k, v interface{}) {
-		key := k.(l8poll.L8C_Protocol)
+		key := k.(l8tpollaris.L8PProtocol)
 		p := v.(common.ProtocolCollector)
 		protocolState[int32(key)] = p.Online()
 	})

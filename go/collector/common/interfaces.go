@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8types/go/ifs"
 )
 
@@ -21,9 +21,9 @@ const (
 var BootStages = []string{BOOT_STAGE_00, BOOT_STAGE_01, BOOT_STAGE_02, BOOT_STAGE_03, BOOT_STAGE_04}
 
 type ProtocolCollector interface {
-	Init(*l8poll.L8T_Connection, ifs.IResources) error
-	Protocol() l8poll.L8C_Protocol
-	Exec(job *l8poll.CJob)
+	Init(*l8tpollaris.L8PHostProtocol, ifs.IResources) error
+	Protocol() l8tpollaris.L8PProtocol
+	Exec(job *l8tpollaris.CJob)
 	Connect() error
 	Disconnect() error
 	Online() bool

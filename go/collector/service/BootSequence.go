@@ -4,7 +4,7 @@ import (
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
 )
 
@@ -51,7 +51,7 @@ func (this *BootState) isComplete() bool {
 	return true
 }
 
-func (this *BootState) doStaticJob(job *l8poll.CJob, hostColletor *HostCollector) bool {
+func (this *BootState) doStaticJob(job *l8tpollaris.CJob, hostColletor *HostCollector) bool {
 	sjob, ok := staticJobs[job.JobName]
 	if ok {
 		sjob.do(job, hostColletor)
@@ -64,14 +64,14 @@ func (this *BootState) doStaticJob(job *l8poll.CJob, hostColletor *HostCollector
 	return false
 }
 
-func (this *BootState) jobComplete(job *l8poll.CJob) {
+func (this *BootState) jobComplete(job *l8tpollaris.CJob) {
 	_, ok := this.jobNames[job.JobName]
 	if ok {
 		this.jobNames[job.JobName] = true
 	}
 }
 
-func (this *HostCollector) bootDetailDevice(job *l8poll.CJob) {
+func (this *HostCollector) bootDetailDevice(job *l8tpollaris.CJob) {
 	if this.pollarisName != "" {
 		return
 	}
@@ -85,7 +85,7 @@ func (this *HostCollector) bootDetailDevice(job *l8poll.CJob) {
 		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.TargetId, " has sysmib error ", err.Error())
 		return
 	}
-	cmap, ok := data.(*l8poll.CMap)
+	cmap, ok := data.(*l8tpollaris.CMap)
 	if !ok {
 		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.TargetId, " systemMib not A CMap")
 		return

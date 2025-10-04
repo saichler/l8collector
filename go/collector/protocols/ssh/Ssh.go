@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/saichler/l8pollaris/go/pollaris"
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/queues"
@@ -20,7 +20,7 @@ var CR = []byte("\n")
 
 type SshCollector struct {
 	resources ifs.IResources
-	config    *l8poll.L8T_Connection
+	config    *l8tpollaris.L8PHostProtocol
 	client    *ssh2.Client
 	session   *ssh2.Session
 	in        io.WriteCloser
@@ -32,11 +32,11 @@ type SshCollector struct {
 	mtx       *sync.Mutex
 }
 
-func (this *SshCollector) Protocol() l8poll.L8C_Protocol {
-	return l8poll.L8C_Protocol_L8P_SSH
+func (this *SshCollector) Protocol() l8tpollaris.L8PProtocol {
+	return l8tpollaris.L8PProtocol_L8PSSH
 }
 
-func (this *SshCollector) Init(conf *l8poll.L8T_Connection, resources ifs.IResources) error {
+func (this *SshCollector) Init(conf *l8tpollaris.L8PHostProtocol, resources ifs.IResources) error {
 	this.config = conf
 	this.resources = resources
 	this.queue = queues.NewQueue("SSh Collector", 1024)
@@ -235,7 +235,7 @@ func (this *SshCollector) exec(cmd string, timeout int64) (string, error) {
 	return result.String(), nil
 }
 
-func (this *SshCollector) Exec(job *l8poll.CJob) {
+func (this *SshCollector) Exec(job *l8tpollaris.CJob) {
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, this.resources)
 	if err != nil {
 		this.resources.Logger().Error(strings2.New("Ssh:", err.Error()).String())

@@ -7,16 +7,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8types/go/ifs"
 )
 
 type NetSNMPCollector struct {
-	config    *l8poll.L8T_Connection
+	config    *l8tpollaris.L8PHostProtocol
 	resources ifs.IResources
 }
 
-func NewNetSNMPCollector(config *l8poll.L8T_Connection, resources ifs.IResources) *NetSNMPCollector {
+func NewNetSNMPCollector(config *l8tpollaris.L8PHostProtocol, resources ifs.IResources) *NetSNMPCollector {
 	return &NetSNMPCollector{
 		config:    config,
 		resources: resources,

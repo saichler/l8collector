@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"math/rand"
 
-	"github.com/saichler/l8pollaris/go/types/l8poll"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 )
 
-func ReplaceArguments(what string, job *l8poll.CJob) string {
+func ReplaceArguments(what string, job *l8tpollaris.CJob) string {
 	if job.Arguments == nil {
 		return what
 	}
