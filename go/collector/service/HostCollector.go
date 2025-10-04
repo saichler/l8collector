@@ -216,6 +216,9 @@ func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
 }
 
 func jobHasChange(job *l8tpollaris.CJob) bool {
+	if job.Always {
+		return true
+	}
 	if job.Result != nil && job.Cadence.Current < int32(len(job.Cadence.Cadences)-1) {
 		job.Cadence.Current++
 	}

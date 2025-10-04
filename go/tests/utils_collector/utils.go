@@ -1,6 +1,9 @@
 package utils_collector
 
 import (
+	"encoding/base64"
+	"os"
+
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8types/go/types/l8services"
@@ -44,4 +47,34 @@ func CreateDevice(ip string, serviceArea byte) *l8tpollaris.L8PTarget {
 	host.Configs[int32(snmpConfig.Protocol)] = snmpConfig
 
 	return device
+}
+
+func CreateCluster(kubeconfig, context string, serviceArea int32) *l8tpollaris.L8PTarget {
+	device := &l8tpollaris.L8PTarget{}
+	device.TargetId = context
+	device.LinkData = &l8services.L8ServiceLink{ZsideServiceName: K8sServiceName, ZsideServiceArea: serviceArea}
+	device.LinkParser = &l8services.L8ServiceLink{ZsideServiceName: common.ParserServicePrefix + K8sServiceName, ZsideServiceArea: int32(serviceArea)}
+	device.Hosts = make(map[string]*l8tpollaris.L8PHost)
+	host := &l8tpollaris.L8PHost{}
+	host.TargetId = device.TargetId
+
+	host.Configs = make(map[int32]*l8tpollaris.L8PHostProtocol)
+	device.Hosts[device.TargetId] = host
+
+	k8sConfig := &l8tpollaris.L8PHostProtocol{}
+
+	data, err := os.ReadFile(kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	k8sConfig.KubeConfig = base64.StdEncoding.EncodeToString(data)
+
+	k8sConfig.KukeContext = context
+	k8sConfig.Protocol = l8tpollaris.L8PProtocol_L8PKubectl
+
+	host.Configs[int32(k8sConfig.Protocol)] = k8sConfig
+
+	return device
+
+	return nil
 }

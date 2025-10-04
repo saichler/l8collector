@@ -58,7 +58,7 @@ func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, har
 		job.HostId = this.hostId
 		job.LinkParser = this.target.LinkParser
 		job.LinkData = this.target.LinkData
-
+		job.Always = poll.Always
 		if job.Timeout == 0 {
 			job.Timeout = poll.Timeout
 		}
@@ -89,6 +89,7 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 			job.Timeout = poll.Timeout
 			job.LinkParser = this.target.LinkParser
 			job.LinkData = this.target.LinkData
+			job.Always = poll.Always
 			jobs = append(jobs, job)
 		}
 	}
