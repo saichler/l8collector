@@ -55,7 +55,7 @@ func TestCollector(t *testing.T) {
 
 	p := pollaris.Pollaris(vnic.Resources())
 	for _, poll := range snmpPolls {
-		err := p.Add(poll, false)
+		err := p.Post(poll, false)
 		if err != nil {
 			vnic.Resources().Logger().Fail(t, err.Error())
 			return
@@ -137,7 +137,7 @@ func testJobDisable(t *testing.T) {
 
 	p := pollaris.Pollaris(vnic.Resources())
 	for _, poll := range snmpPolls {
-		err := p.Add(poll, false)
+		err := p.Post(poll, false)
 		if err != nil {
 			vnic.Resources().Logger().Fail(t, err.Error())
 			return

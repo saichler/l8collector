@@ -179,11 +179,11 @@ func (this *HostCollector) execJob(job *l8tpollaris.CJob) bool {
 
 func newProtocolCollector(config *l8tpollaris.L8PHostProtocol, resource ifs.IResources) (common.ProtocolCollector, error) {
 	var protocolCollector common.ProtocolCollector
-	if config.Protocol == l8tpollaris.L8PProtocolL8PSSH {
+	if config.Protocol == l8tpollaris.L8PProtocol_L8PSSH {
 		protocolCollector = &ssh.SshCollector{}
 	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PPSNMPV2 {
 		protocolCollector = &snmp.SNMPv2Collector{}
-	} else if config.Protocol == l8tpollaris.L8PProtocol_L8P_Kubectl {
+	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PKubectl {
 		protocolCollector = &k8s.Kubernetes{}
 	} else {
 		return nil, errors.New(strings.New("Unknown Protocol ", config.Protocol.String()).String())

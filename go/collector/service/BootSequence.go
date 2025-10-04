@@ -113,7 +113,7 @@ func (this *HostCollector) bootDetailDevice(job *l8tpollaris.CJob) {
 
 	plrs := boot.GetPollarisByOid(sysoid)
 	plc := pollaris.Pollaris(this.service.vnic.Resources())
-	plc.Add(plrs, false)
+	plc.Post(plrs, false)
 	if plrs != nil {
 		if plrs.Name != "boot03" {
 			this.pollarisName = plrs.Name
