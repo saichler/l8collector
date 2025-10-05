@@ -78,3 +78,38 @@ func CreateCluster(kubeconfig, context string, serviceArea int32) *l8tpollaris.L
 
 	return nil
 }
+
+func CreateHost(addr string, port int, user, pass string) *l8tpollaris.L8PTarget {
+	device := &l8tpollaris.L8PTarget{}
+	device.TargetId = addr
+	device.LinkData = &l8services.L8ServiceLink{ZsideServiceName: InvServiceName, ZsideServiceArea: int32(0)}
+	device.LinkParser = &l8services.L8ServiceLink{ZsideServiceName: common.ParserServicePrefix + InvServiceName, ZsideServiceArea: int32(0)}
+	device.Hosts = make(map[string]*l8tpollaris.L8PHost)
+	host := &l8tpollaris.L8PHost{}
+	host.TargetId = device.TargetId
+
+	host.Configs = make(map[int32]*l8tpollaris.L8PHostProtocol)
+	device.Hosts[device.TargetId] = host
+
+	restConfig := &l8tpollaris.L8PHostProtocol{}
+	restConfig.Port = int32(port)
+	restConfig.Addr = addr
+	restConfig.Username = user
+	restConfig.Password = pass
+	restConfig.Protocol = l8tpollaris.L8PProtocol_L8PRESTCONF
+	restConfig.Timeout = 30
+
+	restConfig.Ainfo = &l8tpollaris.AuthInfo{
+		NeedAuth:      true,
+		AuthBody:      "AuthUser",
+		AuthResp:      "AuthToken",
+		AuthUserField: "User",
+		AuthPassField: "Pass",
+		AuthPath:      "/auth",
+		AuthToken:     "Token",
+	}
+
+	host.Configs[int32(restConfig.Protocol)] = restConfig
+
+	return device
+}

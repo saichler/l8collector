@@ -6,6 +6,7 @@ import (
 
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8collector/go/collector/protocols/k8s"
+	client "github.com/saichler/l8collector/go/collector/protocols/rest"
 	"github.com/saichler/l8collector/go/collector/protocols/snmp"
 	"github.com/saichler/l8collector/go/collector/protocols/ssh"
 	"github.com/saichler/l8pollaris/go/pollaris"
@@ -179,7 +180,9 @@ func (this *HostCollector) execJob(job *l8tpollaris.CJob) bool {
 
 func newProtocolCollector(config *l8tpollaris.L8PHostProtocol, resource ifs.IResources) (common.ProtocolCollector, error) {
 	var protocolCollector common.ProtocolCollector
-	if config.Protocol == l8tpollaris.L8PProtocol_L8PSSH {
+	if config.Protocol == l8tpollaris.L8PProtocol_L8PRESTCONF {
+		protocolCollector = &client.RestCollector{}
+	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PSSH {
 		protocolCollector = &ssh.SshCollector{}
 	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PPSNMPV2 {
 		protocolCollector = &snmp.SNMPv2Collector{}
