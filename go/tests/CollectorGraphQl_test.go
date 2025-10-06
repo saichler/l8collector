@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -13,27 +14,29 @@ import (
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8types/go/types/l8api"
+	"github.com/saichler/podys/go/types/taddy"
 )
 
-func TestRestCollector(t *testing.T) {
+func TestGraphqlCollector(t *testing.T) {
 
 	p := &l8tpollaris.L8Pollaris{}
 	p.Groups = []string{common.BOOT_STAGE_00}
-	p.Name = "devices"
+	p.Name = "podcast"
 
 	poll := &l8tpollaris.L8Poll{}
-	poll.What = "GET::/probler/0/NetDev::{\"text\":\"select * from networkdevice where networkdevice.id=10.20.30.1\"}"
-	poll.BodyName = "L8Query"
-	poll.Name = "devices"
+	poll.What = "query { getPodcastSeries(name:\"The Daily\"){ uuid name itunesId description imageUrl totalEpisodesCount itunesInfo{ uuid baseArtworkUrlOf(size:640)}}}"
+	poll.Name = "podcast"
 	poll.Cadence = boot.EVERY_5_MINUTES
-	poll.Protocol = l8tpollaris.L8PProtocol_L8PRESTCONF
+	poll.Protocol = l8tpollaris.L8PProtocol_L8PGraphQL
+	poll.RespName = "TaddyResponse"
 	p.Polling = map[string]*l8tpollaris.L8Poll{poll.Name: poll}
 
-	host := utils_collector.CreateRestHost("192.168.86.226", 2443, "admin", "Admin123!")
+	host := utils_collector.CreateGraphqlHost("api.taddy.org", 443, os.Getenv("X_USER_ID"), os.Getenv("X_API_KEY"))
 
 	serviceArea := byte(0)
 
 	vnic := topo.VnicByVnetNum(2, 2)
+	vnic.Resources().Registry().Register(&taddy.TaddyResponse{})
 	vnic.Resources().Registry().Register(pollaris.PollarisService{})
 	vnic.Resources().Services().Activate(pollaris.ServiceType, pollaris.ServiceName, serviceArea, vnic.Resources(), vnic)
 	vnic.Resources().Registry().Register(targets.TargetService{})

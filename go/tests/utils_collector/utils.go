@@ -79,7 +79,7 @@ func CreateCluster(kubeconfig, context string, serviceArea int32) *l8tpollaris.L
 	return nil
 }
 
-func CreateHost(addr string, port int, user, pass string) *l8tpollaris.L8PTarget {
+func CreateRestHost(addr string, port int, user, pass string) *l8tpollaris.L8PTarget {
 	device := &l8tpollaris.L8PTarget{}
 	device.TargetId = addr
 	device.LinkData = &l8services.L8ServiceLink{ZsideServiceName: InvServiceName, ZsideServiceArea: int32(0)}
@@ -110,6 +110,38 @@ func CreateHost(addr string, port int, user, pass string) *l8tpollaris.L8PTarget
 	}
 
 	host.Configs[int32(restConfig.Protocol)] = restConfig
+
+	return device
+}
+
+func CreateGraphqlHost(addr string, port int, user, pass string) *l8tpollaris.L8PTarget {
+	device := &l8tpollaris.L8PTarget{}
+	device.TargetId = addr
+	device.LinkData = &l8services.L8ServiceLink{ZsideServiceName: InvServiceName, ZsideServiceArea: int32(0)}
+	device.LinkParser = &l8services.L8ServiceLink{ZsideServiceName: common.ParserServicePrefix + InvServiceName, ZsideServiceArea: int32(0)}
+	device.Hosts = make(map[string]*l8tpollaris.L8PHost)
+	host := &l8tpollaris.L8PHost{}
+	host.TargetId = device.TargetId
+
+	host.Configs = make(map[int32]*l8tpollaris.L8PHostProtocol)
+	device.Hosts[device.TargetId] = host
+
+	graphQlConfig := &l8tpollaris.L8PHostProtocol{}
+	graphQlConfig.Port = int32(port)
+	graphQlConfig.Addr = addr
+	graphQlConfig.Username = user
+	graphQlConfig.Password = pass
+	graphQlConfig.Protocol = l8tpollaris.L8PProtocol_L8PGraphQL
+	graphQlConfig.Timeout = 30
+
+	graphQlConfig.Ainfo = &l8tpollaris.AuthInfo{
+		NeedAuth: false,
+		IsApiKey: true,
+		ApiUser:  user,
+		ApiKey:   pass,
+	}
+
+	host.Configs[int32(graphQlConfig.Protocol)] = graphQlConfig
 
 	return device
 }
