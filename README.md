@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/badge/Go-1.24.0-blue.svg)](https://golang.org/dl/)
 
-L8Collector is a multi-protocol network data collection service built on the Layer8 ecosystem and Pollaris model. It provides a unified framework for collecting data from various network devices and systems using different protocols including SNMP, SSH, and Kubernetes.
+L8Collector is a multi-protocol network data collection service built on the Layer8 ecosystem and Pollaris model. It provides a unified framework for collecting data from various network devices and systems using different protocols including SNMP, SSH, Kubernetes, REST/RESTCONF, and GraphQL.
 
 ## Table of Contents
 
@@ -29,7 +29,7 @@ The collector operates on a device-centric model where each device can have mult
 
 ## Features
 
-- **Multi-Protocol Support**: SNMP v2c, SSH, and Kubernetes data collection
+- **Multi-Protocol Support**: SNMP v2c, SSH, Kubernetes, REST/RESTCONF, and GraphQL data collection
 - **Concurrent Collection**: Parallel data collection from multiple devices and hosts
 - **Service-Oriented Architecture**: Built as a microservice with Layer8 framework
 - **Device Management**: Centralized device and host management
@@ -59,6 +59,8 @@ The L8Collector follows a modular architecture with the following key components
 - **SNMPv2Collector**: SNMP version 2c data collection
 - **SshCollector**: SSH-based command execution and data collection
 - **Kubernetes**: Kubernetes cluster data collection via kubectl
+- **RestCollector**: REST/RESTCONF API data collection with authentication support
+- **GraphQlCollector**: GraphQL API data collection with flexible querying
 
 ### Interfaces
 
@@ -158,6 +160,21 @@ The codebase has been optimized for maintainability and performance:
 - Cluster resource monitoring
 - Dynamic parameter substitution using `$variable` syntax in commands
 
+### REST/RESTCONF
+- HTTP/HTTPS-based API data collection
+- Multiple authentication methods (token-based, basic auth)
+- Support for GET, POST, PUT, PATCH, DELETE methods
+- Flexible body and response type handling
+- Certificate-based secure connections
+- Configurable HTTP prefixes and endpoints
+
+### GraphQL
+- GraphQL query execution
+- API key and token-based authentication
+- Flexible query structure support
+- Typed response handling with protobuf integration
+- HTTPS with certificate support
+
 ## Dependencies
 
 ### Core Dependencies
@@ -173,6 +190,7 @@ The codebase has been optimized for maintainability and performance:
 - **l8utils**: Utility libraries (including optimized string handling)
 - **l8srlz**: Serialization framework
 - **l8parser**: Data parsing framework
+- **l8web**: Web client libraries for REST and GraphQL support
 
 ## Installation
 
@@ -327,6 +345,39 @@ job := &types.CJob{
 k8sCollector.Exec(job)
 ```
 
+#### REST/RESTCONF Collection
+```go
+restCollector := &RestCollector{}
+restCollector.Init(hostProtocol, resources)
+restCollector.Connect()
+
+// Execute REST job with method, endpoint, and body
+job := &types.CJob{
+    PollarisName: "devices",
+    JobName: "get-device",
+}
+// Poll format: "METHOD::endpoint::body"
+// Example: "GET::/api/devices::{"query":"filter"}"
+restCollector.Exec(job)
+restCollector.Disconnect()
+```
+
+#### GraphQL Collection
+```go
+graphQlCollector := &GraphQlCollector{}
+graphQlCollector.Init(hostProtocol, resources)
+graphQlCollector.Connect()
+
+// Execute GraphQL query
+job := &types.CJob{
+    PollarisName: "devices",
+    JobName: "query-devices",
+}
+// Poll.What contains the GraphQL query string
+graphQlCollector.Exec(job)
+graphQlCollector.Disconnect()
+```
+
 ## Testing
 
 ### Running Tests
@@ -349,6 +400,7 @@ go tool cover -html=cover.html
 ### Test Files
 
 - `tests/Collector_test.go`: Main collector tests
+- `tests/CollectorRest_test.go`: REST collector tests
 - `tests/TestInit.go`: Test initialization
 - `tests/utils_collector/`: Test utilities and mocks
 
@@ -368,6 +420,8 @@ l8collector/
     │   │   ├── snmp/     # SNMP v2c collector
     │   │   ├── ssh/      # SSH collector
     │   │   ├── k8s/      # Kubernetes collector
+    │   │   ├── rest/     # REST/RESTCONF collector
+    │   │   ├── graphql/  # GraphQL collector
     │   │   └── Utils.go  # Protocol utilities
     │   └── service/       # Core services
     │       ├── CollectorService.go    # Main collection service
@@ -457,7 +511,20 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## Latest Updates
 
-### Recent Improvements (2024)
+### Recent Improvements (2024-2025)
+
+#### New Protocol Support
+- **REST/RESTCONF Collector**: Full-featured REST API data collection with support for all HTTP methods (GET, POST, PUT, PATCH, DELETE)
+  - Token-based and basic authentication
+  - Flexible request/response handling with protobuf integration
+  - Certificate-based secure connections
+  - Configurable endpoints and HTTP prefixes
+- **GraphQL Collector**: GraphQL query execution support
+  - API key and token-based authentication
+  - Flexible query structure
+  - Typed response handling with protobuf
+  - HTTPS with certificate support
+- **Protocol Utilities**: Common utility functions for protocol implementations (SetValue, Keys for CTable/CMap operations)
 
 #### Enhanced SNMP Resilience
 - **Net-SNMP Fallback**: Automatic fallback to net-snmp when WapSNMP timeouts occur for improved OID collection reliability
@@ -472,6 +539,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 #### Dependencies Updates
 - Updated Layer8 ecosystem dependencies with latest security patches and performance improvements
 - Enhanced WapSNMP integration with fallback mechanisms
+- Added l8web package for REST and GraphQL client support
 
 ---
 

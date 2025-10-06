@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Layer 8 Data Collection - Advanced Network Intelligence</title>
+    <link rel="icon" type="image/gif" href="Layer8Logo.gif">
     <style>
         * {
             margin: 0;
@@ -49,7 +50,7 @@
         /* Full-page Hero Header */
         .hero-header {
             height: 100vh;
-            background: linear-gradient(135deg, #0f3460 0%, #1e5799 25%, #2989d8 50%, #207cca 75%, #7db9e8 100%);
+            background: linear-gradient(135deg, #1a1f2e 0%, #2d3748 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -65,7 +66,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(15, 52, 96, 0.9) 0%, rgba(30, 87, 153, 0.8) 50%, rgba(123, 185, 232, 0.7) 100%);
+            background: linear-gradient(135deg, rgba(26, 31, 46, 0.9) 0%, rgba(45, 55, 72, 0.8) 100%);
             z-index: 1;
         }
 
@@ -98,7 +99,7 @@
             font-size: clamp(3rem, 8vw, 6rem);
             font-weight: 800;
             margin-bottom: 1rem;
-            background: linear-gradient(45deg, #ffffff, #a8e6cf, #88d8a3);
+            background: linear-gradient(45deg, #ffffff, #e6c157, #d4af37);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -201,7 +202,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(45deg, #28a745, #20c997);
+            background: linear-gradient(135deg, #d4af37 0%, #b8960f 100%);
             color: white;
             box-shadow: 0 10px 30px rgba(40, 167, 69, 0.3);
         }
@@ -293,7 +294,7 @@
         .nav-logo {
             font-size: 1.5rem;
             font-weight: 800;
-            background: linear-gradient(45deg, #0f3460, #28a745);
+            background: linear-gradient(45deg, #1a1f2e, #d4af37);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -313,7 +314,7 @@
         }
 
         .nav-links a:hover {
-            color: #28a745;
+            color: #d4af37;
         }
 
         /* Main Content Sections */
@@ -347,7 +348,7 @@
         .section-title {
             font-size: clamp(2.5rem, 5vw, 4rem);
             font-weight: 700;
-            color: #0f3460;
+            color: #1a1f2e;
             margin-bottom: 1rem;
             position: relative;
         }
@@ -360,7 +361,7 @@
             transform: translateX(-50%);
             width: 80px;
             height: 4px;
-            background: linear-gradient(45deg, #28a745, #20c997);
+            background: linear-gradient(135deg, #d4af37 0%, #b8960f 100%);
             border-radius: 2px;
         }
 
@@ -385,7 +386,7 @@
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
-            border-left: 5px solid #28a745;
+            border-left: 5px solid #d4af37;
             position: relative;
             overflow: hidden;
         }
@@ -397,7 +398,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(40, 167, 69, 0.05) 0%, rgba(32, 201, 151, 0.05) 100%);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(230, 193, 87, 0.05) 100%);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -414,7 +415,7 @@
         .feature-icon {
             width: 60px;
             height: 60px;
-            background: linear-gradient(45deg, #28a745, #20c997);
+            background: linear-gradient(135deg, #d4af37 0%, #b8960f 100%);
             border-radius: 15px;
             display: flex;
             align-items: center;
@@ -426,7 +427,7 @@
         .feature-title {
             font-size: 1.5rem;
             font-weight: 600;
-            color: #0f3460;
+            color: #1a1f2e;
             margin-bottom: 1rem;
         }
 
@@ -800,10 +801,11 @@
         </svg>
 
         <div class="hero-content">
+            <img src="Layer8Logo.gif" alt="Layer 8 Logo" style="width: 75px; height: 75px; margin-bottom: 2rem; border-radius: 50%; box-shadow: 0 8px 25px rgba(0,0,0,0.3);">
             <h1 class="hero-title">Layer 8 Data Collection</h1>
             <p class="hero-subtitle">Advanced Multi-Protocol Network Intelligence Platform</p>
             <p class="hero-description">
-                Unify your network data collection with enterprise-grade SNMP, SSH, and Kubernetes monitoring.
+                Unify your network data collection with enterprise-grade SNMP, SSH, Kubernetes, REST/RESTCONF, and GraphQL monitoring.
                 Built for scale, designed for reliability, optimized for performance.
             </p>
 
@@ -842,7 +844,7 @@
                         <div class="feature-icon">🌐</div>
                         <h3 class="feature-title">Multi-Protocol Support</h3>
                         <p class="feature-description">
-                            Native support for SNMP v2c, SSH command execution, and Kubernetes cluster monitoring.
+                            Native support for SNMP v2c, SSH, Kubernetes, REST/RESTCONF, and GraphQL.
                             Extensible architecture for adding custom protocols.
                         </p>
                     </div>
@@ -962,7 +964,7 @@
                         <div class="stat-label">Devices per Instance</div>
                     </div>
                     <div class="stat-card fade-in">
-                        <span class="stat-number">3</span>
+                        <span class="stat-number">5</span>
                         <div class="stat-label">Supported Protocols</div>
                     </div>
                     <div class="stat-card fade-in">
@@ -1016,6 +1018,28 @@
                             <li>Base64-encoded kubeconfig support</li>
                             <li>Cluster resource monitoring</li>
                             <li>Dynamic parameter substitution ($variable)</li>
+                        </ul>
+                    </div>
+
+                    <div class="protocol-card fade-in">
+                        <h3 class="protocol-title">REST/RESTCONF</h3>
+                        <ul class="protocol-features">
+                            <li>HTTP/HTTPS-based API data collection</li>
+                            <li>Multiple authentication methods (token, basic)</li>
+                            <li>Support for all HTTP methods (GET, POST, PUT, PATCH, DELETE)</li>
+                            <li>Flexible body and response handling</li>
+                            <li>Certificate-based secure connections</li>
+                        </ul>
+                    </div>
+
+                    <div class="protocol-card fade-in">
+                        <h3 class="protocol-title">GraphQL</h3>
+                        <ul class="protocol-features">
+                            <li>GraphQL query execution</li>
+                            <li>API key and token-based authentication</li>
+                            <li>Flexible query structure support</li>
+                            <li>Typed response handling with protobuf</li>
+                            <li>HTTPS with certificate support</li>
                         </ul>
                     </div>
                 </div>
@@ -1101,7 +1125,7 @@ response := collectorService.Post(object.New(device), vnic)</div>
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2024 Layer 8 Data Collection. Licensed under the Apache License 2.0.</p>
+                <p>&copy; 2024-2025 Layer 8 Data Collection. Licensed under the Apache License 2.0.</p>
                 <p>For questions, issues, or contributions, please use the GitHub issue tracker.</p>
             </div>
         </div>
