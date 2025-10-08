@@ -5,7 +5,6 @@ import (
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/web"
-	"github.com/saichler/l8bus/go/overlay/health"
 )
 
 type ExecuteService struct {
@@ -35,8 +34,7 @@ func (this *ExecuteService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements
 		hostController.execJob(job)
 		return object.New(nil, job)
 	} else {
-		hc := health.Health(vnic.Resources())
-		uuids := hc.Uuids("exec", this.serviceArea)
+		uuids := vnic.Resources().Services().GetParticipants("exec", this.serviceArea)
 		delete(uuids, vnic.Resources().SysConfig().LocalUuid)
 		for uuid, _ := range uuids {
 			resp := vnic.Request(uuid, "exec", this.serviceArea, ifs.PUT, job, 30)
