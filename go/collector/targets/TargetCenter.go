@@ -2,21 +2,21 @@ package targets
 
 import (
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
+	"github.com/saichler/l8reflect/go/reflect/introspecting"
 	"github.com/saichler/l8services/go/services/dcache"
 	"github.com/saichler/l8types/go/ifs"
-	"github.com/saichler/l8reflect/go/reflect/introspecting"
 )
 
 type TargetCenter struct {
 	devices ifs.IDistributedCache
 }
 
-func newDeviceCenter(serviceName string, serviceArea byte, resources ifs.IResources, listener ifs.IServiceCacheListener) *TargetCenter {
+func newDeviceCenter(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) *TargetCenter {
 	this := &TargetCenter{}
-	node, _ := resources.Introspector().Inspect(&l8tpollaris.L8PTarget{})
+	node, _ := vnic.Resources().Introspector().Inspect(&l8tpollaris.L8PTarget{})
 	introspecting.AddPrimaryKeyDecorator(node, "TargetId")
-	this.devices = dcache.NewDistributedCache(serviceName, serviceArea, &l8tpollaris.L8PTarget{}, nil,
-		listener, resources)
+	this.devices = dcache.NewDistributedCache(sla.ServiceName(), sla.ServiceArea(), &l8tpollaris.L8PTarget{}, nil,
+		vnic, vnic.Resources())
 	return this
 }
 

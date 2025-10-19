@@ -18,12 +18,11 @@ type TargetService struct {
 	serviceArea  byte
 }
 
-func (this *TargetService) Activate(serviceName string, serviceArea byte,
-	r ifs.IResources, l ifs.IServiceCacheListener, args ...interface{}) error {
-	r.Registry().Register(&l8tpollaris.L8PTarget{})
-	r.Registry().Register(&l8tpollaris.L8PTargetList{})
-	this.configCenter = newDeviceCenter(ServiceName, serviceArea, r, l)
-	this.serviceArea = serviceArea
+func (this *TargetService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) error {
+	vnic.Resources().Registry().Register(&l8tpollaris.L8PTarget{})
+	vnic.Resources().Registry().Register(&l8tpollaris.L8PTargetList{})
+	this.configCenter = newDeviceCenter(sla, vnic)
+	this.serviceArea = sla.ServiceArea()
 	return nil
 }
 

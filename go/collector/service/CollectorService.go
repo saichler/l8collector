@@ -18,20 +18,19 @@ type CollectorService struct {
 	vnic           ifs.IVNic
 }
 
-func (this *CollectorService) Activate(serviceName string, serviceArea byte,
-	r ifs.IResources, l ifs.IServiceCacheListener, args ...interface{}) error {
-	this.serviceArea = serviceArea
+func (this *CollectorService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) error {
+	this.serviceArea = sla.ServiceArea()
 	this.hostCollectors = maps.NewSyncMap()
-	vnic, ok := l.(ifs.IVNic)
-	if ok {
-		this.vnic = vnic
-		r.Registry().Register(&l8tpollaris.L8PTarget{})
-		r.Registry().Register(&l8tpollaris.CMap{})
-		r.Registry().Register(&l8tpollaris.CTable{})
-		r.Registry().Register(&l8tpollaris.CJob{})
-		r.Registry().Register(&ExecuteService{})
-		r.Services().Activate("ExecuteService", "exec", serviceArea, r, vnic, this)
-	}
+	this.vnic = vnic
+	vnic.Resources().Registry().Register(&l8tpollaris.L8PTarget{})
+	vnic.Resources().Registry().Register(&l8tpollaris.CMap{})
+	vnic.Resources().Registry().Register(&l8tpollaris.CTable{})
+	vnic.Resources().Registry().Register(&l8tpollaris.CJob{})
+
+	slaExec := ifs.NewServiceLevelAgreement(&ExecuteService{}, "exec", this.serviceArea, false, nil)
+	slaExec.SetArgs(this)
+	vnic.Resources().Services().Activate(slaExec, vnic)
+
 	return nil
 }
 

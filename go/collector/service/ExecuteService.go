@@ -12,11 +12,10 @@ type ExecuteService struct {
 	serviceArea      byte
 }
 
-func (this *ExecuteService) Activate(serviceName string, serviceArea byte,
-	r ifs.IResources, l ifs.IServiceCacheListener, args ...interface{}) error {
-	r.Registry().Register(&l8tpollaris.CJob{})
-	this.collectorService = args[0].(*CollectorService)
-	this.serviceArea = serviceArea
+func (this *ExecuteService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) error {
+	vnic.Resources().Registry().Register(&l8tpollaris.CJob{})
+	this.collectorService = sla.Args()[0].(*CollectorService)
+	this.serviceArea = sla.ServiceArea()
 	return nil
 }
 

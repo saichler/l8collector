@@ -37,16 +37,19 @@ func TestGraphqlCollector(t *testing.T) {
 
 	vnic := topo.VnicByVnetNum(2, 2)
 	vnic.Resources().Registry().Register(&taddy.TaddyResponse{})
-	vnic.Resources().Registry().Register(pollaris.PollarisService{})
-	vnic.Resources().Services().Activate(pollaris.ServiceType, pollaris.ServiceName, serviceArea, vnic.Resources(), vnic)
-	vnic.Resources().Registry().Register(targets.TargetService{})
-	vnic.Resources().Services().Activate(targets.ServiceType, targets.ServiceName, serviceArea, vnic.Resources(), vnic)
-	vnic.Resources().Registry().Register(service.CollectorService{})
-	vnic.Resources().Services().Activate(service.ServiceType, common.CollectorService, serviceArea, vnic.Resources(), vnic)
 
-	vnic.Resources().Registry().Register(utils_collector.MockParsingService{})
-	vnic.Resources().Services().Activate(utils_collector.ServiceType, host.LinkParser.ZsideServiceName,
-		byte(host.LinkParser.ZsideServiceArea), vnic.Resources(), vnic)
+	sla := ifs.NewServiceLevelAgreement(&pollaris.PollarisService{}, pollaris.ServiceName, serviceArea, true, nil)
+	vnic.Resources().Services().Activate(sla, vnic)
+
+	sla = ifs.NewServiceLevelAgreement(&targets.TargetService{}, targets.ServiceName, serviceArea, true, nil)
+	vnic.Resources().Services().Activate(sla, vnic)
+
+	sla = ifs.NewServiceLevelAgreement(&service.CollectorService{}, common.CollectorService, serviceArea, true, nil)
+	vnic.Resources().Services().Activate(sla, vnic)
+
+	sla = ifs.NewServiceLevelAgreement(&utils_collector.MockParsingService{}, host.LinkParser.ZsideServiceName,
+		byte(host.LinkParser.ZsideServiceArea), false, nil)
+	vnic.Resources().Services().Activate(sla, vnic)
 
 	pollaris.Pollaris(vnic.Resources()).Post(p, true)
 	vnic.Resources().Registry().Register(&l8api.AuthUser{})
