@@ -31,14 +31,16 @@ The collector operates on a device-centric model where each device can have mult
 
 - **Multi-Protocol Support**: SNMP v2c, SSH, Kubernetes, REST/RESTCONF, and GraphQL data collection
 - **Concurrent Collection**: Parallel data collection from multiple devices and hosts
-- **Service-Oriented Architecture**: Built as a microservice with Layer8 framework
-- **Device Management**: Centralized device and host management
-- **Job Queuing**: Efficient job scheduling and execution
-- **Remote Job Execution**: ExecuteService for distributed job processing across cluster nodes
+- **Service-Oriented Architecture**: Built as a microservice with Layer8 framework and SLA support
+- **Target Management**: Dynamic target device configuration with TargetService and TargetCenter
+- **Service Level Agreements**: Integrated SLA support for better service lifecycle management
+- **Job Queuing**: Efficient job scheduling and execution with cadence management
+- **Remote Job Execution**: ExecuteService for distributed job processing across cluster nodes with SLA
 - **Parameter Substitution**: Dynamic argument replacement in Kubernetes commands
 - **Error Handling**: Robust error handling and connection management
 - **String Handling Optimization**: Unified string concatenation using l8utils/strings package
-- **Testing Framework**: Comprehensive unit testing with coverage reporting
+- **Testing Framework**: Comprehensive unit testing with coverage reporting including GraphQL and REST tests
+- **Web Interface**: Interactive web interface for monitoring and management
 
 ## Architecture
 
@@ -46,13 +48,14 @@ The L8Collector follows a modular architecture with the following key components
 
 ### Core Components
 
-- **CollectorService**: Main service orchestrating the collection process
-- **ExecuteService**: Service for remote job execution and distribution across cluster nodes
+- **CollectorService**: Main service orchestrating the collection process with Service Level Agreement (SLA) support
+- **ExecuteService**: Service for remote job execution and distribution across cluster nodes with SLA integration
+- **TargetService**: New centralized target device management service with dynamic configuration updates
+- **TargetCenter**: Target configuration center for managing device targets and their lifecycle
 - **HostCollector**: Manages collection from individual hosts
 - **DeviceCollector**: Handles device-level collection logic
 - **JobsQueue**: Manages collection job scheduling and execution
 - **DeviceCenter**: Central management for device configurations
-- **DeviceService**: Service layer for device operations
 
 ### Protocol Collectors
 
@@ -270,12 +273,13 @@ The service integrates with the Layer8 ecosystem and uses the standard Layer8 co
 
 ### Service Integration
 
-L8Collector is designed to run as a service within the Layer8 ecosystem:
+L8Collector is designed to run as a service within the Layer8 ecosystem with Service Level Agreement (SLA) support:
 
 ```go
-// Service activation
+// Service activation with SLA
 collectorService := &CollectorService{}
-err := collectorService.Activate(serviceName, serviceArea, resources, listener)
+sla := ifs.NewServiceLevelAgreement(collectorService, "collector", serviceArea, false, nil)
+err := collectorService.Activate(sla, vnic)
 
 // Device polling
 device := &types.Device{
@@ -291,11 +295,15 @@ response := collectorService.Post(object.New(device), vnic)
 
 ### Remote Job Execution
 
-The ExecuteService enables distributed job execution across cluster nodes:
+The ExecuteService enables distributed job execution across cluster nodes with SLA support:
 
 ```go
-// Execute a job remotely
+// Execute a job remotely with SLA
 executeService := &ExecuteService{}
+slaExec := ifs.NewServiceLevelAgreement(executeService, "exec", serviceArea, false, nil)
+slaExec.SetArgs(collectorService)
+vnic.Resources().Services().Activate(slaExec, vnic)
+
 job := &types.CJob{
     DeviceId: "device-001",
     HostId: "host-001",
@@ -412,10 +420,14 @@ go tool cover -html=cover.html
 l8collector/
 ├── LICENSE                 # Apache 2.0 license
 ├── README.md              # This file
+├── Layer8Logo.gif         # Layer8 logo
+├── web.html               # Web interface
 └── go/
     ├── collector/
     │   ├── common/        # Common interfaces and constants
-    │   ├── devices/       # Device management
+    │   ├── targets/       # Target device management
+    │   │   ├── TargetService.go       # Target management service
+    │   │   └── TargetCenter.go        # Target configuration center
     │   ├── protocols/     # Protocol implementations
     │   │   ├── snmp/     # SNMP v2c collector
     │   │   ├── ssh/      # SSH collector
@@ -424,12 +436,17 @@ l8collector/
     │   │   ├── graphql/  # GraphQL collector
     │   │   └── Utils.go  # Protocol utilities
     │   └── service/       # Core services
-    │       ├── CollectorService.go    # Main collection service
-    │       ├── ExecuteService.go      # Remote execution service
-    │       ├── DeviceCollector.go     # Device-level operations
+    │       ├── CollectorService.go    # Main collection service with SLA
+    │       ├── ExecuteService.go      # Remote execution service with SLA
     │       ├── HostCollector.go       # Host-level operations
-    │       └── JobsQueue.go           # Job scheduling
+    │       ├── JobsQueue.go           # Job scheduling
+    │       ├── JobCadence.go          # Job cadence management
+    │       ├── StaticJobs.go          # Static job configurations
+    │       └── BootSequence.go        # Service boot sequence
     ├── tests/             # Test files
+    │   ├── CollectorGraphQl_test.go  # GraphQL collector tests
+    │   ├── CollectorRest_test.go     # REST collector tests
+    │   └── Collector_test.go         # Main collector tests
     ├── go.mod             # Go module definition
     ├── go.sum             # Go module checksums
     ├── test.sh            # Test script
@@ -512,6 +529,20 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 ## Latest Updates
 
 ### Recent Improvements (2024-2025)
+
+#### Service Level Agreement (SLA) Integration (October 2025)
+- **SLA Support**: Added Service Level Agreement support to core services
+  - CollectorService now activates with SLA for better service management
+  - ExecuteService integrated with SLA for remote job execution
+  - Improved service lifecycle management and monitoring
+- **Target Management Refactoring**:
+  - Introduced TargetService for centralized target device management
+  - Added TargetCenter for dynamic device configuration updates
+  - Replaced DeviceService with more flexible target-based architecture
+  - Support for L8PTarget and L8PTargetList types
+- **Enhanced Testing**: Updated test suite with SLA integration tests
+
+### Previous Improvements (2024-2025)
 
 #### New Protocol Support
 - **REST/RESTCONF Collector**: Full-featured REST API data collection with support for all HTTP methods (GET, POST, PUT, PATCH, DELETE)

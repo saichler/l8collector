@@ -756,6 +756,7 @@
                 <li><a href="#architecture">Architecture</a></li>
                 <li><a href="#protocols">Protocols</a></li>
                 <li><a href="#performance">Performance</a></li>
+                <li><a href="#updates">Updates</a></li>
                 <li><a href="#code">Documentation</a></li>
             </ul>
         </div>
@@ -806,13 +807,14 @@
             <p class="hero-subtitle">Advanced Multi-Protocol Network Intelligence Platform</p>
             <p class="hero-description">
                 Unify your network data collection with enterprise-grade SNMP, SSH, Kubernetes, REST/RESTCONF, and GraphQL monitoring.
-                Built for scale, designed for reliability, optimized for performance.
+                Built for scale with SLA support, dynamic target management, and optimized for enterprise performance.
             </p>
 
             <div class="hero-badges">
                 <span class="badge">🚀 Go 1.24.0</span>
                 <span class="badge">📡 Multi-Protocol</span>
                 <span class="badge">⚡ High Performance</span>
+                <span class="badge">🎯 SLA Support</span>
                 <span class="badge">🔒 Enterprise Ready</span>
                 <span class="badge">📊 Apache 2.0</span>
             </div>
@@ -855,6 +857,24 @@
                         <p class="feature-description">
                             1:1 host-to-goroutine mapping enables true parallel data collection.
                             Handle 1,000-10,000 devices per instance with optimal resource utilization.
+                        </p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">🎯</div>
+                        <h3 class="feature-title">Service Level Agreements</h3>
+                        <p class="feature-description">
+                            Integrated SLA support for better service lifecycle management.
+                            CollectorService and ExecuteService now operate with enhanced reliability and monitoring.
+                        </p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">🔧</div>
+                        <h3 class="feature-title">Dynamic Target Management</h3>
+                        <p class="feature-description">
+                            New TargetService and TargetCenter for centralized device configuration.
+                            Support for L8PTarget and dynamic configuration updates at runtime.
                         </p>
                     </div>
 
@@ -906,14 +926,16 @@
                 </div>
 
                 <div class="architecture-diagram slide-in-left">
-                    <h3 style="text-align: center; margin-bottom: 2rem; color: #0f3460;">Core Components</h3>
+                    <h3 style="text-align: center; margin-bottom: 2rem; color: #0f3460;">Core Components with SLA Support</h3>
                     <div class="component-grid">
-                        <div class="component-box">CollectorService</div>
-                        <div class="component-box">ExecuteService</div>
+                        <div class="component-box">CollectorService (SLA)</div>
+                        <div class="component-box">ExecuteService (SLA)</div>
+                        <div class="component-box">TargetService</div>
+                        <div class="component-box">TargetCenter</div>
                         <div class="component-box">HostCollector</div>
-                        <div class="component-box">DeviceCollector</div>
                         <div class="component-box">JobsQueue</div>
-                        <div class="component-box">DeviceCenter</div>
+                        <div class="component-box">JobCadence</div>
+                        <div class="component-box">StaticJobs</div>
                     </div>
                 </div>
 
@@ -1089,20 +1111,91 @@ chmod +x test.sh
                         </div>
                         <div class="code-title">Service Integration</div>
                     </div>
-                    <div class="code-content">// Service activation
+                    <div class="code-content">// Service activation with SLA support
 collectorService := &CollectorService{}
-err := collectorService.Activate(serviceName, serviceArea, resources, listener)
+sla := ifs.NewServiceLevelAgreement(collectorService, "collector", serviceArea, false, nil)
+err := collectorService.Activate(sla, vnic)
 
-// Device polling setup
-device := &types.Device{
-    DeviceId: "device-001",
-    Hosts: []*types.Host{
+// Execute Service with SLA
+slaExec := ifs.NewServiceLevelAgreement(&ExecuteService{}, "exec", serviceArea, false, nil)
+slaExec.SetArgs(collectorService)
+vnic.Resources().Services().Activate(slaExec, vnic)
+
+// Target device configuration
+target := &l8tpollaris.L8PTarget{
+    TargetId: "target-001",
+    Hosts: []*l8tpollaris.Host{
         // Host configurations
     },
 }
 
 // Start data collection
-response := collectorService.Post(object.New(device), vnic)</div>
+response := targetService.Post(object.New(target), vnic)</div>
+                </div>
+            </div>
+        </section>
+        <!-- Latest Updates Section -->
+        <section id="updates" class="section">
+            <div class="container">
+                <div class="section-header fade-in">
+                    <h2 class="section-title">Latest Updates</h2>
+                    <p class="section-subtitle">Recent improvements and enhancements (October 2025)</p>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">🎯</div>
+                        <h3 class="feature-title">SLA Integration</h3>
+                        <p class="feature-description">
+                            Service Level Agreement support added to core services. CollectorService and ExecuteService now
+                            activate with SLA for improved service management, lifecycle control, and monitoring capabilities.
+                        </p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">🔧</div>
+                        <h3 class="feature-title">Target Management Refactoring</h3>
+                        <p class="feature-description">
+                            Introduced TargetService and TargetCenter for centralized target device management.
+                            Support for L8PTarget and L8PTargetList types with dynamic configuration updates.
+                        </p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">🧪</div>
+                        <h3 class="feature-title">Enhanced Testing Framework</h3>
+                        <p class="feature-description">
+                            Comprehensive test coverage for GraphQL and REST collectors. Updated test suite with
+                            SLA integration tests and improved mock services for better test reliability.
+                        </p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">📈</div>
+                        <h3 class="feature-title">Performance Optimizations</h3>
+                        <p class="feature-description">
+                            Continued string handling optimizations using l8utils package. Enhanced memory management
+                            and reduced garbage collection pressure for better throughput at scale.
+                        </p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">🌐</div>
+                        <h3 class="feature-title">Protocol Enhancements</h3>
+                        <p class="feature-description">
+                            REST/RESTCONF and GraphQL collectors with full-featured support. Enhanced SNMP resilience
+                            with net-snmp fallback and improved timeout handling across all protocols.
+                        </p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">🛠️</div>
+                        <h3 class="feature-title">Service Components</h3>
+                        <p class="feature-description">
+                            New service components: JobCadence for job scheduling management, StaticJobs for configuration,
+                            and BootSequence for service initialization with improved startup reliability.
+                        </p>
+                    </div>
                 </div>
             </div>
         </section>
