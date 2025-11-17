@@ -1,8 +1,6 @@
 package targets
 
 import (
-	"time"
-
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
@@ -37,19 +35,14 @@ func (this *TargetService) DeActivate() error {
 func (this *TargetService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	deviceList, ok := pb.Element().(*l8tpollaris.L8PTargetList)
 	if ok {
-		go func() {
-			for index, device := range deviceList.List {
-				ok = this.configCenter.Post(device, pb.Notification())
-				if !ok {
-					this.startDevice(device, vnic, pb.Notification())
-				} else {
-					this.updateDevice(device, vnic, pb.Notification())
-				}
-				if index%1000 == 0 {
-					time.Sleep(time.Second * 2)
-				}
+		for _, device := range deviceList.List {
+			ok = this.configCenter.Post(device, pb.Notification())
+			if !ok {
+				this.startDevice(device, vnic, pb.Notification())
+			} else {
+				this.updateDevice(device, vnic, pb.Notification())
 			}
-		}()
+		}
 	}
 	device, ok := pb.Element().(*l8tpollaris.L8PTarget)
 	if ok {
