@@ -2,7 +2,6 @@ package targets
 
 import (
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
-	"github.com/saichler/l8reflect/go/reflect/helping"
 	"github.com/saichler/l8services/go/services/dcache"
 	"github.com/saichler/l8types/go/ifs"
 )
@@ -13,8 +12,7 @@ type TargetCenter struct {
 
 func newDeviceCenter(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) *TargetCenter {
 	this := &TargetCenter{}
-	node, _ := vnic.Resources().Introspector().Inspect(&l8tpollaris.L8PTarget{})
-	helping.AddPrimaryKeyDecorator(node, "TargetId")
+	vnic.Resources().Introspector().Decorators().AddPrimaryKeyDecorator(&l8tpollaris.L8PTarget{}, "TargetId")
 	this.devices = dcache.NewDistributedCache(sla.ServiceName(), sla.ServiceArea(), &l8tpollaris.L8PTarget{}, nil,
 		vnic, vnic.Resources())
 	return this
