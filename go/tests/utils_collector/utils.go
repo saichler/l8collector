@@ -1,12 +1,8 @@
 package utils_collector
 
 import (
-	"encoding/base64"
-	"os"
-
-	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
-	"github.com/saichler/l8types/go/types/l8services"
+	common2 "github.com/saichler/probler/go/prob/common"
 )
 
 const (
@@ -17,8 +13,7 @@ const (
 func CreateDevice(ip string, serviceArea byte) *l8tpollaris.L8PTarget {
 	device := &l8tpollaris.L8PTarget{}
 	device.TargetId = ip
-	device.LinkData = &l8services.L8ServiceLink{ZsideServiceName: InvServiceName, ZsideServiceArea: int32(serviceArea)}
-	device.LinkParser = &l8services.L8ServiceLink{ZsideServiceName: common.ParserServicePrefix + InvServiceName, ZsideServiceArea: int32(serviceArea)}
+	device.LinksId = common2.NetworkDevice_Links_ID
 	device.Hosts = make(map[string]*l8tpollaris.L8PHost)
 	host := &l8tpollaris.L8PHost{}
 	host.TargetId = device.TargetId
@@ -30,8 +25,7 @@ func CreateDevice(ip string, serviceArea byte) *l8tpollaris.L8PTarget {
 	sshConfig.Protocol = l8tpollaris.L8PProtocol_L8PSSH
 	sshConfig.Port = 22
 	sshConfig.Addr = ip
-	sshConfig.Username = "simadmin"
-	sshConfig.Password = "simadmin"
+	sshConfig.CredId = "sim"
 	sshConfig.Terminal = "vt100"
 	sshConfig.Timeout = 15
 
@@ -42,7 +36,7 @@ func CreateDevice(ip string, serviceArea byte) *l8tpollaris.L8PTarget {
 	snmpConfig.Addr = ip
 	snmpConfig.Port = 161
 	snmpConfig.Timeout = 15
-	snmpConfig.ReadCommunity = "public"
+	snmpConfig.CredId = "sim"
 
 	host.Configs[int32(snmpConfig.Protocol)] = snmpConfig
 
@@ -52,8 +46,7 @@ func CreateDevice(ip string, serviceArea byte) *l8tpollaris.L8PTarget {
 func CreateCluster(kubeconfig, context string, serviceArea int32) *l8tpollaris.L8PTarget {
 	device := &l8tpollaris.L8PTarget{}
 	device.TargetId = context
-	device.LinkData = &l8services.L8ServiceLink{ZsideServiceName: K8sServiceName, ZsideServiceArea: serviceArea}
-	device.LinkParser = &l8services.L8ServiceLink{ZsideServiceName: common.ParserServicePrefix + K8sServiceName, ZsideServiceArea: int32(serviceArea)}
+	device.LinksId = common2.K8s_Links_ID
 	device.Hosts = make(map[string]*l8tpollaris.L8PHost)
 	host := &l8tpollaris.L8PHost{}
 	host.TargetId = device.TargetId
@@ -63,27 +56,18 @@ func CreateCluster(kubeconfig, context string, serviceArea int32) *l8tpollaris.L
 
 	k8sConfig := &l8tpollaris.L8PHostProtocol{}
 
-	data, err := os.ReadFile(kubeconfig)
-	if err != nil {
-		panic(err)
-	}
-	k8sConfig.KubeConfig = base64.StdEncoding.EncodeToString(data)
-
-	k8sConfig.KukeContext = context
+	k8sConfig.CredId = "lab"
 	k8sConfig.Protocol = l8tpollaris.L8PProtocol_L8PKubectl
 
 	host.Configs[int32(k8sConfig.Protocol)] = k8sConfig
 
 	return device
-
-	return nil
 }
 
 func CreateRestHost(addr string, port int, user, pass string) *l8tpollaris.L8PTarget {
 	device := &l8tpollaris.L8PTarget{}
 	device.TargetId = addr
-	device.LinkData = &l8services.L8ServiceLink{ZsideServiceName: InvServiceName, ZsideServiceArea: int32(0)}
-	device.LinkParser = &l8services.L8ServiceLink{ZsideServiceName: common.ParserServicePrefix + InvServiceName, ZsideServiceArea: int32(0)}
+	device.LinksId = common2.NetworkDevice_Links_ID
 	device.Hosts = make(map[string]*l8tpollaris.L8PHost)
 	host := &l8tpollaris.L8PHost{}
 	host.TargetId = device.TargetId
@@ -94,8 +78,7 @@ func CreateRestHost(addr string, port int, user, pass string) *l8tpollaris.L8PTa
 	restConfig := &l8tpollaris.L8PHostProtocol{}
 	restConfig.Port = int32(port)
 	restConfig.Addr = addr
-	restConfig.Username = user
-	restConfig.Password = pass
+	restConfig.CredId = "sim"
 	restConfig.Protocol = l8tpollaris.L8PProtocol_L8PRESTCONF
 	restConfig.Timeout = 30
 
@@ -117,8 +100,7 @@ func CreateRestHost(addr string, port int, user, pass string) *l8tpollaris.L8PTa
 func CreateGraphqlHost(addr string, port int, user, pass string) *l8tpollaris.L8PTarget {
 	device := &l8tpollaris.L8PTarget{}
 	device.TargetId = addr
-	device.LinkData = &l8services.L8ServiceLink{ZsideServiceName: InvServiceName, ZsideServiceArea: int32(0)}
-	device.LinkParser = &l8services.L8ServiceLink{ZsideServiceName: common.ParserServicePrefix + InvServiceName, ZsideServiceArea: int32(0)}
+	device.LinksId = common2.NetworkDevice_Links_ID
 	device.Hosts = make(map[string]*l8tpollaris.L8PHost)
 	host := &l8tpollaris.L8PHost{}
 	host.TargetId = device.TargetId
@@ -129,8 +111,7 @@ func CreateGraphqlHost(addr string, port int, user, pass string) *l8tpollaris.L8
 	graphQlConfig := &l8tpollaris.L8PHostProtocol{}
 	graphQlConfig.Port = int32(port)
 	graphQlConfig.Addr = addr
-	graphQlConfig.Username = user
-	graphQlConfig.Password = pass
+	graphQlConfig.CredId = "sim"
 	graphQlConfig.Protocol = l8tpollaris.L8PProtocol_L8PGraphQL
 	graphQlConfig.Timeout = 30
 

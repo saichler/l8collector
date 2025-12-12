@@ -18,14 +18,20 @@ type Kubernetes struct {
 	resources  ifs.IResources
 	config     *l8tpollaris.L8PHostProtocol
 	kubeConfig string
+	context    string
 	connected  bool
 }
 
 func (this *Kubernetes) Init(config *l8tpollaris.L8PHostProtocol, resources ifs.IResources) error {
 	this.resources = resources
 	this.config = config
-	this.kubeConfig = ".kubeadm-" + config.KukeContext
-	data, err := base64.StdEncoding.DecodeString(this.config.KubeConfig)
+	_, context, kubeconfig, _, err := this.resources.Security().Credential(this.config.CredId, "kubeconfig", this.resources)
+	if err != nil {
+		panic(err)
+	}
+	this.context = context
+	this.kubeConfig = ".kubeadm-" + context
+	data, err := base64.StdEncoding.DecodeString(kubeconfig)
 	if err != nil {
 		return err
 	}
@@ -50,7 +56,7 @@ func (this *Kubernetes) Exec(job *l8tpollaris.CJob) {
 	script := strings.New("kubectl --kubeconfig=")
 	script.Add(this.kubeConfig)
 	script.Add(" --context=")
-	script.Add(this.config.KukeContext)
+	script.Add(this.context)
 	script.Add(" ")
 	script.Add(common.ReplaceArguments(poll.What, job))
 	script.Add("\n")

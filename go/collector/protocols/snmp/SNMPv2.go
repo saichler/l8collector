@@ -59,7 +59,11 @@ func (this *SNMPv2Collector) Connect() error {
 
 	// Create WapSNMP instance using the NewWapSNMP constructor
 	target := this.config.Addr
-	community := this.config.ReadCommunity
+	_, readCommunity, _, _, err := this.resources.Security().Credential(this.config.CredId, "snmp", this.resources)
+	if err != nil {
+		panic(err)
+	}
+	community := readCommunity
 	version := wapsnmp.SNMPv2c
 	timeout := time.Duration(this.config.Timeout) * time.Second
 

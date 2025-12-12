@@ -70,8 +70,12 @@ func (this *SshCollector) Connect() error {
 	sshconfig := &ssh2.ClientConfig{}
 	sshconfig.Timeout = time.Second * time.Duration(this.config.Timeout)
 	sshconfig.Config = ssh2.Config{}
-	sshconfig.User = this.config.Username
-	pass := ssh2.Password(this.config.Password)
+	_, user, password, _, err := this.resources.Security().Credential(this.config.CredId, "ssh", this.resources)
+	if err != nil {
+		panic(err)
+	}
+	sshconfig.User = user
+	pass := ssh2.Password(password)
 	sshconfig.Auth = make([]ssh2.AuthMethod, 1)
 	sshconfig.Auth[0] = pass
 	sshconfig.HostKeyCallback = ssh2.InsecureIgnoreHostKey()

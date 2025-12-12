@@ -8,18 +8,12 @@ import (
 	"github.com/saichler/l8utils/go/utils/strings"
 )
 
-const (
-	ServiceType = "CollectorService"
-)
-
 type CollectorService struct {
-	serviceArea    byte
 	hostCollectors *maps.SyncMap
 	vnic           ifs.IVNic
 }
 
 func (this *CollectorService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) error {
-	this.serviceArea = sla.ServiceArea()
 	this.hostCollectors = maps.NewSyncMap()
 	this.vnic = vnic
 	vnic.Resources().Registry().Register(&l8tpollaris.L8PTarget{})
@@ -27,7 +21,7 @@ func (this *CollectorService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.
 	vnic.Resources().Registry().Register(&l8tpollaris.CTable{})
 	vnic.Resources().Registry().Register(&l8tpollaris.CJob{})
 
-	slaExec := ifs.NewServiceLevelAgreement(&ExecuteService{}, "exec", this.serviceArea, false, nil)
+	slaExec := ifs.NewServiceLevelAgreement(&ExecuteService{}, "exec", sla.ServiceArea(), false, nil)
 	slaExec.SetArgs(this)
 	vnic.Resources().Services().Activate(slaExec, vnic)
 

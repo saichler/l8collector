@@ -114,7 +114,11 @@ func (this *RestCollector) Exec(job *l8tpollaris.CJob) {
 }
 
 func (this *RestCollector) Connect() error {
-	return this.client.Auth(this.hostProtocol.Username, this.hostProtocol.Password)
+	_, user, password, _, err := this.resources.Security().Credential(this.hostProtocol.CredId, "rest", this.resources)
+	if err != nil {
+		panic(err)
+	}
+	return this.client.Auth(user, password)
 }
 
 func (this *RestCollector) Disconnect() error {

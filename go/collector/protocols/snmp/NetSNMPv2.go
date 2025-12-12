@@ -37,9 +37,14 @@ func (n *NetSNMPCollector) snmpWalk(oid string) ([]SnmpPDU, error) {
 		n.resources.Logger().Debug("net-snmp timeout configured to: ", timeout, " seconds")
 	}
 
+	_, readCommunity, _, _, e := n.resources.Security().Credential(n.config.CredId, "snmp", n.resources)
+	if e != nil {
+		panic(e)
+	}
+
 	args := []string{
 		"-v", "2c",
-		"-c", n.config.ReadCommunity,
+		"-c", readCommunity,
 		"-t", strconv.Itoa(int(timeout)),
 		"-r", "3", // 3 retries
 		"-On", // Numeric OIDs

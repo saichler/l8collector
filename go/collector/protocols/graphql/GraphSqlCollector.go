@@ -78,7 +78,11 @@ func (this *GraphQlCollector) Exec(job *l8tpollaris.CJob) {
 }
 
 func (this *GraphQlCollector) Connect() error {
-	return this.client.Auth(this.hostProtocol.Username, this.hostProtocol.Password)
+	_, username, password, _, err := this.resources.Security().Credential(this.hostProtocol.CredId, "graph", this.resources)
+	if err != nil {
+		panic(err)
+	}
+	return this.client.Auth(username, password)
 }
 
 func (this *GraphQlCollector) Disconnect() error {

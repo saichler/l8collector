@@ -56,8 +56,7 @@ func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, har
 		job.Timeout = poll.Timeout
 		job.TargetId = this.target.TargetId
 		job.HostId = this.hostId
-		job.LinkParser = this.target.LinkParser
-		job.LinkData = this.target.LinkData
+		job.LinksId = this.target.LinksId
 		job.Always = poll.Always
 		if job.Timeout == 0 {
 			job.Timeout = poll.Timeout
@@ -87,8 +86,7 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 			job.PollarisName = p.Name
 			job.Cadence = poll.Cadence
 			job.Timeout = poll.Timeout
-			job.LinkParser = this.target.LinkParser
-			job.LinkData = this.target.LinkData
+			job.LinksId = this.target.LinksId
 			job.Always = poll.Always
 			jobs = append(jobs, job)
 		}

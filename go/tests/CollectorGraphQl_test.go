@@ -1,13 +1,14 @@
 package tests
 
 import (
+	targets2 "github.com/saichler/l8pollaris/go/pollaris/targets"
+	common2 "github.com/saichler/probler/go/prob/common"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8collector/go/collector/service"
-	"github.com/saichler/l8collector/go/collector/targets"
 	"github.com/saichler/l8collector/go/tests/utils_collector"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
@@ -18,6 +19,9 @@ import (
 )
 
 func TestGraphqlCollector(t *testing.T) {
+
+	cServiceName, cServiceArea := targets2.Links.Collector(common2.NetworkDevice_Links_ID)
+	pServiceName, pServiceArea := targets2.Links.Parser(common2.NetworkDevice_Links_ID)
 
 	p := &l8tpollaris.L8Pollaris{}
 	p.Groups = []string{common.BOOT_STAGE_00}
@@ -33,22 +37,18 @@ func TestGraphqlCollector(t *testing.T) {
 
 	host := utils_collector.CreateGraphqlHost("api.taddy.org", 443, os.Getenv("X_USER_ID"), os.Getenv("X_API_KEY"))
 
-	serviceArea := byte(0)
-
 	vnic := topo.VnicByVnetNum(2, 2)
 	vnic.Resources().Registry().Register(&taddy.TaddyResponse{})
 
-	sla := ifs.NewServiceLevelAgreement(&pollaris.PollarisService{}, pollaris.ServiceName, serviceArea, true, nil)
+	sla := ifs.NewServiceLevelAgreement(&pollaris.PollarisService{}, pollaris.ServiceName, pollaris.ServiceArea, true, nil)
 	vnic.Resources().Services().Activate(sla, vnic)
 
-	sla = ifs.NewServiceLevelAgreement(&targets.TargetService{}, targets.ServiceName, serviceArea, true, nil)
+	ActivateTargets(vnic)
+
+	sla = ifs.NewServiceLevelAgreement(&service.CollectorService{}, cServiceName, cServiceArea, true, nil)
 	vnic.Resources().Services().Activate(sla, vnic)
 
-	sla = ifs.NewServiceLevelAgreement(&service.CollectorService{}, common.CollectorService, serviceArea, true, nil)
-	vnic.Resources().Services().Activate(sla, vnic)
-
-	sla = ifs.NewServiceLevelAgreement(&utils_collector.MockParsingService{}, host.LinkParser.ZsideServiceName,
-		byte(host.LinkParser.ZsideServiceArea), false, nil)
+	sla = ifs.NewServiceLevelAgreement(&utils_collector.MockParsingService{}, pServiceName, pServiceArea, false, nil)
 	vnic.Resources().Services().Activate(sla, vnic)
 
 	pollaris.Pollaris(vnic.Resources()).Post(p, true)
@@ -59,7 +59,7 @@ func TestGraphqlCollector(t *testing.T) {
 	time.Sleep(time.Second)
 
 	cl := topo.VnicByVnetNum(1, 1)
-	err := cl.Multicast(targets.ServiceName, serviceArea, ifs.POST, host)
+	err := cl.Multicast(targets2.ServiceName, targets2.ServiceArea, ifs.POST, host)
 	if err != nil {
 		panic(err)
 	}

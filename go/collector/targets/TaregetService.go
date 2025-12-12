@@ -1,5 +1,6 @@
 package targets
 
+/*
 import (
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
@@ -169,3 +170,4 @@ func (this *TargetService) stopDevice(device *l8tpollaris.L8PTarget, vnic ifs.IV
 		}
 	}
 }
+*/

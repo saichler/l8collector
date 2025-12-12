@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/saichler/l8types/go/types/l8services"
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
@@ -11,6 +12,7 @@ import (
 	"github.com/saichler/l8collector/go/collector/protocols/snmp"
 	"github.com/saichler/l8collector/go/collector/protocols/ssh"
 	"github.com/saichler/l8pollaris/go/pollaris"
+	"github.com/saichler/l8pollaris/go/pollaris/targets"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8utils/go/utils/maps"
@@ -30,8 +32,6 @@ type HostCollector struct {
 }
 
 func newHostCollector(target *l8tpollaris.L8PTarget, hostId string, service *CollectorService) *HostCollector {
-	target.LinkParser.Mode = int32(ifs.M_Proximity)
-	target.LinkParser.Interval = 5
 	hc := &HostCollector{}
 	hc.target = target
 	hc.hostId = hostId
@@ -40,7 +40,12 @@ func newHostCollector(target *l8tpollaris.L8PTarget, hostId string, service *Col
 	hc.jobsQueue = NewJobsQueue(target, hostId, service)
 	hc.running = true
 	hc.bootStages = make([]*BootState, 5)
-	hc.service.vnic.RegisterServiceLink(target.LinkParser)
+	ps, pa := targets.Links.Parser(target.LinksId)
+	if ps != "" {
+		parserLink := &l8services.L8ServiceLink{ZsideServiceName: ps, ZsideServiceArea: int32(pa),
+			Mode: int32(ifs.M_Proximity), Interval: 5}
+		hc.service.vnic.RegisterServiceLink(parserLink)
+	}
 	return hc
 }
 
@@ -165,6 +170,7 @@ func (this *HostCollector) execJob(job *l8tpollaris.CJob) bool {
 	pc := pollaris.Pollaris(this.service.vnic.Resources())
 	poll := pc.Poll(job.PollarisName, job.JobName)
 	if poll == nil {
+		panic(this.target.TargetId + ": cannot find poll " + job.PollarisName + "/" + job.JobName)
 		this.service.vnic.Resources().Logger().Error("cannot find poll for device id ", this.target.TargetId)
 		return false
 	}
@@ -211,7 +217,9 @@ func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
 		return
 	}
 
-	err := this.service.vnic.Proximity(job.LinkParser.ZsideServiceName, byte(job.LinkParser.ZsideServiceArea), ifs.POST, job)
+	pService, pArea := targets.Links.Parser(job.LinksId)
+
+	err := this.service.vnic.Proximity(pService, pArea, ifs.POST, job)
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
 	}

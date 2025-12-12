@@ -1,11 +1,6 @@
 package targets
 
-import (
-	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
-	"github.com/saichler/l8services/go/services/dcache"
-	"github.com/saichler/l8types/go/ifs"
-)
-
+/*
 type TargetCenter struct {
 	devices ifs.IDistributedCache
 }
@@ -73,3 +68,4 @@ func Configs(resource ifs.IResources, serviceArea byte) *TargetCenter {
 	}
 	return (sp.(*TargetService)).configCenter
 }
+*/

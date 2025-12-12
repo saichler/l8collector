@@ -6,11 +6,6 @@ import (
 )
 
 const (
-	CollectorService    = "Collector"
-	ParserServicePrefix = "P-"
-)
-
-const (
 	BOOT_STAGE_00 = "Boot_Stage_00"
 	BOOT_STAGE_01 = "Boot_Stage_01"
 	BOOT_STAGE_02 = "Boot_Stage_02"
