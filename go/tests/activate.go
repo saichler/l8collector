@@ -7,11 +7,6 @@ import (
 	"github.com/saichler/l8types/go/ifs"
 )
 
-const (
-	DB_CREDS = "postgres"
-	DB_NAME  = "dbname"
-)
-
 func ActivateTargets(vnic ifs.IVNic) {
 	targets.Activate(DB_CREDS, DB_NAME, vnic)
 }
