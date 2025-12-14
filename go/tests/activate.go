@@ -5,10 +5,11 @@ import (
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris/targets"
 	"github.com/saichler/l8types/go/ifs"
+	"github.com/saichler/probler/go/prob/common"
 )
 
 func ActivateTargets(vnic ifs.IVNic) {
-	targets.Activate(DB_CREDS, DB_NAME, vnic)
+	targets.Activate(common.DB_CREDS, common.DB_NAME, vnic)
 }
 
 func SetPolls(sla *ifs.ServiceLevelAgreement) {
