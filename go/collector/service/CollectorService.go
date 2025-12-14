@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/saichler/l8pollaris/go/pollaris/targets"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
@@ -11,6 +12,12 @@ import (
 type CollectorService struct {
 	hostCollectors *maps.SyncMap
 	vnic           ifs.IVNic
+}
+
+func Activate(linksID string, vnic ifs.IVNic) {
+	collServiceName, collServiceArea := targets.Links.Collector(linksID)
+	sla := ifs.NewServiceLevelAgreement(&CollectorService{}, collServiceName, collServiceArea, true, nil)
+	vnic.Resources().Services().Activate(sla, vnic)
 }
 
 func (this *CollectorService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) error {
