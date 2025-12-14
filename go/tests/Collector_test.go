@@ -35,7 +35,7 @@ func TestCollector(t *testing.T) {
 
 	vnic := topo.VnicByVnetNum(2, 2)
 	sla := ifs.NewServiceLevelAgreement(&pollaris.PollarisService{}, pollaris.ServiceName, pollaris.ServiceArea, true, nil)
-	SetPolls(sla)
+	utils_collector.SetPolls(sla)
 	vnic.Resources().Services().Activate(sla, vnic)
 
 	ActivateTargets(vnic)

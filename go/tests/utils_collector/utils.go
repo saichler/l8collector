@@ -1,7 +1,10 @@
 package utils_collector
 
 import (
+	"fmt"
+	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
+	"github.com/saichler/l8types/go/ifs"
 	common2 "github.com/saichler/probler/go/prob/common"
 )
 
@@ -71,4 +74,19 @@ func CreateGraphqlHost(addr string, port int, user, pass string) *l8tpollaris.L8
 	host.Configs[int32(graphQlConfig.Protocol)] = graphQlConfig
 
 	return device
+}
+
+func SetPolls(sla *ifs.ServiceLevelAgreement) {
+	initData := []interface{}{}
+	for _, p := range boot.GetAllPolarisModels() {
+		for _, poll := range p.Polling {
+			fmt.Println(p.Name, "/", poll.Name)
+			if poll.Cadence.Enabled {
+				poll.Cadence.Cadences[0] = 3
+			}
+			initData = append(initData, p)
+		}
+	}
+	initData = append(initData, boot.CreateK8sBootPolls())
+	sla.SetInitItems(initData)
 }
