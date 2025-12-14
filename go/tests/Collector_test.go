@@ -4,6 +4,7 @@ import (
 	"fmt"
 	targets2 "github.com/saichler/l8pollaris/go/pollaris/targets"
 	common2 "github.com/saichler/probler/go/prob/common"
+	"github.com/saichler/probler/go/prob/common/creates"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func TestCollector(t *testing.T) {
 	//use opensim to simulate this device with this ip
 	//https://github.com/saichler/opensim
 	//curl -X POST http://localhost:8080/api/v1/devices -H "Content-Type: application/json" -d '{"start_ip":"10.10.10.1","device_count":3,"netmask":"24"}'
-	device := utils_collector.CreateDevice("10.20.30.1", cServiceArea)
+	device := creates.CreateDevice("10.20.30.1", common2.NetworkDevice_Links_ID, "sim")
 
 	vnic := topo.VnicByVnetNum(2, 2)
 	sla := ifs.NewServiceLevelAgreement(&pollaris.PollarisService{}, pollaris.ServiceName, pollaris.ServiceArea, true, nil)
@@ -105,7 +106,7 @@ func testJobDisable(t *testing.T) {
 	//use opensim to simulate this device with this ip
 	//https://github.com/saichler/opensim
 	//curl -X POST http://localhost:8080/api/v1/devices -H "Content-Type: application/json" -d '{"start_ip":"10.10.10.1","device_count":3,"netmask":"24"}'
-	device := utils_collector.CreateDevice("10.20.30.1", cServiceArea)
+	device := creates.CreateDevice("10.20.30.1", common2.NetworkDevice_Links_ID, "sim")
 
 	vnic := topo.VnicByVnetNum(2, 2)
 	sla := ifs.NewServiceLevelAgreement(&pollaris.PollarisService{}, pollaris.ServiceName, pollaris.ServiceArea, true, nil)
