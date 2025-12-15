@@ -19,7 +19,7 @@ func CreateRestHost(addr string, port int, user, pass string) *l8tpollaris.L8PTa
 	device.LinksId = common2.NetworkDevice_Links_ID
 	device.Hosts = make(map[string]*l8tpollaris.L8PHost)
 	host := &l8tpollaris.L8PHost{}
-	host.TargetId = device.TargetId
+	host.HostId = device.TargetId
 
 	host.Configs = make(map[int32]*l8tpollaris.L8PHostProtocol)
 	device.Hosts[device.TargetId] = host
@@ -52,7 +52,7 @@ func CreateGraphqlHost(addr string, port int, user, pass string) *l8tpollaris.L8
 	device.LinksId = common2.NetworkDevice_Links_ID
 	device.Hosts = make(map[string]*l8tpollaris.L8PHost)
 	host := &l8tpollaris.L8PHost{}
-	host.TargetId = device.TargetId
+	host.HostId = device.TargetId
 
 	host.Configs = make(map[int32]*l8tpollaris.L8PHostProtocol)
 	device.Hosts[device.TargetId] = host

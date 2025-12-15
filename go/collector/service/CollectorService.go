@@ -38,8 +38,11 @@ func (this *CollectorService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.
 
 func (this *CollectorService) startPolling(device *l8tpollaris.L8PTarget) error {
 	for _, host := range device.Hosts {
-		hostCol, _ := this.hostCollector(host.TargetId, device)
-		hostCol.start()
+		hostCol, _ := this.hostCollector(host.HostId, device)
+		err := hostCol.start()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -67,7 +70,11 @@ func (this *CollectorService) DeActivate() error {
 func (this *CollectorService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	device := pb.Element().(*l8tpollaris.L8PTarget)
 	vnic.Resources().Logger().Info("Collector Service: Start polling device ", device.TargetId)
-	this.startPolling(device)
+	err := this.startPolling(device)
+	if err != nil {
+		vnic.Resources().Logger().Error("Collector Service: Error starting polling device ", device.TargetId)
+		vnic.Resources().Logger().Error(err.Error())
+	}
 	return object.New(nil, &l8tpollaris.L8PTarget{})
 }
 func (this *CollectorService) Put(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
