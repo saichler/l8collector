@@ -16,7 +16,7 @@ type CollectorService struct {
 
 func Activate(linksID string, vnic ifs.IVNic) {
 	collServiceName, collServiceArea := targets.Links.Collector(linksID)
-	vnic.Resources().Logger().Info("Starting Collector on ", collServiceArea, " area ", collServiceArea)
+	vnic.Resources().Logger().Info("Starting Collector on ", collServiceName, " area ", collServiceArea)
 	sla := ifs.NewServiceLevelAgreement(&CollectorService{}, collServiceName, collServiceArea, true, nil)
 	vnic.Resources().Services().Activate(sla, vnic)
 }
