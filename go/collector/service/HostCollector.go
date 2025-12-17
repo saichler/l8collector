@@ -97,6 +97,7 @@ func (this *HostCollector) sendDeviceDown() {
 	staticJobs["deviceStatus"].(*DeviceStatusJob).doDown(job, this)
 	pService, pArea := targets.Links.Parser(job.LinksId)
 	this.service.vnic.Proximity(pService, pArea, ifs.POST, job)
+	this.service.vnic.Resources().Logger().Info("Sending Device Down")
 }
 
 func (this *HostCollector) start() error {
