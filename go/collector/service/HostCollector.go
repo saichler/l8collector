@@ -91,7 +91,7 @@ func (this *HostCollector) sendDeviceDown() {
 		HostId:       this.hostId,
 		LinksId:      this.target.LinksId,
 		JobName:      "deviceStatus",
-		PollarisName: "boot01",
+		PollarisName: "boot02",
 		Always:       true,
 	}
 	staticJobs["deviceStatus"].(*DeviceStatusJob).doDown(job, this)
