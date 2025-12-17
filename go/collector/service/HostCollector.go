@@ -95,7 +95,8 @@ func (this *HostCollector) sendDeviceDown() {
 		Always:       true,
 	}
 	staticJobs["deviceStatus"].(*DeviceStatusJob).doDown(job, this)
-	this.jobComplete(job)
+	pService, pArea := targets.Links.Parser(job.LinksId)
+	this.service.vnic.Proximity(pService, pArea, ifs.POST, job)
 }
 
 func (this *HostCollector) start() error {
@@ -240,7 +241,6 @@ func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
 	}
 
 	pService, pArea := targets.Links.Parser(job.LinksId)
-
 	err := this.service.vnic.Proximity(pService, pArea, ifs.POST, job)
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
