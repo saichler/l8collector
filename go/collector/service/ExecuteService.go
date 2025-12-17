@@ -76,8 +76,8 @@ func (this *ExecuteService) TransactionConfig() ifs.ITransactionConfig {
 	return nil
 }
 func (this *ExecuteService) WebService() ifs.IWebService {
-	ws := web.New("exec", this.serviceArea, &l8tpollaris.CJob{},
-		&l8tpollaris.CJob{}, nil, nil, nil, nil, nil, nil, nil, nil)
+	ws := web.New("exec", this.serviceArea, 0)
+	ws.AddEndpoint(&l8tpollaris.CJob{}, ifs.POST, &l8tpollaris.CJob{})
 	return ws
 }
 
