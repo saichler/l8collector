@@ -71,6 +71,7 @@ func (this *HostCollector) update() error {
 }
 
 func (this *HostCollector) stop() {
+	this.sendDeviceDown()
 	this.running = false
 	this.collectors.Iterate(func(k, v interface{}) {
 		c := v.(common.ProtocolCollector)
@@ -82,6 +83,19 @@ func (this *HostCollector) stop() {
 	this.bootStages = nil
 	this.target = nil
 	this.service = nil
+}
+
+func (this *HostCollector) sendDeviceDown() {
+	job := &l8tpollaris.CJob{
+		TargetId:     this.target.TargetId,
+		HostId:       this.hostId,
+		LinksId:      this.target.LinksId,
+		JobName:      "deviceStatus",
+		PollarisName: "boot01",
+		Always:       true,
+	}
+	staticJobs["deviceStatus"].(*DeviceStatusJob).doDown(job, this)
+	this.jobComplete(job)
 }
 
 func (this *HostCollector) start() error {

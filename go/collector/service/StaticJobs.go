@@ -48,3 +48,14 @@ func (this *DeviceStatusJob) do(job *l8tpollaris.CJob, hostCollector *HostCollec
 	obj.Add(protocolState)
 	job.Result = obj.Data()
 }
+
+func (this *DeviceStatusJob) doDown(job *l8tpollaris.CJob, hostCollector *HostCollector) {
+	obj := object.NewEncode()
+	protocolState := make(map[int32]bool)
+	hostCollector.collectors.Iterate(func(k, v interface{}) {
+		key := k.(l8tpollaris.L8PProtocol)
+		protocolState[int32(key)] = false
+	})
+	obj.Add(protocolState)
+	job.Result = obj.Data()
+}
