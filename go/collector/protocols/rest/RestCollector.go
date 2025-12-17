@@ -122,6 +122,12 @@ func (this *RestCollector) Connect() error {
 }
 
 func (this *RestCollector) Disconnect() error {
+	if this.client != nil {
+		this.client = nil
+	}
+	this.hostProtocol = nil
+	this.resources = nil
+	this.connected = false
 	return nil
 }
 

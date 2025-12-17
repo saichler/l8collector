@@ -144,15 +144,20 @@ func (this *SshCollector) Disconnect() error {
 	this.running = false
 	if this.in != nil {
 		this.in.Close()
+		this.in = nil
 	}
 	if this.session != nil {
 		this.session.Close()
+		this.session = nil
 	}
 	if this.client != nil {
 		this.client.Close()
+		this.client = nil
 	}
-	this.session = nil
-	this.client = nil
+	if this.queue != nil {
+		this.queue.Shutdown()
+		this.queue = nil
+	}
 	this.connected = false
 	return nil
 }

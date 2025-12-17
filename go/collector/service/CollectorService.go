@@ -47,6 +47,17 @@ func (this *CollectorService) startPolling(device *l8tpollaris.L8PTarget) error 
 	return nil
 }
 
+func (this *CollectorService) stopPolling(device *l8tpollaris.L8PTarget) {
+	for _, host := range device.Hosts {
+		key := hostCollectorKey(device.TargetId, host.HostId)
+		h, ok := this.hostCollectors.Get(key)
+		if ok {
+			h.(*HostCollector).stop()
+			this.hostCollectors.Delete(key)
+		}
+	}
+}
+
 func (this *CollectorService) hostCollector(hostId string, target *l8tpollaris.L8PTarget) (*HostCollector, bool) {
 	key := hostCollectorKey(target.TargetId, hostId)
 	h, ok := this.hostCollectors.Get(key)
@@ -69,11 +80,17 @@ func (this *CollectorService) DeActivate() error {
 
 func (this *CollectorService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	device := pb.Element().(*l8tpollaris.L8PTarget)
-	vnic.Resources().Logger().Info("Collector Service: Start polling device ", device.TargetId)
-	err := this.startPolling(device)
-	if err != nil {
-		vnic.Resources().Logger().Error("Collector Service: Error starting polling device ", device.TargetId)
-		vnic.Resources().Logger().Error(err.Error())
+	switch device.State {
+	case l8tpollaris.L8PTargetState_Up:
+		vnic.Resources().Logger().Info("Collector Service: Start polling device ", device.TargetId)
+		err := this.startPolling(device)
+		if err != nil {
+			vnic.Resources().Logger().Error("Collector Service: Error starting polling device ", device.TargetId)
+			vnic.Resources().Logger().Error(err.Error())
+		}
+	case l8tpollaris.L8PTargetState_Down:
+		vnic.Resources().Logger().Info("Collector Service: Stop polling device ", device.TargetId)
+		this.stopPolling(device)
 	}
 	return object.New(nil, &l8tpollaris.L8PTarget{})
 }

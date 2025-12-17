@@ -86,6 +86,12 @@ func (this *GraphQlCollector) Connect() error {
 }
 
 func (this *GraphQlCollector) Disconnect() error {
+	if this.client != nil {
+		this.client = nil
+	}
+	this.hostProtocol = nil
+	this.resources = nil
+	this.connected = false
 	return nil
 }
 

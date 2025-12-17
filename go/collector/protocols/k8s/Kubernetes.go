@@ -83,6 +83,15 @@ func (this *Kubernetes) Connect() error {
 }
 
 func (this *Kubernetes) Disconnect() error {
+	// Delete the kubeconfig file created in Init()
+	if this.kubeConfig != "" {
+		os.Remove(this.kubeConfig)
+		this.kubeConfig = ""
+	}
+	this.resources = nil
+	this.config = nil
+	this.context = ""
+	this.connected = false
 	return nil
 }
 
