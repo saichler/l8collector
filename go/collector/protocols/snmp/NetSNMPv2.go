@@ -1,3 +1,18 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package snmp
 
 import (
@@ -11,11 +26,27 @@ import (
 	"github.com/saichler/l8types/go/ifs"
 )
 
+// NetSNMPCollector provides a fallback SNMP implementation using the net-snmp
+// command-line tools (snmpwalk). This is used when the WapSNMP library times out
+// or fails, providing enhanced compatibility with certain devices.
+//
+// The net-snmp tools are widely deployed and have excellent device compatibility,
+// making them a reliable fallback for problematic SNMP implementations.
 type NetSNMPCollector struct {
-	config    *l8tpollaris.L8PHostProtocol
-	resources ifs.IResources
+	config    *l8tpollaris.L8PHostProtocol  // Host configuration with address and credentials
+	resources ifs.IResources                // Layer8 resources for logging and security
 }
 
+// NewNetSNMPCollector creates a new NetSNMPCollector instance with the provided
+// configuration and resources. This is typically called as a fallback when
+// the primary WapSNMP-based collector times out.
+//
+// Parameters:
+//   - config: Host protocol configuration containing address, port, and credential ID
+//   - resources: Layer8 resources for accessing security credentials and logging
+//
+// Returns:
+//   - A new NetSNMPCollector instance ready for use
 func NewNetSNMPCollector(config *l8tpollaris.L8PHostProtocol, resources ifs.IResources) *NetSNMPCollector {
 	return &NetSNMPCollector{
 		config:    config,
@@ -23,6 +54,22 @@ func NewNetSNMPCollector(config *l8tpollaris.L8PHostProtocol, resources ifs.IRes
 	}
 }
 
+// snmpWalk performs an SNMP walk using the net-snmp snmpwalk command-line tool.
+// It retrieves the community string from the security service and executes
+// snmpwalk with appropriate flags for SNMP v2c.
+//
+// The command is executed with:
+//   - SNMP version 2c
+//   - Configured timeout with 3 retries
+//   - Numeric OID output format (-On)
+//   - Quick print format (-Oq)
+//
+// Parameters:
+//   - oid: The base OID to walk from
+//
+// Returns:
+//   - Slice of SnmpPDU containing all OID-value pairs found
+//   - error if config is nil, command fails, or parsing fails
 func (n *NetSNMPCollector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	if n.config == nil {
 		return nil, fmt.Errorf("SNMP config is not initialized")
@@ -89,6 +136,16 @@ func (n *NetSNMPCollector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	return n.parseSnmpWalkOutput(string(output))
 }
 
+// parseSnmpWalkOutput parses the text output from the snmpwalk command
+// into a slice of SnmpPDU structures. Each line is expected to be in the
+// format "OID VALUE" as produced by snmpwalk with -Oq flag.
+//
+// Parameters:
+//   - output: The raw text output from snmpwalk command
+//
+// Returns:
+//   - Slice of SnmpPDU with parsed OID-value pairs
+//   - error if no valid data could be parsed
 func (n *NetSNMPCollector) parseSnmpWalkOutput(output string) ([]SnmpPDU, error) {
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	var pdus []SnmpPDU
@@ -123,6 +180,25 @@ func (n *NetSNMPCollector) parseSnmpWalkOutput(output string) ([]SnmpPDU, error)
 	return pdus, nil
 }
 
+// parseValue converts a string value from snmpwalk output to its appropriate
+// Go type. It recognizes standard net-snmp type indicators and converts them:
+//   - STRING: -> string
+//   - INTEGER: -> int64
+//   - Counter32: -> uint64
+//   - Counter64: -> uint64
+//   - Gauge32: -> uint64
+//   - TimeTicks: -> uint64 (extracted from parentheses)
+//   - OID: -> string
+//   - IpAddress: -> string
+//   - Hex-STRING: -> string
+//
+// Values without type indicators are attempted as integers, falling back to strings.
+//
+// Parameters:
+//   - valueStr: The value string from snmpwalk output, potentially with type prefix
+//
+// Returns:
+//   - The parsed value in the appropriate Go type
 func (n *NetSNMPCollector) parseValue(valueStr string) interface{} {
 	// Remove common net-snmp type indicators
 	if strings.Contains(valueStr, "STRING: ") {

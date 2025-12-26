@@ -3,6 +3,12 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/badge/Go-1.24.0-blue.svg)](https://golang.org/dl/)
 
+**© 2025 Sharon Aicler (saichler@gmail.com)**
+
+Part of the Layer 8 Ecosystem - Licensed under the Apache License, Version 2.0.
+
+---
+
 L8Collector is a multi-protocol network data collection service built on the Layer8 ecosystem and Pollaris model. It provides a unified framework for collecting data from various network devices and systems using different protocols including SNMP, SSH, Kubernetes, REST/RESTCONF, and GraphQL.
 
 ## Table of Contents
@@ -520,6 +526,21 @@ go build ./...
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
+```
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
 ## Links
 
 - [Layer8 Ecosystem](https://github.com/saichler/layer8)
@@ -529,6 +550,16 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 ## Latest Updates
 
 ### Recent Improvements (2024-2025)
+
+#### Apache License 2.0 Copyright Headers (December 2025)
+- **Copyright Notice**: Added comprehensive Apache License 2.0 copyright headers to all source files
+  - All 24 Go source files now include proper copyright attribution
+  - Shell scripts updated with appropriate comment-style headers
+  - Copyright holder: Sharon Aicler (saichler@gmail.com)
+- **License Compliance**: Full compliance with Apache License 2.0 requirements
+  - Clear attribution in every source file
+  - License URL reference included in headers
+  - Standard disclaimer for warranty and liability
 
 #### Service Level Agreement (SLA) Integration (October 2025)
 - **SLA Support**: Added Service Level Agreement support to core services

@@ -1,3 +1,18 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package tests
 
 import (
@@ -17,6 +32,21 @@ import (
 	"github.com/saichler/l8types/go/ifs"
 )
 
+// TestEntityMib tests the SNMP Entity MIB collection functionality.
+// It creates a test environment with accelerated poll cadences (3 seconds)
+// and executes an on-demand entityMib job to verify SNMP table collection.
+//
+// The test sets up:
+//   - Poll configurations with reduced cadence intervals for faster testing
+//   - A simulated network device (requires opensim)
+//   - CollectorService and MockParsingService for validation
+//
+// The test executes the entityMib job directly via ExecuteService
+// and prints the collected MIB data to verify proper collection.
+//
+// Prerequisites:
+//   - opensim running with simulated devices
+//   - Example: curl -X POST http://localhost:8080/api/v1/devices -H "Content-Type: application/json" -d '{"start_ip":"10.10.10.1","device_count":3,"netmask":"24"}'
 func TestEntityMib(t *testing.T) {
 	cServiceName, cServiceArea := targets2.Links.Collector(common2.NetworkDevice_Links_ID)
 	pServiceName, pServiceArea := targets2.Links.Parser(common2.NetworkDevice_Links_ID)

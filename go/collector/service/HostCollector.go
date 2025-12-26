@@ -1,3 +1,18 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package service
 
 import (
@@ -19,18 +34,40 @@ import (
 	"github.com/saichler/l8utils/go/utils/strings"
 )
 
+// HostCollector manages data collection for a single host within a device target.
+// It creates and manages protocol-specific collectors based on the host configuration
+// and coordinates the execution of collection jobs through the boot sequence and
+// steady-state polling.
+//
+// The HostCollector:
+//   - Creates protocol collectors (SNMP, SSH, REST, GraphQL, Kubernetes)
+//   - Manages the boot sequence for device discovery and configuration
+//   - Executes scheduled collection jobs via the JobsQueue
+//   - Handles job completion and forwards results to the parser service
+//   - Tracks device online/offline status
 type HostCollector struct {
-	service          *CollectorService
-	target           *l8tpollaris.L8PTarget
-	hostId           string
-	collectors       *maps.SyncMap
-	jobsQueue        *JobsQueue
-	running          bool
-	currentBootStage int
-	bootStages       []*BootState
-	pollarisName     string
+	service          *CollectorService      // Parent service reference
+	target           *l8tpollaris.L8PTarget // Target device configuration
+	hostId           string                 // Unique identifier for this host
+	collectors       *maps.SyncMap          // Protocol -> ProtocolCollector map
+	jobsQueue        *JobsQueue             // Queue of scheduled collection jobs
+	running          bool                   // Flag indicating if collection is active
+	currentBootStage int                    // Current boot stage index (0-4)
+	bootStages       []*BootState           // Boot state tracking for each stage
+	pollarisName     string                 // Identified device pollaris profile name
 }
 
+// newHostCollector creates a new HostCollector instance for the specified host.
+// It initializes the collectors map, jobs queue, and registers the parser service
+// link for sending collection results.
+//
+// Parameters:
+//   - target: The L8PTarget containing host configurations
+//   - hostId: The unique identifier for this host
+//   - service: The parent CollectorService
+//
+// Returns:
+//   - A new HostCollector ready to be started
 func newHostCollector(target *l8tpollaris.L8PTarget, hostId string, service *CollectorService) *HostCollector {
 	hc := &HostCollector{}
 	hc.target = target
@@ -100,6 +137,12 @@ func (this *HostCollector) sendDeviceDown() {
 	this.service.vnic.Resources().Logger().Info("Sending Device Down")
 }
 
+// start initializes protocol collectors and begins the collection process.
+// It creates collectors for each protocol configured for this host and
+// starts the collection goroutine which processes jobs from the queue.
+//
+// Returns:
+//   - Always returns nil (errors are logged but don't prevent startup)
 func (this *HostCollector) start() error {
 	host := this.target.Hosts[this.hostId]
 	for _, config := range host.Configs {

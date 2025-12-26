@@ -1,3 +1,18 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package service
 
 import (
@@ -10,16 +25,27 @@ import (
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 )
 
+// JobsQueue manages the scheduling and execution of collection jobs for a host.
+// It maintains a list of jobs sorted by next execution time and provides
+// thread-safe access to the job queue.
+//
+// The JobsQueue:
+//   - Schedules jobs based on their configured cadence intervals
+//   - Tracks job completion times for next execution calculation
+//   - Supports dynamic job insertion during boot sequence
+//   - Provides round-robin execution by moving executed jobs to the end
 type JobsQueue struct {
-	target   *l8tpollaris.L8PTarget
-	hostId   string
-	jobs     []*l8tpollaris.CJob
-	jobsMap  map[string]*l8tpollaris.CJob
-	mtx      *sync.Mutex
-	shutdown bool
-	service  *CollectorService
+	target   *l8tpollaris.L8PTarget         // Target device configuration
+	hostId   string                         // Host identifier for this queue
+	jobs     []*l8tpollaris.CJob            // Ordered list of scheduled jobs
+	jobsMap  map[string]*l8tpollaris.CJob   // Map for quick job lookup by key
+	mtx      *sync.Mutex                    // Mutex for thread-safe queue access
+	shutdown bool                           // Flag indicating queue shutdown
+	service  *CollectorService              // Parent service reference
 }
 
+// Shutdown gracefully stops the jobs queue and releases all resources.
+// After shutdown, the queue cannot be used and all operations return errors.
 func (this *JobsQueue) Shutdown() {
 	this.mtx.Lock()
 	defer this.mtx.Unlock()
@@ -31,6 +57,16 @@ func (this *JobsQueue) Shutdown() {
 	this.target = nil
 }
 
+// NewJobsQueue creates a new JobsQueue for the specified target and host.
+// The queue is initialized with empty job lists and is ready to accept jobs.
+//
+// Parameters:
+//   - target: The L8PTarget containing device configuration
+//   - hostId: The unique identifier for this host
+//   - service: The parent CollectorService
+//
+// Returns:
+//   - A new JobsQueue ready to accept and schedule jobs
 func NewJobsQueue(target *l8tpollaris.L8PTarget, hostId string, service *CollectorService) *JobsQueue {
 	jq := &JobsQueue{}
 	jq.service = service
@@ -129,6 +165,12 @@ func (this *JobsQueue) DisableJob(job *l8tpollaris.CJob) {
 	job.Cadence.Enabled = false
 }
 
+// Pop returns the next job that is ready for execution based on its cadence.
+// If no job is ready, it returns the time until the next job should execute.
+//
+// Returns:
+//   - job: The next job to execute, or nil if no jobs are ready
+//   - waitTime: Seconds until the next job should execute (if job is nil)
 func (this *JobsQueue) Pop() (*l8tpollaris.CJob, int64) {
 	if this == nil {
 		return nil, -1
@@ -180,6 +222,8 @@ func (this *JobsQueue) moveToLast(index int) {
 	}
 }
 
+// MarkStart prepares a job for execution by saving the previous result
+// and resetting execution state. Should be called before Exec.
 func MarkStart(job *l8tpollaris.CJob) {
 	if job.ErrorCount == 0 {
 		job.LastResult = job.Result
@@ -190,10 +234,13 @@ func MarkStart(job *l8tpollaris.CJob) {
 	job.Error = ""
 }
 
+// MarkEnded records the job completion time. Should be called after Exec.
 func MarkEnded(job *l8tpollaris.CJob) {
 	job.Ended = time.Now().Unix()
 }
 
+// JobKey generates a unique key for a job by combining pollaris and job names.
+// Used for storing and looking up jobs in the jobsMap.
 func JobKey(polarisName, jobName string) string {
 	buff := bytes.Buffer{}
 	buff.WriteString(polarisName)

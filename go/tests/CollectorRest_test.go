@@ -1,3 +1,18 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package tests
 
 import (
@@ -16,6 +31,17 @@ import (
 	"github.com/saichler/l8types/go/types/l8api"
 )
 
+// TestRestCollector tests the REST/RESTCONF protocol collector functionality.
+// It creates a pollaris configuration for querying a REST API endpoint
+// and verifies that the collector can execute REST queries with authentication.
+//
+// The test sets up:
+//   - A REST host configuration with username/password authentication
+//   - Poll configuration for network device queries via L8Query
+//   - CollectorService and MockParsingService for validation
+//
+// The poll configuration uses GET method with a probler query to
+// fetch network device data from the target REST API.
 func TestRestCollector(t *testing.T) {
 
 	cServiceName, cServiceArea := targets2.Links.Collector(common2.NetworkDevice_Links_ID)

@@ -1,3 +1,18 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package utils_collector
 
 import (
@@ -8,11 +23,25 @@ import (
 	common2 "github.com/saichler/probler/go/prob/common"
 )
 
+// Service name constants for test configurations.
 const (
+	// InvServiceName is the service name for inventory/NetBox testing.
 	InvServiceName = "NetBox"
+	// K8sServiceName is the service name for Kubernetes cluster testing.
 	K8sServiceName = "Cluster"
 )
 
+// CreateRestHost creates a test target configured for REST/RESTCONF protocol collection.
+// It sets up a target with username/password authentication for REST API access.
+//
+// Parameters:
+//   - addr: The IP address or hostname of the REST API endpoint
+//   - port: The port number for the REST API (typically 443 for HTTPS)
+//   - user: The username for authentication
+//   - pass: The password for authentication
+//
+// Returns:
+//   - A configured L8PTarget ready for REST collection testing
 func CreateRestHost(addr string, port int, user, pass string) *l8tpollaris.L8PTarget {
 	device := &l8tpollaris.L8PTarget{}
 	device.TargetId = addr
@@ -46,6 +75,17 @@ func CreateRestHost(addr string, port int, user, pass string) *l8tpollaris.L8PTa
 	return device
 }
 
+// CreateGraphqlHost creates a test target configured for GraphQL protocol collection.
+// It sets up a target with API key authentication for GraphQL API access.
+//
+// Parameters:
+//   - addr: The hostname of the GraphQL API endpoint
+//   - port: The port number for the GraphQL API (typically 443 for HTTPS)
+//   - user: The API user ID (X-USER-ID header)
+//   - pass: The API key (X-API-KEY header)
+//
+// Returns:
+//   - A configured L8PTarget ready for GraphQL collection testing
 func CreateGraphqlHost(addr string, port int, user, pass string) *l8tpollaris.L8PTarget {
 	device := &l8tpollaris.L8PTarget{}
 	device.TargetId = addr
@@ -76,6 +116,12 @@ func CreateGraphqlHost(addr string, port int, user, pass string) *l8tpollaris.L8
 	return device
 }
 
+// SetPolls configures poll cadences for testing and adds all pollaris models
+// to the service level agreement. It reduces poll cadences to 3 seconds
+// for faster test execution and includes Kubernetes boot polls.
+//
+// Parameters:
+//   - sla: The service level agreement to configure with poll data
 func SetPolls(sla *ifs.ServiceLevelAgreement) {
 	initData := []interface{}{}
 	for _, p := range boot.GetAllPolarisModels() {

@@ -1,3 +1,18 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package service
 
 import (
@@ -8,11 +23,30 @@ import (
 	"github.com/saichler/l8srlz/go/serialize/object"
 )
 
+// BootState tracks the progress of a boot stage during device discovery.
+// Each boot stage has a set of jobs that must complete before advancing
+// to the next stage. The BootState tracks which jobs have completed.
+//
+// The boot sequence follows these stages:
+//   - Stage 0: Initial discovery (system MIB collection)
+//   - Stage 1: Basic connectivity validation
+//   - Stage 2: Device capability discovery
+//   - Stage 3: Extended MIB and feature discovery
+//   - Stage 4: Final configuration and steady-state transition
 type BootState struct {
-	jobNames map[string]bool
-	stage    int
+	jobNames map[string]bool  // Map of job names to completion status
+	stage    int              // Current boot stage index
 }
 
+// newBootState creates a new BootState for the specified boot stage.
+// It queries the pollaris registry for all polls in the stage's group
+// and creates jobs for those polls that have matching protocol collectors.
+//
+// Parameters:
+//   - stage: The boot stage index (0-4)
+//
+// Returns:
+//   - A new BootState initialized with the stage's jobs
 func (this *HostCollector) newBootState(stage int) *BootState {
 	bs := &BootState{}
 	bs.stage = stage
@@ -42,6 +76,8 @@ func (this *HostCollector) newBootState(stage int) *BootState {
 	return bs
 }
 
+// isComplete checks if all jobs in this boot stage have completed.
+// Returns true when every job in jobNames has been marked as complete.
 func (this *BootState) isComplete() bool {
 	for _, complete := range this.jobNames {
 		if !complete {
@@ -51,6 +87,18 @@ func (this *BootState) isComplete() bool {
 	return true
 }
 
+// doStaticJob checks if the job is a static job and executes it if so.
+// Static jobs are special built-in operations like device detail discovery.
+// If the job is found in the static jobs registry, it is executed and
+// marked as complete.
+//
+// Parameters:
+//   - job: The collection job to check and potentially execute
+//   - hostColletor: The host collector context for execution
+//
+// Returns:
+//   - true if the job was a static job and was handled
+//   - false if the job is not a static job
 func (this *BootState) doStaticJob(job *l8tpollaris.CJob, hostColletor *HostCollector) bool {
 	sjob, ok := staticJobs[job.JobName]
 	if ok {
@@ -64,6 +112,11 @@ func (this *BootState) doStaticJob(job *l8tpollaris.CJob, hostColletor *HostColl
 	return false
 }
 
+// jobComplete marks a job as completed in this boot stage's tracking map.
+// If the job is part of this stage, its completion status is set to true.
+//
+// Parameters:
+//   - job: The completed collection job
 func (this *BootState) jobComplete(job *l8tpollaris.CJob) {
 	_, ok := this.jobNames[job.JobName]
 	if ok {
@@ -71,6 +124,16 @@ func (this *BootState) jobComplete(job *l8tpollaris.CJob) {
 	}
 }
 
+// bootDetailDevice processes the system MIB response to identify the device
+// type and load appropriate polling configuration. It extracts the sysObjectID
+// OID from the SNMP response and looks up the corresponding pollaris profile.
+//
+// This method is called during boot stage 0 after the initial system MIB
+// collection completes. It sets the pollarisName for the host collector,
+// which determines the device-specific polls to execute.
+//
+// Parameters:
+//   - job: The completed system MIB job containing the SNMP walk results
 func (this *HostCollector) bootDetailDevice(job *l8tpollaris.CJob) {
 	if this.pollarisName != "" {
 		return
@@ -121,6 +184,12 @@ func (this *HostCollector) bootDetailDevice(job *l8tpollaris.CJob) {
 	}
 }
 
+// insertCustomJobs adds custom polling jobs for a specific pollaris profile.
+// This is called after device identification to schedule device-specific
+// data collection jobs based on the identified device type.
+//
+// Parameters:
+//   - pollarisName: The name of the pollaris profile to load jobs from
 func (this *HostCollector) insertCustomJobs(pollarisName string) {
 	this.jobsQueue.InsertJob(pollarisName, "", "", "", "", "", "", 0, 0)
 }

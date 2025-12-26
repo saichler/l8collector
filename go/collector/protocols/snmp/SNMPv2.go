@@ -1,3 +1,21 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Package snmp provides SNMP v2c protocol collector implementation for the
+// L8Collector service. It enables data collection from network devices using
+// SNMP GET, GETNEXT, and WALK operations with community-based authentication.
 package snmp
 
 import (
@@ -17,8 +35,18 @@ import (
 	strings2 "github.com/saichler/l8utils/go/utils/strings"
 )
 
-// normalizeOID converts ISO format OIDs to standard dotted decimal format
-// Example: "iso.3.6.1.2.1.1.1.0" -> ".1.3.6.1.2.1.1.1.0"
+// normalizeOID converts ISO format OIDs to standard dotted decimal format.
+// This handles variations in OID representation from different SNMP implementations.
+//
+// Examples:
+//   - "iso.3.6.1.2.1.1.1.0" -> ".1.3.6.1.2.1.1.1.0"
+//   - "1.3.6.1.2.1.1.1.0" -> ".1.3.6.1.2.1.1.1.0"
+//
+// Parameters:
+//   - oid: The OID string to normalize
+//
+// Returns:
+//   - The normalized OID string with leading dot and numeric format
 func normalizeOID(oid string) string {
 	if strings.HasPrefix(oid, "iso.") {
 		return ".1." + oid[4:]
@@ -29,29 +57,63 @@ func normalizeOID(oid string) string {
 	return oid
 }
 
+// SNMPv2Collector implements the ProtocolCollector interface for SNMP v2c.
+// It provides SNMP walk and table operations for collecting data from
+// network devices using community-based authentication.
+//
+// Features:
+//   - SNMP v2c protocol support with community string authentication
+//   - Configurable timeout with automatic fallback to net-snmp
+//   - SNMP walk operations returning map or table formats
+//   - Enhanced timeout protection with context-based cancellation
+//   - Automatic OID normalization for consistent result formatting
+//
+// The collector uses the WapSNMP library as the primary SNMP implementation
+// with automatic fallback to net-snmp command-line tools on timeout.
 type SNMPv2Collector struct {
-	resources   ifs.IResources
-	config      *l8tpollaris.L8PHostProtocol
-	session     *wapsnmp.WapSNMP
-	connected   bool
-	pollSuccess bool
+	resources   ifs.IResources                // Layer8 resources for logging and security
+	config      *l8tpollaris.L8PHostProtocol  // Host configuration with address and credentials
+	session     *wapsnmp.WapSNMP              // WapSNMP session for SNMP operations
+	connected   bool                          // Connection state flag
+	pollSuccess bool                          // Flag indicating at least one successful poll
 }
 
+// SnmpPDU represents a single SNMP Protocol Data Unit containing an OID
+// name and its associated value. Used for collecting walk results.
 type SnmpPDU struct {
-	Name  string
-	Value interface{}
+	Name  string      // The OID in dotted decimal notation
+	Value interface{} // The value associated with this OID
 }
 
+// Protocol returns the protocol type identifier for SNMP v2c.
+// This is used by the collector service to route jobs to the correct collector.
 func (this *SNMPv2Collector) Protocol() l8tpollaris.L8PProtocol {
 	return l8tpollaris.L8PProtocol_L8PPSNMPV2
 }
 
+// Init initializes the SNMP collector with the provided host configuration.
+// It stores the configuration and resources for later use during Connect.
+//
+// Parameters:
+//   - conf: Host protocol configuration containing address, port, and credential ID
+//   - resources: Layer8 resources for accessing security credentials and logging
+//
+// Returns:
+//   - Always returns nil (initialization cannot fail)
 func (this *SNMPv2Collector) Init(conf *l8tpollaris.L8PHostProtocol, resources ifs.IResources) error {
 	this.config = conf
 	this.resources = resources
 	return nil
 }
 
+// Connect establishes the SNMP session with the target device.
+// It retrieves the community string from the security service and creates
+// a WapSNMP session configured for SNMP v2c with the specified timeout.
+//
+// The default timeout is 60 seconds if not specified in the configuration.
+//
+// Returns:
+//   - error if credential retrieval or session creation fails
 func (this *SNMPv2Collector) Connect() error {
 	if this == nil {
 		return nil
@@ -82,6 +144,11 @@ func (this *SNMPv2Collector) Connect() error {
 	return nil
 }
 
+// Disconnect closes the SNMP session and releases all resources.
+// It logs the closure and handles any errors during session close.
+//
+// Returns:
+//   - Always returns nil (cleanup is best-effort)
 func (this *SNMPv2Collector) Disconnect() error {
 	if this.resources != nil && this.resources.Logger() != nil {
 		this.resources.Logger().Info("SNMP Collector for ", this.config.Addr, " is closed.")
@@ -96,6 +163,16 @@ func (this *SNMPv2Collector) Disconnect() error {
 	return nil
 }
 
+// Exec executes an SNMP collection job against the target device.
+// The operation type (Map or Table) is determined from the pollaris configuration.
+// The method automatically establishes a connection if not already connected.
+//
+// Supported operations:
+//   - L8C_Map: Performs SNMP walk and returns results as a CMap
+//   - L8C_Table: Performs SNMP walk and structures results as a CTable
+//
+// Parameters:
+//   - job: The collection job containing pollaris reference and result storage
 func (this *SNMPv2Collector) Exec(job *l8tpollaris.CJob) {
 	if this.resources != nil && this.resources.Logger() != nil {
 		this.resources.Logger().Debug("Exec Job Start ", job.TargetId, " ", job.PollarisName, ":", job.JobName)
@@ -127,6 +204,23 @@ func (this *SNMPv2Collector) Exec(job *l8tpollaris.CJob) {
 	}
 }
 
+// walk performs an SNMP walk operation starting from the specified OID.
+// It implements timeout protection with automatic fallback to net-snmp
+// command-line tools if the WapSNMP library times out.
+//
+// The walk process:
+//  1. Creates a timeout context based on configuration
+//  2. Attempts walk using WapSNMP library
+//  3. Falls back to net-snmp if timeout occurs
+//  4. Normalizes OIDs and encodes results
+//
+// Parameters:
+//   - job: The collection job for storing results and errors
+//   - poll: The poll configuration containing the base OID
+//   - encodeMap: Whether to encode the result map for storage
+//
+// Returns:
+//   - CMap containing OID->value mappings, or nil on error
 func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll, encodeMap bool) *l8tpollaris.CMap {
 	// Add timeout wrapper for SNMP walk to prevent hanging on invalid OIDs
 	timeout := time.Duration(this.config.Timeout) * time.Second
@@ -234,6 +328,16 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	return m
 }
 
+// snmpWalk performs the actual SNMP walk using WapSNMP's GetNext operations.
+// It iteratively retrieves OIDs within the specified subtree until it reaches
+// an OID outside the subtree or encounters an error.
+//
+// Parameters:
+//   - oid: The base OID to walk from (e.g., ".1.3.6.1.2.1.2.2.1")
+//
+// Returns:
+//   - Slice of SnmpPDU containing all OID-value pairs found
+//   - error if session is not initialized or walk finds no results
 func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	if this.session == nil {
 		return nil, fmt.Errorf("SNMP session is not initialized")
@@ -276,6 +380,17 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	return pdus, nil
 }
 
+// table performs an SNMP walk and structures the results as a table (CTable).
+// It extracts row and column indices from the OIDs and organizes the data
+// into a row/column structure suitable for tabular MIB data.
+//
+// The method parses OIDs to extract:
+//   - Row index: The last component of the OID (instance identifier)
+//   - Column index: The second-to-last component (column identifier)
+//
+// Parameters:
+//   - job: The collection job for storing results and errors
+//   - poll: The poll configuration containing the table base OID
 func (this *SNMPv2Collector) table(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll) {
 	m := this.walk(job, poll, false)
 	if job.Error != "" {
@@ -305,10 +420,24 @@ func (this *SNMPv2Collector) table(job *l8tpollaris.CJob, poll *l8tpollaris.L8Po
 	job.Result = enc.Data()
 }
 
+// Online returns the connection status of the SNMP collector.
+// Returns true only if the session is connected AND at least one poll
+// has succeeded. This provides accurate device reachability status.
 func (this *SNMPv2Collector) Online() bool {
 	return this.connected && this.pollSuccess
 }
 
+// getRowAndColName extracts the row index and column identifier from an
+// SNMP table OID. For example, from ".1.3.6.1.2.1.2.2.1.6.1", it extracts:
+//   - Row index: 1 (the last component, representing the interface index)
+//   - Column name: "6" (second-to-last component, representing ifPhysAddress)
+//
+// Parameters:
+//   - oid: The full OID string from an SNMP walk result
+//
+// Returns:
+//   - row: The row index as int32 (-1 if parsing fails)
+//   - col: The column identifier as string (empty if parsing fails)
 func getRowAndColName(oid string) (int32, string) {
 	index := strings.LastIndex(oid, ".")
 	if index != -1 {

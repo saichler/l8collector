@@ -1,3 +1,18 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package tests
 
 import (
@@ -17,12 +32,27 @@ import (
 	"github.com/saichler/l8types/go/ifs"
 )
 
+// TestMain is the test suite entry point that manages the test topology lifecycle.
+// It calls setup() before any tests run and tear() after all tests complete.
 func TestMain(m *testing.M) {
 	setup()
 	m.Run()
 	tear()
 }
 
+// TestCollector is the main integration test for the collector service.
+// It sets up a complete test environment with:
+//   - Pollaris service for poll configuration
+//   - CollectorService for data collection
+//   - MockParsingService to receive and validate collected data
+//
+// The test creates a simulated device (using opensim) and verifies that
+// all configured jobs execute exactly once during the boot sequence.
+// It also tests the on-demand job execution via the ExecuteService.
+//
+// Prerequisites:
+//   - opensim running with simulated devices
+//   - Example: curl -X POST http://localhost:8080/api/v1/devices -H "Content-Type: application/json" -d '{"start_ip":"10.10.10.1","device_count":3,"netmask":"24"}'
 func TestCollector(t *testing.T) {
 
 	cServiceName, cServiceArea := targets2.Links.Collector(common2.NetworkDevice_Links_ID)
@@ -87,6 +117,10 @@ func TestCollector(t *testing.T) {
 	fmt.Println(job.Result)
 }
 
+// testJobDisable tests the job disabling functionality.
+// It modifies poll cadences to run more frequently and changes
+// the entityMib OID to test error handling when a job fails.
+// This test is not exported (lowercase) and may be used for manual testing.
 func testJobDisable(t *testing.T) {
 	cServiceName, cServiceArea := targets2.Links.Collector(common2.NetworkDevice_Links_ID)
 	pServiceName, pServiceArea := targets2.Links.Parser(common2.NetworkDevice_Links_ID)

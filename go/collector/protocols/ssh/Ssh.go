@@ -1,3 +1,21 @@
+/*
+© 2025 Sharon Aicler (saichler@gmail.com)
+
+Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Package ssh provides an SSH protocol collector implementation for the
+// L8Collector service. It enables command execution and data collection
+// from remote devices via SSH with interactive shell support.
 package ssh
 
 import (
@@ -16,26 +34,54 @@ import (
 	ssh2 "golang.org/x/crypto/ssh"
 )
 
+// CR represents a carriage return/newline byte sequence for command termination.
 var CR = []byte("\n")
 
+// SshCollector implements the ProtocolCollector interface for SSH-based
+// command execution. It maintains a persistent interactive shell session
+// to the target device and executes commands by writing to stdin and
+// reading responses from stdout.
+//
+// Features:
+//   - Password-based authentication
+//   - VT100 terminal emulation support
+//   - Configurable command prompts for response detection
+//   - Background output reader with queue-based buffering
+//   - Terminal initialization commands for device-specific setup
+//   - Automatic connection management with reconnection support
+//
+// The collector uses a background goroutine to continuously read from
+// the SSH session and queue the output for command response collection.
 type SshCollector struct {
-	resources ifs.IResources
-	config    *l8tpollaris.L8PHostProtocol
-	client    *ssh2.Client
-	session   *ssh2.Session
-	in        io.WriteCloser
-	out       io.Reader
-	queue     *queues.Queue
-	running   bool
-	connected bool
-	pollOnce  bool
-	mtx       *sync.Mutex
+	resources ifs.IResources                // Layer8 resources for logging and security
+	config    *l8tpollaris.L8PHostProtocol  // Host configuration with connection details
+	client    *ssh2.Client                  // SSH client connection
+	session   *ssh2.Session                 // SSH session for shell interaction
+	in        io.WriteCloser                // Stdin pipe for command input
+	out       io.Reader                     // Stdout pipe for response output
+	queue     *queues.Queue                 // Queue for buffering async output reads
+	running   bool                          // Flag indicating if background reader is active
+	connected bool                          // Connection state flag
+	pollOnce  bool                          // Flag indicating at least one poll was attempted
+	mtx       *sync.Mutex                   // Mutex for thread-safe operations
 }
 
+// Protocol returns the protocol type identifier for SSH.
+// This is used by the collector service to route jobs to the correct collector.
 func (this *SshCollector) Protocol() l8tpollaris.L8PProtocol {
 	return l8tpollaris.L8PProtocol_L8PSSH
 }
 
+// Init initializes the SSH collector with the provided host configuration.
+// It sets up the output queue and default prompt pattern if none is specified.
+// The default prompt is "#" which works for most Unix/Linux systems.
+//
+// Parameters:
+//   - conf: Host protocol configuration containing address, port, and prompts
+//   - resources: Layer8 resources for accessing security credentials and logging
+//
+// Returns:
+//   - Always returns nil (initialization cannot fail)
 func (this *SshCollector) Init(conf *l8tpollaris.L8PHostProtocol, resources ifs.IResources) error {
 	this.config = conf
 	this.resources = resources
@@ -49,6 +95,10 @@ func (this *SshCollector) Init(conf *l8tpollaris.L8PHostProtocol, resources ifs.
 	return nil
 }
 
+// run is the background goroutine that continuously reads from the SSH
+// stdout pipe and queues the data for processing by exec(). It reads in
+// 512-byte chunks and runs until the running flag is set to false or
+// an EOF is encountered.
 func (this *SshCollector) run() {
 	for this.running {
 		buff := make([]byte, 512)
@@ -66,6 +116,21 @@ func (this *SshCollector) run() {
 	this.resources.Logger().Info(strings2.New("Ssh Collector for host:", this.config.Addr, " is closed.").String())
 }
 
+// Connect establishes the SSH connection to the target device.
+// It configures the SSH client with password authentication and optionally
+// sets up VT100 terminal emulation. After establishing the session, it
+// starts the background output reader goroutine.
+//
+// The connection process:
+//  1. Retrieves credentials from the security service
+//  2. Establishes TCP connection to the target
+//  3. Creates an SSH session
+//  4. Optionally configures VT100 terminal mode
+//  5. Executes any configured terminal initialization commands
+//  6. Starts the background output reader
+//
+// Returns:
+//   - error if any step of the connection process fails
 func (this *SshCollector) Connect() error {
 	sshconfig := &ssh2.ClientConfig{}
 	sshconfig.Timeout = time.Second * time.Duration(this.config.Timeout)
@@ -140,6 +205,12 @@ func (this *SshCollector) Connect() error {
 	return nil
 }
 
+// Disconnect closes the SSH connection and releases all resources.
+// It stops the background reader, closes the stdin/stdout pipes,
+// terminates the session, and closes the client connection.
+//
+// Returns:
+//   - Always returns nil (cleanup is best-effort)
 func (this *SshCollector) Disconnect() error {
 	this.running = false
 	if this.in != nil {
@@ -162,6 +233,9 @@ func (this *SshCollector) Disconnect() error {
 	return nil
 }
 
+// setInitialPrompt extracts the command prompt from the initial connection
+// output and updates the prompt configuration. This is used to auto-detect
+// the device's actual prompt pattern.
 func (this *SshCollector) setInitialPrompt(str string) {
 	index := -1
 	size := len(str)
@@ -178,6 +252,10 @@ func (this *SshCollector) setInitialPrompt(str string) {
 	}
 }
 
+// hasPrompt checks if the accumulated output data contains the expected
+// command prompt at least 'count' times. Supports multiple prompt patterns
+// configured in the host configuration. Returns true when the prompt is
+// detected, indicating the command has completed.
 func (this *SshCollector) hasPrompt(data string, count int) bool {
 	l := len(this.config.Prompt)
 	if l == 1 {
@@ -202,6 +280,17 @@ func (this *SshCollector) hasPrompt(data string, count int) bool {
 	return false
 }
 
+// exec is the internal command execution method. It sends a command to the
+// SSH session and waits for the response until the prompt is detected or
+// timeout occurs. The method automatically establishes a connection if needed.
+//
+// Parameters:
+//   - cmd: The command to execute (empty string for reading initial output)
+//   - timeout: Maximum time in seconds to wait for the response
+//
+// Returns:
+//   - The command output as a string
+//   - error if connection or command execution fails
 func (this *SshCollector) exec(cmd string, timeout int64) (string, error) {
 	this.pollOnce = true
 	if !this.connected {
@@ -244,6 +333,19 @@ func (this *SshCollector) exec(cmd string, timeout int64) (string, error) {
 	return result.String(), nil
 }
 
+// Exec executes an SSH command job against the target device.
+// The command is obtained from the pollaris configuration using the job's
+// PollarisName and JobName. The response is cleaned (removing command echo
+// and prompt) and stored in the job's Result field.
+//
+// Response processing:
+//  1. Strips the echoed command from the output
+//  2. Removes leading/trailing whitespace and newlines
+//  3. Removes the trailing prompt from the output
+//  4. Serializes the cleaned result
+//
+// Parameters:
+//   - job: The collection job containing pollaris reference and result storage
 func (this *SshCollector) Exec(job *l8tpollaris.CJob) {
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, this.resources)
 	if err != nil {
@@ -278,6 +380,9 @@ func (this *SshCollector) Exec(job *l8tpollaris.CJob) {
 	job.Result = enc.Data()
 }
 
+// Online returns the connection status of the SSH collector.
+// Returns true if connected, or if no poll has been attempted yet
+// (optimistic status before first poll attempt).
 func (this *SshCollector) Online() bool {
 	return this.connected || !this.pollOnce
 }
