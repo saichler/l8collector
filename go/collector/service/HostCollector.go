@@ -230,7 +230,7 @@ func (this *HostCollector) collect() {
 			time.Sleep(time.Second * time.Duration(waitTime))
 		}
 	}
-	resources.Logger().Info("Host collection for device ", targetId, " host ", hostId, " has ended.")
+	resources.Logger().Debug("Host collection for device ", targetId, " host ", hostId, " has ended.")
 }
 
 func (this *HostCollector) execJob(job *l8tpollaris.CJob) bool {

@@ -151,7 +151,7 @@ func (this *SNMPv2Collector) Connect() error {
 //   - Always returns nil (cleanup is best-effort)
 func (this *SNMPv2Collector) Disconnect() error {
 	if this.resources != nil && this.resources.Logger() != nil {
-		this.resources.Logger().Info("SNMP Collector for ", this.config.Addr, " is closed.")
+		this.resources.Logger().Debug("SNMP Collector for ", this.config.Addr, " is closed.")
 	}
 	if this.session != nil {
 		if err := this.session.Close(); err != nil && this.resources != nil && this.resources.Logger() != nil {
@@ -259,7 +259,7 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 		cancel()
 		// Timeout occurred - try net-snmp fallback
 		if this.resources != nil && this.resources.Logger() != nil {
-			this.resources.Logger().Info("SNMP timeout, trying net-snmp fallback for OID: ", poll.What)
+			this.resources.Logger().Debug("SNMP timeout, trying net-snmp fallback for OID: ", poll.What)
 		}
 
 		netSnmp := NewNetSNMPCollector(this.config, this.resources)
@@ -270,7 +270,7 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 			pdus = fallbackPdus
 			lastError = nil
 			if this.resources != nil && this.resources.Logger() != nil {
-				this.resources.Logger().Info("net-snmp fallback succeeded for OID: ", poll.What)
+				this.resources.Logger().Debug("net-snmp fallback succeeded for OID: ", poll.What)
 			}
 		} else {
 			lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)

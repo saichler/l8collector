@@ -107,8 +107,8 @@ func (this *Kubernetes) Protocol() l8tpollaris.L8PProtocol {
 // Parameters:
 //   - job: The collection job containing pollaris reference, arguments, and result storage
 func (this *Kubernetes) Exec(job *l8tpollaris.CJob) {
-	this.resources.Logger().Info("K8s Job ", job.PollarisName, ":", job.JobName, " started")
-	defer this.resources.Logger().Info("K8s Job ", job.PollarisName, ":", job.JobName, " ended")
+	this.resources.Logger().Debug("K8s Job ", job.PollarisName, ":", job.JobName, " started")
+	defer this.resources.Logger().Debug("K8s Job ", job.PollarisName, ":", job.JobName, " ended")
 
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, this.resources)
 	if err != nil {

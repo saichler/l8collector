@@ -113,7 +113,7 @@ func (this *SshCollector) run() {
 			this.queue.Add(buff[0:readBytes])
 		}
 	}
-	this.resources.Logger().Info(strings2.New("Ssh Collector for host:", this.config.Addr, " is closed.").String())
+	this.resources.Logger().Debug(strings2.New("Ssh Collector for host:", this.config.Addr, " is closed.").String())
 }
 
 // Connect establishes the SSH connection to the target device.
@@ -247,7 +247,7 @@ func (this *SshCollector) setInitialPrompt(str string) {
 	}
 	if index != -1 {
 		prompt := str[index:]
-		this.resources.Logger().Info(strings2.New("Setting Prompt to:", prompt).String())
+		this.resources.Logger().Debug(strings2.New("Setting Prompt to:", prompt).String())
 		this.config.Prompt[0] = prompt
 	}
 }

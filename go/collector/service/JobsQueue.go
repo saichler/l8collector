@@ -152,7 +152,7 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 		if !ok {
 			this.jobsMap[jobKey] = job
 			this.jobs = append(this.jobs, job)
-			this.service.vnic.Resources().Logger().Info("Added job ", job.PollarisName, " - ", job.JobName)
+			this.service.vnic.Resources().Logger().Debug("Added job ", job.PollarisName, " - ", job.JobName)
 		} else {
 			old.Started = 0
 			old.Ended = 0

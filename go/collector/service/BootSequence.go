@@ -162,7 +162,7 @@ func (this *HostCollector) bootDetailDevice(job *l8tpollaris.CJob) {
 	enc = object.NewDecode(strData, 0, this.service.vnic.Resources().Registry())
 	byteInterface, _ := enc.Get()
 	sysoid, _ := byteInterface.(string)
-	this.service.vnic.Resources().Logger().Info("HostCollector, loadPolls: ", job.TargetId, " discovered sysoid =", sysoid)
+	this.service.vnic.Resources().Logger().Debug("HostCollector, loadPolls: ", job.TargetId, " discovered sysoid =", sysoid)
 	if sysoid == "" {
 		this.service.vnic.Resources().Logger().Error("HostCollector, loadPolls: ", job.TargetId, " - sysoid is blank!")
 		/* when there is DebugEnabled
