@@ -24,6 +24,7 @@ import (
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
+	"github.com/saichler/l8utils/go/utils/aggregator"
 	"github.com/saichler/l8utils/go/utils/maps"
 	"github.com/saichler/l8utils/go/utils/strings"
 )
@@ -41,8 +42,9 @@ import (
 // CollectorService receives L8PTarget messages via the Post method to
 // start or stop polling for specific devices.
 type CollectorService struct {
-	hostCollectors *maps.SyncMap  // Map of hostId -> HostCollector
-	vnic           ifs.IVNic      // Virtual network interface for messaging
+	hostCollectors *maps.SyncMap // Map of hostId -> HostCollector
+	vnic           ifs.IVNic     // Virtual network interface for messaging
+	agg            *aggregator.Aggregator
 }
 
 // Activate is the entry point for starting the CollectorService.
@@ -74,6 +76,7 @@ func Activate(linksID string, vnic ifs.IVNic) {
 func (this *CollectorService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) error {
 	this.hostCollectors = maps.NewSyncMap()
 	this.vnic = vnic
+	this.agg = aggregator.NewAggregator(vnic, 5, 30)
 	vnic.Resources().Registry().Register(&l8tpollaris.L8PTarget{})
 	vnic.Resources().Registry().Register(&l8tpollaris.CMap{})
 	vnic.Resources().Registry().Register(&l8tpollaris.CTable{})

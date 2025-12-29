@@ -17,7 +17,6 @@ package service
 
 import (
 	"errors"
-	"github.com/saichler/l8types/go/types/l8services"
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
@@ -77,12 +76,6 @@ func newHostCollector(target *l8tpollaris.L8PTarget, hostId string, service *Col
 	hc.jobsQueue = NewJobsQueue(target, hostId, service)
 	hc.running = true
 	hc.bootStages = make([]*BootState, 5)
-	ps, pa := targets.Links.Parser(target.LinksId)
-	if ps != "" {
-		parserLink := &l8services.L8ServiceLink{ZsideServiceName: ps, ZsideServiceArea: int32(pa),
-			Mode: int32(ifs.M_Proximity), Interval: 5}
-		hc.service.vnic.RegisterServiceLink(parserLink)
-	}
 	return hc
 }
 
@@ -285,10 +278,11 @@ func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
 	}
 
 	pService, pArea := targets.Links.Parser(job.LinksId)
-	err := this.service.vnic.Proximity(pService, pArea, ifs.POST, job)
-	if err != nil {
-		this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
-	}
+	this.service.agg.AddElement(job, ifs.Proximity, "", pService, pArea, ifs.POST)
+	//err := this.service.vnic.Proximity(pService, pArea, ifs.POST, job)
+	//if err != nil {
+	//	this.service.vnic.Resources().Logger().Error("HostCollector:", err.Error())
+	//}
 	if job.JobName == "systemMib" {
 		this.service.vnic.Resources().Logger().Debug("SystemMib for ", job.TargetId, " was received")
 		this.bootDetailDevice(job)
