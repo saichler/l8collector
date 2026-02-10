@@ -29,8 +29,8 @@ import (
 // This service enables distributed collection where jobs can be triggered
 // remotely for immediate execution, bypassing the normal scheduling cadence.
 type ExecuteService struct {
-	collectorService *CollectorService  // Parent collector service
-	serviceArea      byte               // Service area for routing
+	collectorService *CollectorService // Parent collector service
+	serviceArea      byte              // Service area for routing
 }
 
 func (this *ExecuteService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) error {
@@ -63,7 +63,7 @@ func (this *ExecuteService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements
 			}
 		}
 	}
-
+	job.Error = "Primary Not Found"
 	return object.New(nil, job)
 }
 
