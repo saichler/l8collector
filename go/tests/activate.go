@@ -18,7 +18,6 @@ package tests
 import (
 	"github.com/saichler/l8pollaris/go/pollaris/targets"
 	"github.com/saichler/l8types/go/ifs"
-	"github.com/saichler/probler/go/prob/common"
 )
 
 // ActivateTargets registers and activates the targets service on the given VNic.
@@ -28,5 +27,5 @@ import (
 // Parameters:
 //   - vnic: The virtual network interface to activate the service on
 func ActivateTargets(vnic ifs.IVNic) {
-	targets.Activate(common.DB_CREDS, common.DB_NAME, vnic)
+	targets.Activate("admin", "admin", vnic)
 }

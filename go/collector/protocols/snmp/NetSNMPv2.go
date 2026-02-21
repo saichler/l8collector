@@ -136,6 +136,77 @@ func (n *NetSNMPCollector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	return n.parseSnmpWalkOutput(string(output))
 }
 
+// snmpGet performs a single SNMP GET using the net-snmp snmpget command-line tool.
+// It retrieves the value for a specific OID rather than walking an entire subtree.
+//
+// Parameters:
+//   - oid: The OID to get
+//
+// Returns:
+//   - SnmpPDU containing the OID and its value
+//   - error if config is nil, command fails, or parsing fails
+func (n *NetSNMPCollector) snmpGet(oid string) (*SnmpPDU, error) {
+	if n.config == nil {
+		return nil, fmt.Errorf("SNMP config is not initialized")
+	}
+
+	timeout := n.config.Timeout
+	if timeout == 0 {
+		timeout = 60
+	}
+
+	_, readCommunity, _, _, e := n.resources.Security().Credential(n.config.CredId, "snmp", n.resources)
+	if e != nil {
+		panic(e)
+	}
+
+	args := []string{
+		"-v", "2c",
+		"-c", readCommunity,
+		"-t", strconv.Itoa(int(timeout)),
+		"-r", "3",
+		"-On",
+		"-Oq",
+		n.config.Addr + ":" + strconv.Itoa(int(n.config.Port)),
+		oid,
+	}
+
+	cmd := exec.Command("snmpget", args...)
+
+	cmdTimeout := time.Duration(timeout+5) * time.Second
+	done := make(chan error, 1)
+	var output []byte
+	var err error
+
+	go func() {
+		output, err = cmd.CombinedOutput()
+		done <- err
+	}()
+
+	select {
+	case cmdErr := <-done:
+		if cmdErr != nil {
+			return nil, fmt.Errorf("net-snmp snmpget failed: %v, output: %s", cmdErr, string(output))
+		}
+	case <-time.After(cmdTimeout):
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+		return nil, fmt.Errorf("net-snmp snmpget timed out after %s", cmdTimeout.String())
+	}
+
+	if len(output) == 0 {
+		return nil, fmt.Errorf("net-snmp snmpget returned no data for OID %s", oid)
+	}
+
+	pdus, parseErr := n.parseSnmpWalkOutput(string(output))
+	if parseErr != nil || len(pdus) == 0 {
+		return nil, fmt.Errorf("failed to parse snmpget output for OID %s", oid)
+	}
+
+	return &pdus[0], nil
+}
+
 // parseSnmpWalkOutput parses the text output from the snmpwalk command
 // into a slice of SnmpPDU structures. Each line is expected to be in the
 // format "OID VALUE" as produced by snmpwalk with -Oq flag.

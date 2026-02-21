@@ -34,8 +34,8 @@ import (
 //   - Stage 3: Extended MIB and feature discovery
 //   - Stage 4: Final configuration and steady-state transition
 type BootState struct {
-	jobNames map[string]bool  // Map of job names to completion status
-	stage    int              // Current boot stage index
+	jobNames map[string]bool // Map of job names to completion status
+	stage    int             // Current boot stage index
 }
 
 // newBootState creates a new BootState for the specified boot stage.
@@ -180,6 +180,7 @@ func (this *HostCollector) bootDetailDevice(job *l8tpollaris.CJob) {
 	if plrs != nil {
 		if plrs.Name != "boot03" {
 			this.pollarisName = plrs.Name
+			this.insertCustomJobs(plrs.Name)
 		}
 	}
 }

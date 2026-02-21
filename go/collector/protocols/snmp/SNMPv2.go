@@ -194,7 +194,9 @@ func (this *SNMPv2Collector) Exec(job *l8tpollaris.CJob) {
 		return
 	}
 
-	if poll.Operation == l8tpollaris.L8C_Operation_L8C_Map {
+	if poll.Operation == l8tpollaris.L8C_Operation_L8C_Get {
+		this.get(job, poll)
+	} else if poll.Operation == l8tpollaris.L8C_Operation_L8C_Map {
 		this.walk(job, poll, true)
 	} else if poll.Operation == l8tpollaris.L8C_Operation_L8C_Table {
 		this.table(job, poll)
@@ -202,6 +204,123 @@ func (this *SNMPv2Collector) Exec(job *l8tpollaris.CJob) {
 	if this.resources != nil && this.resources.Logger() != nil {
 		this.resources.Logger().Debug("Exec Job End  ", job.TargetId, " ", job.PollarisName, ":", job.JobName)
 	}
+}
+
+// get performs an SNMP GET operation for a single OID.
+// Unlike walk, which traverses an entire subtree using GetNext, get retrieves
+// the value of a specific OID directly. The result is returned as an encoded
+// CMap with a single OID->value entry.
+//
+// The method uses the same timeout and fallback strategy as walk:
+//  1. Attempts GET using WapSNMP library with a timeout context
+//  2. Falls back to net-snmp snmpget if timeout occurs
+//
+// Parameters:
+//   - job: The collection job for storing results and errors
+//   - poll: The poll configuration containing the OID to get
+func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll) {
+	timeout := time.Duration(this.config.Timeout) * time.Second
+	if timeout == 0 {
+		timeout = 60 * time.Second
+	}
+
+	var pdu *SnmpPDU
+	var lastError error
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+
+	done := make(chan bool)
+
+	go func() {
+		p, e := this.snmpGet(poll.What)
+		if e == nil {
+			pdu = p
+		} else {
+			lastError = e
+		}
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		this.pollSuccess = true
+		cancel()
+	case <-ctx.Done():
+		cancel()
+		if this.resources != nil && this.resources.Logger() != nil {
+			this.resources.Logger().Debug("SNMP GET timeout, trying net-snmp fallback for OID: ", poll.What)
+		}
+
+		netSnmp := NewNetSNMPCollector(this.config, this.resources)
+		fallbackPdu, fallbackErr := netSnmp.snmpGet(poll.What)
+
+		if fallbackErr == nil {
+			pdu = fallbackPdu
+			lastError = nil
+		} else {
+			lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)
+		}
+	}
+
+	if lastError != nil {
+		job.Error = strings2.New("SNMP Get Error Host:", this.config.Addr, "/",
+			int(this.config.Port), " Oid:", poll.What, " ", lastError.Error()).String()
+		job.Result = nil
+		job.ErrorCount++
+		return
+	}
+	job.ErrorCount = 0
+
+	m := &l8tpollaris.CMap{}
+	m.Data = make(map[string][]byte)
+
+	enc := object.NewEncode()
+	err := enc.Add(pdu.Value)
+	if err != nil {
+		if this.resources != nil && this.resources.Logger() != nil {
+			this.resources.Logger().Error("Object Value Error: ", err.Error())
+		}
+	}
+	normalizedOID := normalizeOID(pdu.Name)
+	m.Data[normalizedOID] = enc.Data()
+
+	encMap := object.NewEncode()
+	err = encMap.Add(m)
+	if err != nil {
+		if this.resources != nil && this.resources.Logger() != nil {
+			this.resources.Logger().Error("Object Map Error: ", err)
+		}
+	}
+	job.Result = encMap.Data()
+}
+
+// snmpGet performs a single SNMP GET using WapSNMP's Get operation.
+//
+// Parameters:
+//   - oid: The OID to get (e.g., ".1.3.6.1.2.1.1.1.0")
+//
+// Returns:
+//   - SnmpPDU containing the OID and its value
+//   - error if session is not initialized or GET fails
+func (this *SNMPv2Collector) snmpGet(oid string) (*SnmpPDU, error) {
+	if this.session == nil {
+		return nil, fmt.Errorf("SNMP session is not initialized")
+	}
+
+	parsedOid, err := wapsnmp.ParseOid(oid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse OID %s: %v", oid, err)
+	}
+
+	value, err := this.session.Get(parsedOid)
+	if err != nil {
+		return nil, fmt.Errorf("SNMP GET failed for OID %s: %v", oid, err)
+	}
+
+	return &SnmpPDU{
+		Name:  oid,
+		Value: value,
+	}, nil
 }
 
 // walk performs an SNMP walk operation starting from the specified OID.
