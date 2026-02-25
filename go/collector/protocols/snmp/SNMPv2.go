@@ -394,7 +394,7 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 		} else {
 			lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)
 			if this.resources != nil && this.resources.Logger() != nil {
-				this.resources.Logger().Error("net-snmp fallback failed for OID: ", poll.What, " error: ",
+				this.resources.Logger().Warning("net-snmp fallback failed for OID: ", poll.What, " error: ",
 					job.TargetId, " ",
 					os.Getenv("HOSTNAME"), " ",
 					fallbackErr.Error())
