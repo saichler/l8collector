@@ -181,12 +181,21 @@ func (this *HostCollector) collect() {
 			}
 			MarkStart(job)
 
-			if this.currentBootStage < len(this.bootStages) && this.bootStages[this.currentBootStage].doStaticJob(job, this) {
+			// Static jobs (ipAddress, deviceStatus) are handled locally
+			// regardless of boot stage - they never go to protocol collectors
+			if sjob, ok := staticJobs[job.JobName]; ok {
+				sjob.do(job, this)
 				MarkEnded(job)
 				this.jobComplete(job)
-				if this.bootStages[this.currentBootStage].isComplete() && this.currentBootStage < len(this.bootStages)-1 {
-					this.currentBootStage++
-					this.bootStages[this.currentBootStage] = this.newBootState(this.currentBootStage)
+				if this.currentBootStage < len(this.bootStages) {
+					this.bootStages[this.currentBootStage].jobComplete(job)
+					for this.bootStages[this.currentBootStage].isComplete() {
+						this.currentBootStage++
+						if this.currentBootStage >= len(this.bootStages) {
+							break
+						}
+						this.bootStages[this.currentBootStage] = this.newBootState(this.currentBootStage)
+					}
 				}
 				continue
 			}
