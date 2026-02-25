@@ -224,7 +224,7 @@ func (this *HostCollector) collect() {
 			}
 
 			if job.ErrorCount >= 5 {
-				resources.Logger().Error("Job ", job.TargetId, " - ", job.PollarisName, " - ",
+				resources.Logger().Warning("Job ", job.TargetId, " - ", job.PollarisName, " - ",
 					job.JobName, " has failed ", job.ErrorCount, " in a row.")
 			}
 		} else {
@@ -275,7 +275,7 @@ func newProtocolCollector(config *l8tpollaris.L8PHostProtocol, resource ifs.IRes
 
 func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
 	if job.Error != "" {
-		this.service.vnic.Resources().Logger().Error("Job ", job.TargetId, " - ", job.PollarisName,
+		this.service.vnic.Resources().Logger().Warning("Job ", job.TargetId, " - ", job.PollarisName,
 			" - ", job.JobName, " has an error:", job.Error)
 		job.Cadence.Current = 0
 		return
