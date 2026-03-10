@@ -222,11 +222,11 @@ func (this *JobsQueue) moveToLast(index int) {
 	}
 }
 
-// MarkStart prepares a job for execution by saving the previous result
-// and resetting execution state. Should be called before Exec.
+// MarkStart prepares a job for execution by hashing the previous result
+// for change detection and resetting execution state. Should be called before Exec.
 func MarkStart(job *l8tpollaris.CJob) {
 	if job.ErrorCount == 0 {
-		job.LastResult = job.Result
+		job.LastResultHash = hashBytes(job.Result)
 	}
 	job.Started = time.Now().Unix()
 	job.Ended = 0

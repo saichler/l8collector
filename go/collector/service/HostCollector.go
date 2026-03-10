@@ -305,20 +305,12 @@ func jobHasChange(job *l8tpollaris.CJob) bool {
 	if job.Result != nil && job.Cadence.Current < int32(len(job.Cadence.Cadences)-1) {
 		job.Cadence.Current++
 	}
-	if job.LastResult == nil && job.Result == nil {
+	if job.LastResultHash == 0 && job.Result == nil {
 		return false
-	} else if job.LastResult == nil && job.Result != nil {
+	} else if job.LastResultHash == 0 && job.Result != nil {
 		return true
 	} else if job.Result == nil {
 		return true
 	}
-	if len(job.Result) != len(job.LastResult) {
-		return true
-	}
-	for i := 0; i < len(job.Result); i++ {
-		if job.Result[i] != job.LastResult[i] {
-			return true
-		}
-	}
-	return false
+	return hashBytes(job.Result) != job.LastResultHash
 }
