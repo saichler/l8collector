@@ -274,6 +274,9 @@ func newProtocolCollector(config *l8tpollaris.L8PHostProtocol, resource ifs.IRes
 }
 
 func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
+	if this.service == nil {
+		return
+	}
 	if job.Error != "" {
 		this.service.vnic.Resources().Logger().Warning("Job ", job.TargetId, " - ", job.PollarisName,
 			" - ", job.JobName, " has an error:", job.Error)
