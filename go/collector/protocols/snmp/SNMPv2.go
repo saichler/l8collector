@@ -229,7 +229,7 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
-	done := make(chan bool)
+	done := make(chan bool, 1)
 
 	go func() {
 		p, e := this.snmpGet(poll.What)
@@ -354,7 +354,7 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 	var e error
-	done := make(chan bool)
+	done := make(chan bool, 1)
 
 	go func() {
 		pdus, e = this.snmpWalk(poll.What)
