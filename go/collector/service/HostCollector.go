@@ -17,7 +17,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
@@ -203,7 +202,6 @@ func (this *HostCollector) collect() {
 
 			c, ok := this.collectors.Get(poll.Protocol)
 			if !ok {
-				fmt.Println("DEBUG HostCollector: no collector for protocol", poll.Protocol, "job=", job.PollarisName, ":", job.JobName)
 				MarkEnded(job)
 				this.jobsQueue.DisableJob(job)
 				continue
