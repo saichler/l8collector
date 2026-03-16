@@ -56,7 +56,7 @@ func TestRestCollector(t *testing.T) {
 	poll.BodyName = "L8Query"
 	poll.Name = "devices"
 	poll.Cadence = boot.EVERY_5_MINUTES
-	poll.Protocol = l8tpollaris.L8PProtocol_L8PRESTCONF
+	poll.Protocol = l8tpollaris.L8PProtocol_L8PRESTAPI
 	p.Polling = map[string]*l8tpollaris.L8Poll{poll.Name: poll}
 
 	host := utils_collector.CreateRestHost("192.168.86.226", 2443, "admin", "Admin123!")
