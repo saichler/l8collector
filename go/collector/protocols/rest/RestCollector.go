@@ -19,6 +19,7 @@ limitations under the License.
 package rest
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -44,10 +45,10 @@ import (
 // The poll.What field format is: "METHOD::endpoint::body_json"
 // Example: "GET::/api/devices::{"query":"filter"}"
 type RestCollector struct {
-	client       *client.RestClient            // REST client for HTTP operations
-	hostProtocol *l8tpollaris.L8PHostProtocol  // Host configuration with connection details
-	resources    ifs.IResources                // Layer8 resources for logging and registry
-	connected    bool                          // Connection/authentication state flag
+	client       *client.RestClient           // REST client for HTTP operations
+	hostProtocol *l8tpollaris.L8PHostProtocol // Host configuration with connection details
+	resources    ifs.IResources               // Layer8 resources for logging and registry
+	connected    bool                         // Connection/authentication state flag
 }
 
 // Init initializes the REST collector with the provided host configuration.
@@ -64,6 +65,9 @@ type RestCollector struct {
 // Returns:
 //   - error if client creation fails, nil on success
 func (this *RestCollector) Init(hostConn *l8tpollaris.L8PHostProtocol, r ifs.IResources) error {
+	if hostConn.Ainfo == nil {
+		return errors.New("host rest auth info connection info is nil")
+	}
 	clientConfig := &client.RestClientConfig{
 		Host:          hostConn.Addr,
 		Port:          int(hostConn.Port),
