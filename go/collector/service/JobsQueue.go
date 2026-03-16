@@ -35,13 +35,13 @@ import (
 //   - Supports dynamic job insertion during boot sequence
 //   - Provides round-robin execution by moving executed jobs to the end
 type JobsQueue struct {
-	target   *l8tpollaris.L8PTarget         // Target device configuration
-	hostId   string                         // Host identifier for this queue
-	jobs     []*l8tpollaris.CJob            // Ordered list of scheduled jobs
-	jobsMap  map[string]*l8tpollaris.CJob   // Map for quick job lookup by key
-	mtx      *sync.Mutex                    // Mutex for thread-safe queue access
-	shutdown bool                           // Flag indicating queue shutdown
-	service  *CollectorService              // Parent service reference
+	target   *l8tpollaris.L8PTarget       // Target device configuration
+	hostId   string                       // Host identifier for this queue
+	jobs     []*l8tpollaris.CJob          // Ordered list of scheduled jobs
+	jobsMap  map[string]*l8tpollaris.CJob // Map for quick job lookup by key
+	mtx      *sync.Mutex                  // Mutex for thread-safe queue access
+	shutdown bool                         // Flag indicating queue shutdown
+	service  *CollectorService            // Parent service reference
 }
 
 // Shutdown gracefully stops the jobs queue and releases all resources.
@@ -84,7 +84,15 @@ func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, har
 		return nil
 	}
 	jobs := make(map[string]*l8tpollaris.CJob)
-	for jobName, poll := range p.Polling {
+	if p.Order == nil || len(p.Order) != len(p.Polling) {
+		this.service.vnic.Resources().Logger().Error("newJobsForKey: Collection order mismatch, using map")
+		p.Order = make([]string, 0)
+		for jobName, _ := range p.Polling {
+			p.Order = append(p.Order, jobName)
+		}
+	}
+	for _, jobName := range p.Order {
+		poll := p.Polling[jobName]
 		job := &l8tpollaris.CJob{}
 		job.JobName = jobName
 		job.PollarisName = p.Name
@@ -109,8 +117,15 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 	}
 	jobs := make([]*l8tpollaris.CJob, 0)
 	for _, p := range polarises {
-		for jobName, poll := range p.Polling {
-
+		if p.Order == nil || len(p.Order) != len(p.Polling) {
+			this.service.vnic.Resources().Logger().Error("newJobsForGroup: Collection order mismatch, using map")
+			p.Order = make([]string, 0)
+			for jobName, _ := range p.Polling {
+				p.Order = append(p.Order, jobName)
+			}
+		}
+		for _, jobName := range p.Order {
+			poll := p.Polling[jobName]
 			if !poll.Cadence.Enabled {
 				continue
 			}
