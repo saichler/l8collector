@@ -360,7 +360,6 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	var e error
 	done := make(chan bool, 1)
 
-	fmt.Println("DEBUG SNMP walk start OID:", poll.What, "host:", this.config.Addr, "target:", job.TargetId, "hostId:", job.HostId)
 	go func() {
 		pdus, e = this.snmpWalk(poll.What)
 		done <- true
@@ -435,9 +434,6 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	m.Data = make(map[string][]byte)
 	for _, pdu := range pdus {
 		enc := object.NewEncode()
-		if b, ok := pdu.Value.([]byte); ok {
-			fmt.Println("pdu.Value is []byte, len=", len(b), "data=", b)
-		}
 		err := enc.Add(pdu.Value)
 		if err != nil {
 			if this.resources != nil && this.resources.Logger() != nil {
@@ -486,13 +482,10 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	currentOid := parsedOid.Copy()
 
 	for {
-		fmt.Println(time.Now().Format("15:04:05.000"), "DEBUG GetNext requesting OID:", currentOid.String())
 		nextOid, value, err := this.session.GetNext(currentOid)
 		if err != nil {
-			fmt.Println(time.Now().Format("15:04:05.000"), "DEBUG GetNext error:", err)
 			break // End of walk or error
 		}
-		fmt.Println(time.Now().Format("15:04:05.000"), "DEBUG GetNext got OID:", nextOid.String(), "value type:", fmt.Sprintf("%T", value))
 
 		// Check if we're still within the requested subtree
 		if !nextOid.Within(parsedOid) {
