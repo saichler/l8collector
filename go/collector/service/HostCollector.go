@@ -258,7 +258,7 @@ func newProtocolCollector(config *l8tpollaris.L8PHostProtocol, resource ifs.IRes
 	var protocolCollector common.ProtocolCollector
 	if config.Protocol == l8tpollaris.L8PProtocol_L8PGraphQL {
 		protocolCollector = &graphql.GraphQlCollector{}
-	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PRESTCONF {
+	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PRESTAPI {
 		protocolCollector = &rest.RestCollector{}
 	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PSSH {
 		protocolCollector = &ssh.SshCollector{}

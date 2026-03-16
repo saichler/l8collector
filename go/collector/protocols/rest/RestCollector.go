@@ -98,7 +98,7 @@ func (this *RestCollector) Init(hostConn *l8tpollaris.L8PHostProtocol, r ifs.IRe
 // Protocol returns the protocol type identifier for REST/RESTCONF.
 // This is used by the collector service to route jobs to the correct collector.
 func (this *RestCollector) Protocol() l8tpollaris.L8PProtocol {
-	return l8tpollaris.L8PProtocol_L8PRESTCONF
+	return l8tpollaris.L8PProtocol_L8PRESTAPI
 }
 
 // parseWhat parses the poll.What field to extract HTTP method, endpoint, and body.
