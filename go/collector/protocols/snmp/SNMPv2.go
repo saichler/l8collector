@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	wapsnmp "github.com/cdevr/WapSNMP"
+	"github.com/gosnmp/gosnmp"
 	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
@@ -65,17 +65,17 @@ func normalizeOID(oid string) string {
 //   - SNMP v2c protocol support with community string authentication
 //   - Configurable timeout with automatic fallback to net-snmp
 //   - SNMP walk operations returning map or table formats
-//   - Enhanced timeout protection with context-based cancellation
+//   - BulkWalk for efficient multi-OID retrieval
 //   - Automatic OID normalization for consistent result formatting
 //
-// The collector uses the WapSNMP library as the primary SNMP implementation
+// The collector uses the GoSNMP library as the primary SNMP implementation
 // with automatic fallback to net-snmp command-line tools on timeout.
 type SNMPv2Collector struct {
-	resources   ifs.IResources                // Layer8 resources for logging and security
-	config      *l8tpollaris.L8PHostProtocol  // Host configuration with address and credentials
-	session     *wapsnmp.WapSNMP              // WapSNMP session for SNMP operations
-	connected   bool                          // Connection state flag
-	pollSuccess bool                          // Flag indicating at least one successful poll
+	resources   ifs.IResources               // Layer8 resources for logging and security
+	config      *l8tpollaris.L8PHostProtocol // Host configuration with address and credentials
+	session     *gosnmp.GoSNMP               // GoSNMP session for SNMP operations
+	connected   bool                         // Connection state flag
+	pollSuccess bool                         // Flag indicating at least one successful poll
 }
 
 // SnmpPDU represents a single SNMP Protocol Data Unit containing an OID
@@ -108,7 +108,7 @@ func (this *SNMPv2Collector) Init(conf *l8tpollaris.L8PHostProtocol, resources i
 
 // Connect establishes the SNMP session with the target device.
 // It retrieves the community string from the security service and creates
-// a WapSNMP session configured for SNMP v2c with the specified timeout.
+// a GoSNMP session configured for SNMP v2c with the specified timeout.
 //
 // The default timeout is 60 seconds if not specified in the configuration.
 //
@@ -119,23 +119,32 @@ func (this *SNMPv2Collector) Connect() error {
 		return nil
 	}
 
-	// Create WapSNMP instance using the NewWapSNMP constructor
 	target := this.config.Addr
 	_, readCommunity, _, _, err := this.resources.Security().Credential(this.config.CredId, "snmp", this.resources)
 	if err != nil {
 		panic(err)
 	}
-	community := readCommunity
-	version := wapsnmp.SNMPv2c
-	timeout := time.Duration(this.config.Timeout) * time.Second
 
-	// Default timeout if not specified
+	port := uint16(this.config.Port)
+	if port == 0 {
+		port = 161
+	}
+
+	timeout := time.Duration(this.config.Timeout) * time.Second
 	if timeout == 0 {
 		timeout = 60 * time.Second
 	}
 
-	session, err := wapsnmp.NewWapSNMP(target, community, version, timeout, 3)
-	if err != nil {
+	session := &gosnmp.GoSNMP{
+		Target:    target,
+		Port:      port,
+		Community: readCommunity,
+		Version:   gosnmp.Version2c,
+		Timeout:   timeout,
+		Retries:   3,
+	}
+
+	if err := session.Connect(); err != nil {
 		return fmt.Errorf("failed to create SNMP session for %s: %v", target, err)
 	}
 
@@ -153,8 +162,8 @@ func (this *SNMPv2Collector) Disconnect() error {
 	if this.resources != nil && this.resources.Logger() != nil {
 		this.resources.Logger().Debug("SNMP Collector for ", this.config.Addr, " is closed.")
 	}
-	if this.session != nil {
-		if err := this.session.Close(); err != nil && this.resources != nil && this.resources.Logger() != nil {
+	if this.session != nil && this.session.Conn != nil {
+		if err := this.session.Conn.Close(); err != nil && this.resources != nil && this.resources.Logger() != nil {
 			this.resources.Logger().Error("Error closing SNMP session: ", err.Error())
 		}
 		this.session = nil
@@ -207,12 +216,12 @@ func (this *SNMPv2Collector) Exec(job *l8tpollaris.CJob) {
 }
 
 // get performs an SNMP GET operation for a single OID.
-// Unlike walk, which traverses an entire subtree using GetNext, get retrieves
+// Unlike walk, which traverses an entire subtree, get retrieves
 // the value of a specific OID directly. The result is returned as an encoded
 // CMap with a single OID->value entry.
 //
 // The method uses the same timeout and fallback strategy as walk:
-//  1. Attempts GET using WapSNMP library with a timeout context
+//  1. Attempts GET using GoSNMP library with a timeout context
 //  2. Falls back to net-snmp snmpget if timeout occurs
 //
 // Parameters:
@@ -247,10 +256,9 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 		cancel()
 	case <-ctx.Done():
 		cancel()
-		// Close session to stop the abandoned goroutine, then reconnect on next Exec.
-		this.session.Close()
-		this.connected = false
-
+		// GoSNMP handles timeout internally — session remains usable.
+		// No need to close the session like WapSNMP required.
+		// Fall back to net-snmp CLI.
 		if this.resources != nil && this.resources.Logger() != nil {
 			this.resources.Logger().Debug("SNMP GET timeout, trying net-snmp fallback for OID: ", poll.What)
 		}
@@ -298,7 +306,7 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 	job.Result = encMap.Data()
 }
 
-// snmpGet performs a single SNMP GET using WapSNMP's Get operation.
+// snmpGet performs a single SNMP GET using GoSNMP.
 //
 // Parameters:
 //   - oid: The OID to get (e.g., ".1.3.6.1.2.1.1.1.0")
@@ -311,29 +319,33 @@ func (this *SNMPv2Collector) snmpGet(oid string) (*SnmpPDU, error) {
 		return nil, fmt.Errorf("SNMP session is not initialized")
 	}
 
-	parsedOid, err := wapsnmp.ParseOid(oid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse OID %s: %v", oid, err)
-	}
-
-	value, err := this.session.Get(parsedOid)
+	result, err := this.session.Get([]string{oid})
 	if err != nil {
 		return nil, fmt.Errorf("SNMP GET failed for OID %s: %v", oid, err)
 	}
 
+	if len(result.Variables) == 0 {
+		return nil, fmt.Errorf("SNMP GET returned no results for OID %s", oid)
+	}
+
+	pdu := result.Variables[0]
+	if pdu.Type == gosnmp.NoSuchObject || pdu.Type == gosnmp.NoSuchInstance {
+		return nil, fmt.Errorf("SNMP GET: no such object for OID %s", oid)
+	}
+
 	return &SnmpPDU{
-		Name:  oid,
-		Value: value,
+		Name:  pdu.Name,
+		Value: pduValue(pdu),
 	}, nil
 }
 
 // walk performs an SNMP walk operation starting from the specified OID.
 // It implements timeout protection with automatic fallback to net-snmp
-// command-line tools if the WapSNMP library times out.
+// command-line tools if the GoSNMP library times out.
 //
 // The walk process:
 //  1. Creates a timeout context based on configuration
-//  2. Attempts walk using WapSNMP library
+//  2. Attempts walk using GoSNMP BulkWalk
 //  3. Falls back to net-snmp if timeout occurs
 //  4. Normalizes OIDs and encodes results
 //
@@ -345,16 +357,14 @@ func (this *SNMPv2Collector) snmpGet(oid string) (*SnmpPDU, error) {
 // Returns:
 //   - CMap containing OID->value mappings, or nil on error
 func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll, encodeMap bool) *l8tpollaris.CMap {
-	// Add timeout wrapper for SNMP walk to prevent hanging on invalid OIDs
 	timeout := time.Duration(this.config.Timeout) * time.Second
 	if timeout == 0 {
-		timeout = 60 * time.Second // Default 60 second timeout
+		timeout = 60 * time.Second
 	}
 
 	var pdus []SnmpPDU
 	var lastError error
 
-	// Try once with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 	var e error
@@ -369,29 +379,22 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	case <-done:
 		this.pollSuccess = true
 		cancel()
-		// Walk completed normally
 		if e == nil {
-			// Success
 			lastError = nil
 		} else {
-			// Error occurred
 			lastError = e
 		}
 
 	case <-ctx.Done():
 		cancel()
-		// Timeout occurred - close the session to stop the abandoned goroutine,
-		// then reconnect so the next job gets a fresh connection.
-		this.session.Close()
-		this.connected = false
-
-		// Timeout occurred - try net-snmp fallback
+		// GoSNMP handles timeout internally — session remains usable.
+		// No need to close the session like WapSNMP required.
+		// Fall back to net-snmp CLI.
 		if this.resources != nil && this.resources.Logger() != nil {
 			this.resources.Logger().Debug("SNMP timeout, trying net-snmp fallback for OID: ", poll.What)
 		}
 
 		netSnmp := NewNetSNMPCollector(this.config, this.resources)
-		// Remove leading "." for net-snmp compatibility
 		fallbackPdus, fallbackErr := netSnmp.snmpWalk(poll.What)
 
 		if fallbackErr == nil {
@@ -411,15 +414,12 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 		}
 	}
 
-	// Handle errors
 	if lastError != nil {
 		if strings.Contains(lastError.Error(), "timeout") {
-			// Timeout error
 			job.Error = strings2.New("SNMP Walk Timeout. Host:",
 				this.config.Addr, "/", int(this.config.Port), " Oid:", poll.What, " ",
 				lastError.Error()).String()
 		} else {
-			// Other SNMP error
 			job.Error = strings2.New("SNMP Error Walk Host:", this.config.Addr, "/",
 				int(this.config.Port), " Oid:", poll.What, " ", lastError.Error()).String()
 		}
@@ -456,9 +456,10 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	return m
 }
 
-// snmpWalk performs the actual SNMP walk using WapSNMP's GetNext operations.
-// It iteratively retrieves OIDs within the specified subtree until it reaches
-// an OID outside the subtree or encounters an error.
+// snmpWalk performs the actual SNMP walk using GoSNMP's BulkWalk.
+// BulkWalk uses GetBulk internally, retrieving multiple OIDs per packet
+// for much faster walks compared to iterative GetNext.
+// Falls back to Walk (GetNext-based) if BulkWalk fails.
 //
 // Parameters:
 //   - oid: The base OID to walk from (e.g., ".1.3.6.1.2.1.2.2.1")
@@ -471,40 +472,27 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 		return nil, fmt.Errorf("SNMP session is not initialized")
 	}
 
-	// Parse OID string to WapSNMP Oid format
-	parsedOid, err := wapsnmp.ParseOid(oid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse OID %s: %v", oid, err)
+	var pdus []SnmpPDU
+	walkFn := func(pdu gosnmp.SnmpPDU) error {
+		if pdu.Type == gosnmp.EndOfMibView || pdu.Type == gosnmp.NoSuchObject || pdu.Type == gosnmp.NoSuchInstance {
+			return nil
+		}
+		pdus = append(pdus, SnmpPDU{
+			Name:  pdu.Name,
+			Value: pduValue(pdu),
+		})
+		return nil
 	}
 
-	// Perform SNMP walk using iterative GetNext calls only
-	var pdus []SnmpPDU
-	currentOid := parsedOid.Copy()
-
-	for {
-		nextOid, value, err := this.session.GetNext(currentOid)
+	// Try BulkWalk first (faster, uses GetBulk internally)
+	err := this.session.BulkWalk(oid, walkFn)
+	if err != nil {
+		// Fall back to Walk (uses GetNext, works on devices that don't support GetBulk)
+		pdus = nil
+		err = this.session.Walk(oid, walkFn)
 		if err != nil {
-			break // End of walk or error
+			return nil, fmt.Errorf("SNMP walk failed for OID %s: %v", oid, err)
 		}
-
-		// Check if we're still within the requested subtree
-		if !nextOid.Within(parsedOid) {
-			break // We've walked beyond the requested subtree
-		}
-
-		// BERType values indicate WapSNMP misinterpreted the response
-		// (e.g., endOfMibView). Stop the walk.
-		if _, isBER := value.(wapsnmp.BERType); isBER {
-			break
-		}
-
-		pdus = append(pdus, SnmpPDU{
-			Name:  nextOid.String(),
-			Value: value,
-		})
-
-		// Move to the next OID
-		currentOid = *nextOid
 	}
 
 	if len(pdus) == 0 {
@@ -512,6 +500,16 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	}
 
 	return pdus, nil
+}
+
+// pduValue extracts the value from a GoSNMP PDU and converts it to a
+// standard Go type. GoSNMP returns OctetString as []byte, which must be
+// converted to string for compatibility with the parser rules.
+func pduValue(pdu gosnmp.SnmpPDU) interface{} {
+	if pdu.Type == gosnmp.OctetString {
+		return string(pdu.Value.([]byte))
+	}
+	return pdu.Value
 }
 
 // table performs an SNMP walk and structures the results as a table (CTable).
