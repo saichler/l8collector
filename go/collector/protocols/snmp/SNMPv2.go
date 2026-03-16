@@ -356,7 +356,7 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	var e error
 	done := make(chan bool, 1)
 
-	fmt.Println("DEBUG SNMP walk start OID:", poll.What, "host:", this.config.Addr)
+	fmt.Println("DEBUG SNMP walk start OID:", poll.What, "host:", this.config.Addr, "target:", job.TargetId, "hostId:", job.HostId)
 	go func() {
 		pdus, e = this.snmpWalk(poll.What)
 		done <- true
