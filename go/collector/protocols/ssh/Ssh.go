@@ -187,6 +187,10 @@ func (this *SshCollector) Connect() error {
 		}
 	}
 
+	if this.queue == nil {
+		this.queue = queues.NewQueue("SSh Collector", 1024)
+	}
+
 	go this.run()
 
 	time.Sleep(time.Second)
