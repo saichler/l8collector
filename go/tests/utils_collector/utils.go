@@ -57,7 +57,7 @@ func CreateRestHost(addr string, port int, user, pass string) *l8tpollaris.L8PTa
 	restConfig.Port = int32(port)
 	restConfig.Addr = addr
 	restConfig.CredId = "sim"
-	restConfig.Protocol = l8tpollaris.L8PProtocol_L8PRESTCONF
+	restConfig.Protocol = l8tpollaris.L8PProtocol_L8PRESTAPI
 	restConfig.Timeout = 30
 
 	restConfig.Ainfo = &l8tpollaris.AuthInfo{
