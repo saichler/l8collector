@@ -65,6 +65,7 @@ type RestCollector struct {
 // Returns:
 //   - error if client creation fails, nil on success
 func (this *RestCollector) Init(hostConn *l8tpollaris.L8PHostProtocol, r ifs.IResources) error {
+	fmt.Println("DEBUG RestCollector.Init: addr=", hostConn.Addr, " port=", hostConn.Port)
 	if hostConn.Ainfo == nil {
 		return errors.New("host rest auth info connection info is nil")
 	}
@@ -162,29 +163,43 @@ func (this *RestCollector) parseWhat(poll *l8tpollaris.L8Poll) (string, string, 
 // Parameters:
 //   - job: The collection job containing pollaris reference and result storage
 func (this *RestCollector) Exec(job *l8tpollaris.CJob) {
+	fmt.Println("DEBUG RestCollector.Exec: job=", job.PollarisName, ":", job.JobName)
 	if !this.connected {
 		err := this.Connect()
 		if err != nil {
+			fmt.Println("DEBUG RestCollector.Exec: Connect error=", err.Error())
 			job.ErrorCount++
 			job.Error = err.Error()
 			return
 		}
+		fmt.Println("DEBUG RestCollector.Exec: Connected successfully")
 	}
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, this.resources)
-	method, endpoint, body, err := this.parseWhat(poll)
 	if err != nil {
+		fmt.Println("DEBUG RestCollector.Exec: Poll lookup error=", err.Error())
 		job.ErrorCount++
 		job.Error = err.Error()
 		return
 	}
+	fmt.Println("DEBUG RestCollector.Exec: poll.What=", poll.What, " poll.BodyName=", poll.BodyName)
+	method, endpoint, body, err := this.parseWhat(poll)
+	if err != nil {
+		fmt.Println("DEBUG RestCollector.Exec: parseWhat error=", err.Error())
+		job.ErrorCount++
+		job.Error = err.Error()
+		return
+	}
+	fmt.Println("DEBUG RestCollector.Exec: method=", method, " endpoint=", endpoint)
 
 	resp, err := this.client.Do(method, endpoint, poll.RespName, "", "", body, 1)
 	if err != nil {
+		fmt.Println("DEBUG RestCollector.Exec: Do error=", err.Error())
 		job.ErrorCount++
 		job.Error = err.Error()
 		return
 	}
 
+	fmt.Println("DEBUG RestCollector.Exec: success, result size=", len(job.Result))
 	job.ErrorCount = 0
 	job.Result, _ = proto.Marshal(resp)
 }
