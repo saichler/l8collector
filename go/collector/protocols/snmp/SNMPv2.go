@@ -486,10 +486,13 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	currentOid := parsedOid.Copy()
 
 	for {
+		fmt.Println(time.Now().Format("15:04:05.000"), "DEBUG GetNext requesting OID:", currentOid.String())
 		nextOid, value, err := this.session.GetNext(currentOid)
 		if err != nil {
+			fmt.Println(time.Now().Format("15:04:05.000"), "DEBUG GetNext error:", err)
 			break // End of walk or error
 		}
+		fmt.Println(time.Now().Format("15:04:05.000"), "DEBUG GetNext got OID:", nextOid.String(), "value type:", fmt.Sprintf("%T", value))
 
 		// Check if we're still within the requested subtree
 		if !nextOid.Within(parsedOid) {
