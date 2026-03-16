@@ -215,6 +215,11 @@ func (this *RestCollector) Exec(job *l8tpollaris.CJob) {
 // Returns:
 //   - error if authentication fails, nil on success
 func (this *RestCollector) Connect() error {
+	if !this.hostProtocol.Ainfo.NeedAuth {
+		this.client.Token = "no-auth"
+		this.connected = true
+		return nil
+	}
 	_, user, password, _, err := this.resources.Security().Credential(this.hostProtocol.CredId, "rest", this.resources)
 	if err != nil {
 		panic(err)
