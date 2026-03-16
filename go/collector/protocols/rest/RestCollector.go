@@ -138,6 +138,10 @@ func (this *RestCollector) parseWhat(poll *l8tpollaris.L8Poll) (string, string, 
 		return "", "", nil, fmt.Errorf("invalid What method")
 	}
 
+	if poll.BodyName == "" && tokens[2] == "" {
+		return tokens[0], tokens[1], nil, nil
+	}
+
 	info, err := this.resources.Registry().Info(poll.BodyName)
 	if err != nil {
 		return "", "", nil, err
