@@ -85,7 +85,7 @@ func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, har
 	}
 	jobs := make(map[string]*l8tpollaris.CJob)
 	if p.Order == nil || len(p.Order) != len(p.Polling) {
-		this.service.vnic.Resources().Logger().Error("newJobsForKey: Collection order mismatch, using map")
+		//this.service.vnic.Resources().Logger().Error("newJobsForKey: Collection order mismatch, using map")
 		p.Order = make([]string, 0)
 		for jobName, _ := range p.Polling {
 			p.Order = append(p.Order, jobName)
@@ -118,7 +118,7 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 	jobs := make([]*l8tpollaris.CJob, 0)
 	for _, p := range polarises {
 		if p.Order == nil || len(p.Order) != len(p.Polling) {
-			this.service.vnic.Resources().Logger().Error("newJobsForGroup: Collection order mismatch, using map")
+			//this.service.vnic.Resources().Logger().Error("newJobsForGroup: Collection order mismatch, using map")
 			p.Order = make([]string, 0)
 			for jobName, _ := range p.Polling {
 				p.Order = append(p.Order, jobName)
