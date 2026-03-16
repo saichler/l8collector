@@ -425,6 +425,9 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	m.Data = make(map[string][]byte)
 	for _, pdu := range pdus {
 		enc := object.NewEncode()
+		if b, ok := pdu.Value.([]byte); ok {
+			fmt.Println("pdu.Value is []byte, len=", len(b), "data=", b)
+		}
 		err := enc.Add(pdu.Value)
 		if err != nil {
 			if this.resources != nil && this.resources.Logger() != nil {
