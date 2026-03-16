@@ -187,9 +187,7 @@ func (this *SshCollector) Connect() error {
 		}
 	}
 
-	if this.queue == nil {
-		this.queue = queues.NewQueue("SSh Collector", 1024)
-	}
+	this.queue = queues.NewQueue("SSh Collector", 1024)
 
 	go this.run()
 
@@ -231,7 +229,6 @@ func (this *SshCollector) Disconnect() error {
 	}
 	if this.queue != nil {
 		this.queue.Shutdown()
-		this.queue = nil
 	}
 	this.connected = false
 	return nil

@@ -29,6 +29,7 @@ import (
 
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
+	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 )
 
@@ -144,7 +145,17 @@ func (this *RestCollector) Exec(job *l8tpollaris.CJob) {
 	}
 
 	job.ErrorCount = 0
-	job.Result = jsonBytes
+
+	// Wrap JSON in a CMap so the parser can deserialize it
+	cmap := &l8tpollaris.CMap{}
+	cmap.Data = make(map[string][]byte)
+	enc := object.NewEncode()
+	enc.Add(string(jsonBytes))
+	cmap.Data["json"] = enc.Data()
+
+	encMap := object.NewEncode()
+	encMap.Add(cmap)
+	job.Result = encMap.Data()
 }
 
 // Connect is a no-op for the JSON-based REST collector.
