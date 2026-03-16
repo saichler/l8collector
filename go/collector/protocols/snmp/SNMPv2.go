@@ -499,6 +499,12 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 			break // We've walked beyond the requested subtree
 		}
 
+		// BERType values indicate WapSNMP misinterpreted the response
+		// (e.g., endOfMibView). Stop the walk.
+		if _, isBER := value.(wapsnmp.BERType); isBER {
+			break
+		}
+
 		pdus = append(pdus, SnmpPDU{
 			Name:  nextOid.String(),
 			Value: value,
