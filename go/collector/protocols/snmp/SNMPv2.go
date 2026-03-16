@@ -256,13 +256,9 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 		cancel()
 	case <-ctx.Done():
 		cancel()
-		// GoSNMP gets stuck — close session and force reconnect on next Exec.
-		if this.session != nil && this.session.Conn != nil {
-			this.session.Conn.Close()
-		}
-		this.session = nil
-		this.connected = false
-
+		// GoSNMP handles timeout internally — session remains usable.
+		// No need to close the session like WapSNMP required.
+		// Fall back to net-snmp CLI.
 		if this.resources != nil && this.resources.Logger() != nil {
 			this.resources.Logger().Debug("SNMP GET timeout, trying net-snmp fallback for OID: ", poll.What)
 		}
@@ -391,13 +387,9 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 
 	case <-ctx.Done():
 		cancel()
-		// GoSNMP gets stuck — close session and force reconnect on next Exec.
-		if this.session != nil && this.session.Conn != nil {
-			this.session.Conn.Close()
-		}
-		this.session = nil
-		this.connected = false
-
+		// GoSNMP handles timeout internally — session remains usable.
+		// No need to close the session like WapSNMP required.
+		// Fall back to net-snmp CLI.
 		if this.resources != nil && this.resources.Logger() != nil {
 			this.resources.Logger().Debug("SNMP timeout, trying net-snmp fallback for OID: ", poll.What)
 		}
