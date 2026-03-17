@@ -432,6 +432,9 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 
 	m := &l8tpollaris.CMap{}
 	m.Data = make(map[string][]byte)
+	if this.resources != nil && this.resources.Logger() != nil {
+		this.resources.Logger().Debug("SNMP walk for OID ", poll.What, " returned ", len(pdus), " PDUs")
+	}
 	for _, pdu := range pdus {
 		enc := object.NewEncode()
 		err := enc.Add(pdu.Value)

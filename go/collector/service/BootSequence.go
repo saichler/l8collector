@@ -178,10 +178,13 @@ func (this *HostCollector) bootDetailDevice(job *l8tpollaris.CJob) {
 	plc := pollaris.Pollaris(this.service.vnic.Resources())
 	plc.Post(plrs, false)
 	if plrs != nil {
+		this.service.vnic.Resources().Logger().Debug("bootDetailDevice: ", job.TargetId, " matched pollaris '", plrs.Name, "' with ", len(plrs.Polling), " polls, order=", plrs.Order)
 		if plrs.Name != "boot03" {
 			this.pollarisName = plrs.Name
 			this.insertCustomJobs(plrs.Name)
 		}
+	} else {
+		this.service.vnic.Resources().Logger().Debug("bootDetailDevice: ", job.TargetId, " no pollaris matched for sysoid=", sysoid)
 	}
 }
 
