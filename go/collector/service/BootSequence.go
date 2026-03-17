@@ -16,7 +16,6 @@ limitations under the License.
 package service
 
 import (
-	"fmt"
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
@@ -179,13 +178,12 @@ func (this *HostCollector) bootDetailDevice(job *l8tpollaris.CJob) {
 	plc := pollaris.Pollaris(this.service.vnic.Resources())
 	plc.Post(plrs, false)
 	if plrs != nil {
-		fmt.Println("bootDetailDevice:", job.TargetId, "matched pollaris '"+plrs.Name+"' with", len(plrs.Polling), "polls, order=", plrs.Order)
 		if plrs.Name != "boot03" {
 			this.pollarisName = plrs.Name
 			this.insertCustomJobs(plrs.Name)
 		}
 	} else {
-		fmt.Println("bootDetailDevice:", job.TargetId, "no pollaris matched for sysoid="+sysoid)
+		this.service.vnic.Resources().Logger().Warning("bootDetailDevice: ", job.TargetId, " no pollaris matched for sysoid=", sysoid)
 	}
 }
 
