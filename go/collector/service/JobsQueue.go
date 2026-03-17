@@ -96,7 +96,7 @@ func (this *JobsQueue) newJobsForKey(name, vendor, series, family, software, har
 		job := &l8tpollaris.CJob{}
 		job.JobName = jobName
 		job.PollarisName = p.Name
-		job.Cadence = poll.Cadence
+		job.Cadence = cloneCadence(poll.Cadence)
 		job.Timeout = poll.Timeout
 		job.TargetId = this.target.TargetId
 		job.HostId = this.hostId
@@ -135,7 +135,7 @@ func (this *JobsQueue) newJobsForGroup(groupName, vendor, series, family, softwa
 			job.HostId = this.hostId
 			job.JobName = jobName
 			job.PollarisName = p.Name
-			job.Cadence = poll.Cadence
+			job.Cadence = cloneCadence(poll.Cadence)
 			job.Timeout = poll.Timeout
 			job.LinksId = this.target.LinksId
 			job.Always = poll.Always
@@ -252,6 +252,24 @@ func MarkStart(job *l8tpollaris.CJob) {
 // MarkEnded records the job completion time. Should be called after Exec.
 func MarkEnded(job *l8tpollaris.CJob) {
 	job.Ended = time.Now().Unix()
+}
+
+// cloneCadence creates a deep copy of a Cadence so each device job has its own
+// independent cadence state. Without this, all devices sharing the same poll
+// share a single Cadence pointer, and disabling a job on one device disables
+// it on all devices.
+func cloneCadence(src *l8tpollaris.L8PCadencePlan) *l8tpollaris.L8PCadencePlan {
+	if src == nil {
+		return nil
+	}
+	c := &l8tpollaris.L8PCadencePlan{}
+	c.Enabled = src.Enabled
+	c.Current = src.Current
+	if src.Cadences != nil {
+		c.Cadences = make([]int64, len(src.Cadences))
+		copy(c.Cadences, src.Cadences)
+	}
+	return c
 }
 
 // JobKey generates a unique key for a job by combining pollaris and job names.
