@@ -287,7 +287,7 @@ func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
 	}
 
 	if !jobHasChange(job) {
-		this.service.vnic.Resources().Logger().Debug("Job ", job.JobName, " has no change")
+		fmt.Println("Job", job.PollarisName+":"+job.JobName, "for target", job.TargetId, "has NO change, not forwarding")
 		return
 	}
 
