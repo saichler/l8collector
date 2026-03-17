@@ -17,6 +17,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
@@ -202,7 +203,7 @@ func (this *HostCollector) collect() {
 
 			c, ok := this.collectors.Get(poll.Protocol)
 			if !ok {
-				resources.Logger().Debug("No collector for protocol ", poll.Protocol.String(), ", disabling job ", job.PollarisName, ":", job.JobName)
+				fmt.Println("No collector for protocol", poll.Protocol.String(), ", disabling job", job.PollarisName+":"+job.JobName)
 				MarkEnded(job)
 				this.jobsQueue.DisableJob(job)
 				continue
@@ -290,7 +291,7 @@ func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
 		return
 	}
 
-	this.service.vnic.Resources().Logger().Debug("Job ", job.PollarisName, ":", job.JobName, " has change, forwarding to parser, resultLen=", len(job.Result))
+	fmt.Println("Job", job.PollarisName+":"+job.JobName, "has change, forwarding to parser, resultLen=", len(job.Result))
 	pService, pArea := targets.Links.Parser(job.LinksId)
 	this.service.agg.AddElement(job, ifs.Proximity, "", pService, pArea, ifs.POST)
 	//err := this.service.vnic.Proximity(pService, pArea, ifs.POST, job)
