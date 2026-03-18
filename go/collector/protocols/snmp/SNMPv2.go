@@ -495,6 +495,10 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	currentOid := parsedOid.Copy()
 
 	for {
+		// Session may have been closed by the timeout handler in walk()
+		if this.session == nil {
+			return pdus, fmt.Errorf("SNMP session was closed during walk")
+		}
 		nextOid, value, err := this.session.GetNext(currentOid)
 		if err != nil {
 			// Try reconnecting and retrying this one GetNext
@@ -504,6 +508,9 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 			}
 			if reconnErr := this.reconnectSession(); reconnErr != nil {
 				break // Can't recover, stop walk with what we have
+			}
+			if this.session == nil {
+				return pdus, fmt.Errorf("SNMP session was closed during walk")
 			}
 			nextOid, value, err = this.session.GetNext(currentOid)
 			if err != nil {
