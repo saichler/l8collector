@@ -250,6 +250,7 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 		// Close session to stop the abandoned goroutine, then reconnect on next Exec.
 		if this.session != nil {
 			this.session.Close()
+			this.session = nil
 		}
 		this.connected = false
 
@@ -401,6 +402,7 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 		// then reconnect so the next job gets a fresh connection.
 		if this.session != nil {
 			this.session.Close()
+			this.session = nil
 		}
 		this.connected = false
 
