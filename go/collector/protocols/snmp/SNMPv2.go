@@ -22,12 +22,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	wapsnmp "github.com/cdevr/WapSNMP"
-	"github.com/saichler/l8collector/go/collector/protocols"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
@@ -227,45 +225,66 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 	var pdu *SnmpPDU
 	var lastError error
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	for attempt := 1; attempt <= 2; attempt++ {
+		pdu = nil
+		lastError = nil
 
-	done := make(chan bool, 1)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		done := make(chan bool, 1)
 
-	go func() {
-		p, e := this.snmpGet(poll.What)
-		if e == nil {
-			pdu = p
-		} else {
-			lastError = e
+		go func() {
+			p, e := this.snmpGet(poll.What)
+			if e == nil {
+				pdu = p
+			} else {
+				lastError = e
+			}
+			done <- true
+		}()
+
+		select {
+		case <-done:
+			this.pollSuccess = true
+			cancel()
+		case <-ctx.Done():
+			cancel()
+			// Close session to stop the abandoned goroutine, then reconnect on next Exec.
+			if this.session != nil {
+				this.session.Close()
+				this.session = nil
+			}
+			this.connected = false
+
+			if this.resources != nil && this.resources.Logger() != nil {
+				this.resources.Logger().Debug("SNMP GET timeout, trying net-snmp fallback for OID: ", poll.What)
+			}
+
+			netSnmp := NewNetSNMPCollector(this.config, this.resources)
+			fallbackPdu, fallbackErr := netSnmp.snmpGet(poll.What)
+
+			if fallbackErr == nil {
+				pdu = fallbackPdu
+				lastError = nil
+			} else {
+				lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)
+			}
 		}
-		done <- true
-	}()
 
-	select {
-	case <-done:
-		this.pollSuccess = true
-		cancel()
-	case <-ctx.Done():
-		cancel()
-		// Close session to stop the abandoned goroutine, then reconnect on next Exec.
-		if this.session != nil {
-			this.session.Close()
-			this.session = nil
-		}
-		this.connected = false
-
-		if this.resources != nil && this.resources.Logger() != nil {
-			this.resources.Logger().Debug("SNMP GET timeout, trying net-snmp fallback for OID: ", poll.What)
+		// Success — no need to retry
+		if lastError == nil {
+			break
 		}
 
-		netSnmp := NewNetSNMPCollector(this.config, this.resources)
-		fallbackPdu, fallbackErr := netSnmp.snmpGet(poll.What)
-
-		if fallbackErr == nil {
-			pdu = fallbackPdu
-			lastError = nil
-		} else {
-			lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)
+		// First attempt failed — sleep 1s, reconnect, and retry
+		if attempt == 1 {
+			if this.resources != nil && this.resources.Logger() != nil {
+				this.resources.Logger().Warning("SNMP GET failed for ", this.config.Addr,
+					" OID: ", poll.What, " error: ", lastError.Error(), ". Sleeping 1s and retrying.")
+			}
+			time.Sleep(1 * time.Second)
+			if reconnErr := this.reconnectSession(); reconnErr != nil {
+				break // Can't reconnect, no point retrying
+			}
 		}
 	}
 
@@ -372,62 +391,76 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	var pdus []SnmpPDU
 	var lastError error
 
-	// Try once with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	for attempt := 1; attempt <= 2; attempt++ {
+		pdus = nil
+		lastError = nil
 
-	var e error
-	done := make(chan bool, 1)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		var e error
+		done := make(chan bool, 1)
 
-	go func() {
-		pdus, e = this.snmpWalk(poll.What)
-		done <- true
-	}()
+		go func() {
+			pdus, e = this.snmpWalk(poll.What)
+			done <- true
+		}()
 
-	select {
-	case <-done:
-		this.pollSuccess = true
-		cancel()
-		// Walk completed normally
-		if e == nil {
-			// Success
-			lastError = nil
-		} else {
-			// Error occurred
-			lastError = e
-		}
-
-	case <-ctx.Done():
-		cancel()
-		// Timeout occurred - close the session to stop the abandoned goroutine,
-		// then reconnect so the next job gets a fresh connection.
-		if this.session != nil {
-			this.session.Close()
-			this.session = nil
-		}
-		this.connected = false
-
-		// Timeout occurred - try net-snmp fallback
-		if this.resources != nil && this.resources.Logger() != nil {
-			this.resources.Logger().Debug("SNMP timeout, trying net-snmp fallback for OID: ", poll.What)
-		}
-
-		netSnmp := NewNetSNMPCollector(this.config, this.resources)
-		// Remove leading "." for net-snmp compatibility
-		fallbackPdus, fallbackErr := netSnmp.snmpWalk(poll.What)
-
-		if fallbackErr == nil {
-			pdus = fallbackPdus
-			lastError = nil
-			if this.resources != nil && this.resources.Logger() != nil {
-				this.resources.Logger().Debug("net-snmp fallback succeeded for OID: ", poll.What)
+		select {
+		case <-done:
+			this.pollSuccess = true
+			cancel()
+			if e != nil {
+				lastError = e
 			}
-		} else {
-			lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)
+
+		case <-ctx.Done():
+			cancel()
+			// Timeout occurred - close the session to stop the abandoned goroutine,
+			// then reconnect so the next job gets a fresh connection.
+			if this.session != nil {
+				this.session.Close()
+				this.session = nil
+			}
+			this.connected = false
+
+			// Timeout occurred - try net-snmp fallback
 			if this.resources != nil && this.resources.Logger() != nil {
-				this.resources.Logger().Warning("net-snmp fallback failed for OID: ", poll.What, " error: ",
-					job.TargetId, " ",
-					os.Getenv("HOSTNAME"), " ",
-					fallbackErr.Error())
+				this.resources.Logger().Debug("SNMP timeout, trying net-snmp fallback for OID: ", poll.What)
+			}
+
+			netSnmp := NewNetSNMPCollector(this.config, this.resources)
+			fallbackPdus, fallbackErr := netSnmp.snmpWalk(poll.What)
+
+			if fallbackErr == nil {
+				pdus = fallbackPdus
+				lastError = nil
+				if this.resources != nil && this.resources.Logger() != nil {
+					this.resources.Logger().Debug("net-snmp fallback succeeded for OID: ", poll.What)
+				}
+			} else {
+				lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)
+				if this.resources != nil && this.resources.Logger() != nil {
+					this.resources.Logger().Warning("net-snmp fallback failed for OID: ", poll.What, " error: ",
+						job.TargetId, " ",
+						os.Getenv("HOSTNAME"), " ",
+						fallbackErr.Error())
+				}
+			}
+		}
+
+		// Success — no need to retry
+		if lastError == nil {
+			break
+		}
+
+		// First attempt failed — sleep 1s, reconnect, and retry
+		if attempt == 1 {
+			if this.resources != nil && this.resources.Logger() != nil {
+				this.resources.Logger().Warning("SNMP Walk failed for ", this.config.Addr,
+					" OID: ", poll.What, " error: ", lastError.Error(), ". Sleeping 1s and retrying.")
+			}
+			time.Sleep(1 * time.Second)
+			if reconnErr := this.reconnectSession(); reconnErr != nil {
+				break // Can't reconnect, no point retrying
 			}
 		}
 	}
@@ -477,159 +510,3 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	return m
 }
 
-// snmpWalk performs the actual SNMP walk using WapSNMP's GetNext operations.
-// It iteratively retrieves OIDs within the specified subtree until it reaches
-// an OID outside the subtree or encounters an error. On a GetNext failure,
-// it reconnects the session and retries from the last successful OID.
-//
-// Parameters:
-//   - oid: The base OID to walk from (e.g., ".1.3.6.1.2.1.2.2.1")
-//
-// Returns:
-//   - Slice of SnmpPDU containing all OID-value pairs found
-//   - error if session is not initialized or walk finds no results
-func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
-	if this.session == nil {
-		return nil, fmt.Errorf("SNMP session is not initialized")
-	}
-
-	// Parse OID string to WapSNMP Oid format
-	parsedOid, err := wapsnmp.ParseOid(oid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse OID %s: %v", oid, err)
-	}
-
-	// Perform SNMP walk using iterative GetNext calls only
-	var pdus []SnmpPDU
-	currentOid := parsedOid.Copy()
-
-	for {
-		// Session may have been closed by the timeout handler in walk()
-		if this.session == nil {
-			return pdus, fmt.Errorf("SNMP session was closed during walk")
-		}
-		nextOid, value, err := this.session.GetNext(currentOid)
-		if err != nil {
-			// Try reconnecting and retrying this one GetNext
-			if this.resources != nil && this.resources.Logger() != nil {
-				this.resources.Logger().Warning("SNMP GetNext failed for ", this.config.Addr,
-					" OID ", currentOid.String(), ": ", err.Error(), ". Reconnecting and retrying.")
-			}
-			if reconnErr := this.reconnectSession(); reconnErr != nil {
-				break // Can't recover, stop walk with what we have
-			}
-			if this.session == nil {
-				return pdus, fmt.Errorf("SNMP session was closed during walk")
-			}
-			nextOid, value, err = this.session.GetNext(currentOid)
-			if err != nil {
-				break // Still failing after reconnect, stop walk
-			}
-		}
-
-		// Check if we're still within the requested subtree
-		if !nextOid.Within(parsedOid) {
-			break // We've walked beyond the requested subtree
-		}
-
-		// BERType values indicate WapSNMP misinterpreted the response
-		// (e.g., endOfMibView). Stop the walk.
-		if _, isBER := value.(wapsnmp.BERType); isBER {
-			break
-		}
-
-		pdus = append(pdus, SnmpPDU{
-			Name:  nextOid.String(),
-			Value: value,
-		})
-
-		// Move to the next OID
-		currentOid = *nextOid
-	}
-
-	if len(pdus) == 0 {
-		return nil, fmt.Errorf("SNMP walk found no results for OID %s", oid)
-	}
-
-	return pdus, nil
-}
-
-// table performs an SNMP walk and structures the results as a table (CTable).
-// It extracts row and column indices from the OIDs and organizes the data
-// into a row/column structure suitable for tabular MIB data.
-//
-// The method parses OIDs to extract:
-//   - Row index: The last component of the OID (instance identifier)
-//   - Column index: The second-to-last component (column identifier)
-//
-// Parameters:
-//   - job: The collection job for storing results and errors
-//   - poll: The poll configuration containing the table base OID
-func (this *SNMPv2Collector) table(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll) {
-	m := this.walk(job, poll, false)
-	if job.Error != "" {
-		return
-	}
-	tbl := &l8tpollaris.CTable{Rows: make(map[int32]*l8tpollaris.CRow), Columns: make(map[int32]string)}
-	var lastRowIndex int32 = -1
-	keys := protocols.Keys(m)
-
-	for _, key := range keys {
-		rowIndex, colIndex := getRowAndColName(key)
-		if rowIndex > lastRowIndex {
-			lastRowIndex = rowIndex
-		}
-		colInt, _ := strconv.Atoi(colIndex)
-		protocols.SetValue(rowIndex, int32(colInt), colIndex, m.Data[key], tbl)
-	}
-
-	enc := object.NewEncode()
-	err := enc.Add(tbl)
-	if err != nil {
-		if this.resources != nil && this.resources.Logger() != nil {
-			this.resources.Logger().Error("Object Table Error: ", err)
-		}
-		return
-	}
-	job.Result = enc.Data()
-}
-
-// reconnectSession closes the current SNMP session, waits 1 second for the
-// socket to fully release, and opens a fresh connection to the same target.
-func (this *SNMPv2Collector) reconnectSession() error {
-	this.Disconnect()
-	time.Sleep(1 * time.Second)
-	return this.Connect()
-}
-
-// Online returns the connection status of the SNMP collector.
-// Returns true only if the session is connected AND at least one poll
-// has succeeded. This provides accurate device reachability status.
-func (this *SNMPv2Collector) Online() bool {
-	return this.connected && this.pollSuccess
-}
-
-// getRowAndColName extracts the row index and column identifier from an
-// SNMP table OID. For example, from ".1.3.6.1.2.1.2.2.1.6.1", it extracts:
-//   - Row index: 1 (the last component, representing the interface index)
-//   - Column name: "6" (second-to-last component, representing ifPhysAddress)
-//
-// Parameters:
-//   - oid: The full OID string from an SNMP walk result
-//
-// Returns:
-//   - row: The row index as int32 (-1 if parsing fails)
-//   - col: The column identifier as string (empty if parsing fails)
-func getRowAndColName(oid string) (int32, string) {
-	index := strings.LastIndex(oid, ".")
-	if index != -1 {
-		row, _ := strconv.Atoi(oid[index+1:])
-		suboid := oid[0:index]
-		index = strings.LastIndex(suboid, ".")
-		if index != -1 {
-			col := suboid[index+1:]
-			return int32(row), col
-		}
-	}
-	return -1, ""
-}
