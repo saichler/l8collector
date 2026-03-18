@@ -299,13 +299,14 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 }
 
 // snmpGet performs a single SNMP GET using WapSNMP's Get operation.
+// On failure, it closes the session, waits 1 second, reconnects, and retries once.
 //
 // Parameters:
 //   - oid: The OID to get (e.g., ".1.3.6.1.2.1.1.1.0")
 //
 // Returns:
 //   - SnmpPDU containing the OID and its value
-//   - error if session is not initialized or GET fails
+//   - error if session is not initialized or GET fails after retry
 func (this *SNMPv2Collector) snmpGet(oid string) (*SnmpPDU, error) {
 	if this.session == nil {
 		return nil, fmt.Errorf("SNMP session is not initialized")
@@ -317,14 +318,25 @@ func (this *SNMPv2Collector) snmpGet(oid string) (*SnmpPDU, error) {
 	}
 
 	value, err := this.session.Get(parsedOid)
-	if err != nil {
-		return nil, fmt.Errorf("SNMP GET failed for OID %s: %v", oid, err)
+	if err == nil {
+		return &SnmpPDU{Name: oid, Value: value}, nil
 	}
 
-	return &SnmpPDU{
-		Name:  oid,
-		Value: value,
-	}, nil
+	// First attempt failed — reconnect and retry once
+	if this.resources != nil && this.resources.Logger() != nil {
+		this.resources.Logger().Warning("SNMP GET failed for ", this.config.Addr,
+			" OID ", oid, ": ", err.Error(), ". Reconnecting and retrying.")
+	}
+	if reconnErr := this.reconnectSession(); reconnErr != nil {
+		return nil, fmt.Errorf("SNMP GET failed for OID %s: %v (reconnect also failed: %v)", oid, err, reconnErr)
+	}
+
+	value, err = this.session.Get(parsedOid)
+	if err != nil {
+		return nil, fmt.Errorf("SNMP GET failed for OID %s after reconnect: %v", oid, err)
+	}
+
+	return &SnmpPDU{Name: oid, Value: value}, nil
 }
 
 // walk performs an SNMP walk operation starting from the specified OID.
@@ -458,7 +470,8 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 
 // snmpWalk performs the actual SNMP walk using WapSNMP's GetNext operations.
 // It iteratively retrieves OIDs within the specified subtree until it reaches
-// an OID outside the subtree or encounters an error.
+// an OID outside the subtree or encounters an error. On a GetNext failure,
+// it reconnects the session and retries from the last successful OID.
 //
 // Parameters:
 //   - oid: The base OID to walk from (e.g., ".1.3.6.1.2.1.2.2.1")
@@ -484,7 +497,18 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 	for {
 		nextOid, value, err := this.session.GetNext(currentOid)
 		if err != nil {
-			break // End of walk or error
+			// Try reconnecting and retrying this one GetNext
+			if this.resources != nil && this.resources.Logger() != nil {
+				this.resources.Logger().Warning("SNMP GetNext failed for ", this.config.Addr,
+					" OID ", currentOid.String(), ": ", err.Error(), ". Reconnecting and retrying.")
+			}
+			if reconnErr := this.reconnectSession(); reconnErr != nil {
+				break // Can't recover, stop walk with what we have
+			}
+			nextOid, value, err = this.session.GetNext(currentOid)
+			if err != nil {
+				break // Still failing after reconnect, stop walk
+			}
 		}
 
 		// Check if we're still within the requested subtree
@@ -552,6 +576,14 @@ func (this *SNMPv2Collector) table(job *l8tpollaris.CJob, poll *l8tpollaris.L8Po
 		return
 	}
 	job.Result = enc.Data()
+}
+
+// reconnectSession closes the current SNMP session, waits 1 second for the
+// socket to fully release, and opens a fresh connection to the same target.
+func (this *SNMPv2Collector) reconnectSession() error {
+	this.Disconnect()
+	time.Sleep(1 * time.Second)
+	return this.Connect()
 }
 
 // Online returns the connection status of the SNMP collector.
