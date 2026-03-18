@@ -21,7 +21,6 @@ package snmp
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -132,7 +131,7 @@ func (this *SNMPv2Collector) Connect() error {
 		timeout = 60 * time.Second
 	}
 
-	session, err := wapsnmp.NewWapSNMP(target, community, version, timeout, 3)
+	session, err := wapsnmp.NewWapSNMP(target, community, version, timeout, 1)
 	if err != nil {
 		return fmt.Errorf("failed to create SNMP session for %s: %v", target, err)
 	}
@@ -225,7 +224,7 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 	var pdu *SnmpPDU
 	var lastError error
 
-	for attempt := 1; attempt <= 2; attempt++ {
+	for attempt := 1; attempt <= 10; attempt++ {
 		pdu = nil
 		lastError = nil
 
@@ -259,20 +258,7 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 				this.session = nil
 			}
 			this.connected = false
-
-			if this.resources != nil && this.resources.Logger() != nil {
-				this.resources.Logger().Debug("SNMP GET timeout, trying net-snmp fallback for OID: ", poll.What)
-			}
-
-			netSnmp := NewNetSNMPCollector(this.config, this.resources)
-			fallbackPdu, fallbackErr := netSnmp.snmpGet(poll.What)
-
-			if fallbackErr == nil {
-				pdu = fallbackPdu
-				lastError = nil
-			} else {
-				lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)
-			}
+			lastError = fmt.Errorf("timeout after %s", timeout.String())
 		}
 
 		// Success — no need to retry
@@ -281,7 +267,7 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 		}
 
 		// First attempt failed — sleep 1s, reconnect, and retry
-		if attempt == 1 {
+		if attempt < 10 {
 			if this.resources != nil && this.resources.Logger() != nil {
 				this.resources.Logger().Warning("SNMP GET failed for ", this.config.Addr,
 					" OID: ", poll.What, " error: ", lastError.Error(), ". Sleeping 1s and retrying.")
@@ -402,7 +388,7 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 	var pdus []SnmpPDU
 	var lastError error
 
-	for attempt := 1; attempt <= 2; attempt++ {
+	for attempt := 1; attempt <= 10; attempt++ {
 		pdus = nil
 		lastError = nil
 
@@ -437,30 +423,7 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 				this.session = nil
 			}
 			this.connected = false
-
-			// Timeout occurred - try net-snmp fallback
-			if this.resources != nil && this.resources.Logger() != nil {
-				this.resources.Logger().Debug("SNMP timeout, trying net-snmp fallback for OID: ", poll.What)
-			}
-
-			netSnmp := NewNetSNMPCollector(this.config, this.resources)
-			fallbackPdus, fallbackErr := netSnmp.snmpWalk(poll.What)
-
-			if fallbackErr == nil {
-				pdus = fallbackPdus
-				lastError = nil
-				if this.resources != nil && this.resources.Logger() != nil {
-					this.resources.Logger().Debug("net-snmp fallback succeeded for OID: ", poll.What)
-				}
-			} else {
-				lastError = fmt.Errorf("timeout after %s, net-snmp fallback also failed: %v", timeout.String(), fallbackErr)
-				if this.resources != nil && this.resources.Logger() != nil {
-					this.resources.Logger().Warning("net-snmp fallback failed for OID: ", poll.What, " error: ",
-						job.TargetId, " ",
-						os.Getenv("HOSTNAME"), " ",
-						fallbackErr.Error())
-				}
-			}
+			lastError = fmt.Errorf("timeout after %s", timeout.String())
 		}
 
 		// Success — no need to retry
@@ -469,7 +432,7 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 		}
 
 		// First attempt failed — sleep 1s, reconnect, and retry
-		if attempt == 1 {
+		if attempt < 10 {
 			if this.resources != nil && this.resources.Logger() != nil {
 				this.resources.Logger().Warning("SNMP Walk failed for ", this.config.Addr,
 					" OID: ", poll.What, " error: ", lastError.Error(), ". Sleeping 1s and retrying.")
