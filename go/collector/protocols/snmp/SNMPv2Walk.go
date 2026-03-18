@@ -60,6 +60,11 @@ func (this *SNMPv2Collector) snmpWalk(oid string) ([]SnmpPDU, error) {
 		}
 		nextOid, value, err := this.session.GetNext(currentOid)
 		if err != nil {
+			// If the session was closed externally (by the timeout handler),
+			// do NOT reconnect — that would leak a UDP socket. Just bail out.
+			if this.session == nil {
+				return pdus, fmt.Errorf("SNMP session was closed during walk")
+			}
 			// Try reconnecting and retrying this one GetNext
 			if this.resources != nil && this.resources.Logger() != nil {
 				this.resources.Logger().Warning("SNMP GetNext failed for ", this.config.Addr,

@@ -344,6 +344,12 @@ func (this *SNMPv2Collector) snmpGet(oid string) (*SnmpPDU, error) {
 		return &SnmpPDU{Name: oid, Value: value}, nil
 	}
 
+	// If the session was closed externally (by the timeout handler),
+	// do NOT reconnect — that would leak a UDP socket. Just bail out.
+	if this.session == nil {
+		return nil, fmt.Errorf("SNMP session was closed during get for OID %s", oid)
+	}
+
 	// First attempt failed — reconnect and retry once
 	if this.resources != nil && this.resources.Logger() != nil {
 		this.resources.Logger().Warning("SNMP GET failed for ", this.config.Addr,
