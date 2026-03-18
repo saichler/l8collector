@@ -248,7 +248,9 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 	case <-ctx.Done():
 		cancel()
 		// Close session to stop the abandoned goroutine, then reconnect on next Exec.
-		this.session.Close()
+		if this.session != nil {
+			this.session.Close()
+		}
 		this.connected = false
 
 		if this.resources != nil && this.resources.Logger() != nil {
@@ -330,6 +332,9 @@ func (this *SNMPv2Collector) snmpGet(oid string) (*SnmpPDU, error) {
 	if reconnErr := this.reconnectSession(); reconnErr != nil {
 		return nil, fmt.Errorf("SNMP GET failed for OID %s: %v (reconnect also failed: %v)", oid, err, reconnErr)
 	}
+	if this.session == nil {
+		return nil, fmt.Errorf("SNMP session is nil after reconnect for OID %s", oid)
+	}
 
 	value, err = this.session.Get(parsedOid)
 	if err != nil {
@@ -394,7 +399,9 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 		cancel()
 		// Timeout occurred - close the session to stop the abandoned goroutine,
 		// then reconnect so the next job gets a fresh connection.
-		this.session.Close()
+		if this.session != nil {
+			this.session.Close()
+		}
 		this.connected = false
 
 		// Timeout occurred - try net-snmp fallback
