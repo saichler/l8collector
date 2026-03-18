@@ -233,13 +233,18 @@ func (this *SNMPv2Collector) get(job *l8tpollaris.CJob, poll *l8tpollaris.L8Poll
 		done := make(chan bool, 1)
 
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					lastError = fmt.Errorf("SNMP GET panic (session closed during operation): %v", r)
+				}
+				done <- true
+			}()
 			p, e := this.snmpGet(poll.What)
 			if e == nil {
 				pdu = p
 			} else {
 				lastError = e
 			}
-			done <- true
 		}()
 
 		select {
@@ -406,8 +411,13 @@ func (this *SNMPv2Collector) walk(job *l8tpollaris.CJob, poll *l8tpollaris.L8Pol
 		done := make(chan bool, 1)
 
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					e = fmt.Errorf("SNMP Walk panic (session closed during operation): %v", r)
+				}
+				done <- true
+			}()
 			pdus, e = this.snmpWalk(poll.What)
-			done <- true
 		}()
 
 		select {
