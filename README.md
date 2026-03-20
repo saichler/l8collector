@@ -1,9 +1,9 @@
 # L8Collector
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.24.0-blue.svg)](https://golang.org/dl/)
+[![Go Version](https://img.shields.io/badge/Go-1.26.1-blue.svg)](https://golang.org/dl/)
 
-**© 2025 Sharon Aicler (saichler@gmail.com)**
+**© 2025-2026 Sharon Aicler (saichler@gmail.com)**
 
 Part of the Layer 8 Ecosystem - Licensed under the Apache License, Version 2.0.
 
@@ -29,57 +29,104 @@ L8Collector is a multi-protocol network data collection service built on the Lay
 
 ## Overview
 
-L8Collector is designed as a service within the Layer8 ecosystem that enables automated data collection from network infrastructure. It implements a pluggable architecture that supports multiple collection protocols and can be easily extended to support additional protocols.
+L8Collector is designed as a microservice within the Layer8 ecosystem that enables automated data collection from network infrastructure. It implements a pluggable architecture that supports multiple collection protocols and can be easily extended to support additional protocols.
 
-The collector operates on a device-centric model where each device can have multiple hosts, and each host can be polled using different protocols based on the device configuration.
+The collector operates on a target-centric model where each target device can have multiple hosts, and each host can be polled using different protocols based on the device configuration. Target management is handled by the Pollaris framework (`l8pollaris`), which provides centralized target lifecycle management and configuration.
 
 ## Features
 
 - **Multi-Protocol Support**: SNMP v2c, SSH, Kubernetes, REST/RESTCONF, and GraphQL data collection
-- **Concurrent Collection**: Parallel data collection from multiple devices and hosts
+- **Concurrent Collection**: Parallel data collection with goroutine-per-host concurrency model
 - **Service-Oriented Architecture**: Built as a microservice with Layer8 framework and SLA support
-- **Target Management**: Dynamic target device configuration with TargetService and TargetCenter
-- **Service Level Agreements**: Integrated SLA support for better service lifecycle management
-- **Job Queuing**: Efficient job scheduling and execution with cadence management
-- **Remote Job Execution**: ExecuteService for distributed job processing across cluster nodes with SLA
+- **Target Management**: Dynamic target device configuration via Pollaris TargetCenter
+- **5-Stage Boot Sequence**: Progressive device discovery and capability detection
+- **Job Queuing**: Cadence-based job scheduling with round-robin execution
+- **Remote Job Execution**: ExecuteService for distributed job processing across cluster nodes
+- **Result Aggregation**: Batched result forwarding to parser service via Aggregator
 - **Parameter Substitution**: Dynamic argument replacement in Kubernetes commands
-- **Error Handling**: Robust error handling and connection management
-- **String Handling Optimization**: Unified string concatenation using l8utils/strings package
-- **Testing Framework**: Comprehensive unit testing with coverage reporting including GraphQL and REST tests
-- **Web Interface**: Interactive web interface for monitoring and management
+- **Smooth First Collection**: Optional randomized initial collection timing to prevent thundering herd
+- **Error Handling**: Robust error handling with SNMP net-snmp fallback mechanism
+- **Testing Framework**: Integration tests using Layer8 topology with opensim simulator
 
 ## Architecture
 
-The L8Collector follows a modular architecture with the following key components:
+```
+┌─────────────────────────────────────────────────────────┐
+│         Layer8 Virtual Network (IVNic)                  │
+└─────────────────────────────┬───────────────────────────┘
+                              │
+        ┌─────────────────────┴─────────────────────────┐
+        │                                               │
+   ┌────▼──────────────────┐    ┌───────────────────────▼──┐
+   │  CollectorService     │    │  ExecuteService          │
+   │  (Main orchestrator)  │◄───┤  (Remote job execution)  │
+   │                       │    │                          │
+   │ - Manages targets     │    │ - Handles CJob POST      │
+   │ - Creates HostCollect │    │ - Local or distributed   │
+   │ - Thread-safe map     │    │ - Fallback to other nodes│
+   └────┬──────────────────┘    └──────────────────────────┘
+        │
+        │ (One per host)
+        │
+   ┌────▼──────────────────────────────────┐
+   │  HostCollector                        │
+   │  (Per-host orchestrator)              │
+   │                                       │
+   │  - 5-stage boot sequence              │
+   │  - Creates protocol collectors        │
+   │  - Manages JobsQueue                  │
+   │  - Forwards results via Aggregator    │
+   └────┬──────────────────────────────────┘
+        │
+        │ (One per protocol per host)
+        │
+   ┌────┴──────────────────────────────────────────────┐
+   │                                                    │
+   │  SNMPv2   SSH    K8s    REST    GraphQL            │
+   │  (Protocol Collectors - ProtocolCollector iface)   │
+   └────────────────────────────────────────────────────┘
+```
 
 ### Core Components
 
-- **CollectorService**: Main service orchestrating the collection process with Service Level Agreement (SLA) support
-- **ExecuteService**: Service for remote job execution and distribution across cluster nodes with SLA integration
-- **TargetService**: New centralized target device management service with dynamic configuration updates
-- **TargetCenter**: Target configuration center for managing device targets and their lifecycle
-- **HostCollector**: Manages collection from individual hosts
-- **DeviceCollector**: Handles device-level collection logic
-- **JobsQueue**: Manages collection job scheduling and execution
-- **DeviceCenter**: Central management for device configurations
+- **CollectorService**: Main service orchestrating the collection process with SLA support. Receives `L8PTarget` messages to start/stop polling devices.
+- **ExecuteService**: Service for remote job execution and distribution across cluster nodes. Falls back to routing jobs to other collector instances when the local host collector isn't found.
+- **HostCollector**: Manages collection from individual hosts. Creates protocol collectors, runs the boot sequence, and executes scheduled jobs via JobsQueue.
+- **JobsQueue**: Maintains an ordered list of scheduled jobs with cadence-based execution. Jobs execute round-robin — completed jobs move to the end of the queue.
+- **JobCadence**: Manages time-based job execution intervals (minimum 3-second cadence).
+- **BootSequence**: 5-stage progressive device discovery process (stages 00-04).
+- **Aggregator**: Batches collection results before forwarding to the parser service.
 
 ### Protocol Collectors
 
-- **SNMPv2Collector**: SNMP version 2c data collection
+All protocol collectors implement the `ProtocolCollector` interface:
+
+```go
+type ProtocolCollector interface {
+    Init(*L8PHostProtocol, IResources) error
+    Protocol() L8PProtocol
+    Exec(job *CJob)
+    Connect() error
+    Disconnect() error
+    Online() bool
+}
+```
+
+- **SNMPv2Collector**: SNMP v2c data collection with net-snmp fallback
 - **SshCollector**: SSH-based command execution and data collection
-- **Kubernetes**: Kubernetes cluster data collection via kubectl
+- **Kubernetes**: kubectl-based cluster data collection with parameter substitution
 - **RestCollector**: REST/RESTCONF API data collection with authentication support
 - **GraphQlCollector**: GraphQL API data collection with flexible querying
 
-### Interfaces
+### Data Flow
 
-- **ProtocolCollector**: Common interface for all protocol implementations
-- **IResources**: Resource management interface
-- **IVNic**: Virtual network interface for Layer8 communication
+1. **Target Arrival**: `L8PTarget` message arrives via POST → CollectorService creates HostCollectors
+2. **Boot Sequence**: Each HostCollector runs 5 stages of progressive device discovery
+3. **Steady-State Polling**: JobsQueue schedules and executes jobs based on cadence intervals
+4. **Result Aggregation**: Results are batched by the Aggregator and forwarded to the parser service
+5. **Remote Execution**: ExecuteService handles on-demand jobs, routing to the correct collector instance
 
 ## Scalability & Performance
-
-L8Collector is designed for enterprise-scale deployments with robust concurrency and resource management:
 
 ### Device Capacity
 
@@ -90,8 +137,8 @@ L8Collector is designed for enterprise-scale deployments with robust concurrency
 ### Concurrency Model
 
 - **1:1 Host-to-Goroutine mapping**: Each host runs in a dedicated goroutine
-- **Per-protocol collectors**: SNMP, SSH, K8s collectors created per host/device
-- **Thread-safe collections**: Uses concurrent-safe maps for device management
+- **Per-protocol collectors**: SNMP, SSH, K8s, REST, GraphQL collectors created per host
+- **Thread-safe collections**: Uses `SyncMap` for device management
 - **Non-blocking execution**: Jobs run sequentially per host, hosts run in parallel
 
 ### Resource Consumption
@@ -104,57 +151,28 @@ Per device resource usage:
 
 ### Performance Optimizations
 
-- **Enhanced SNMP Timeout Protection**: Configurable timeout with net-snmp fallback mechanism for robust OID collection
-- **Net-SNMP Fallback**: Automatic fallback to net-snmp when WapSNMP timeouts occur
-- **Job Queue Optimization**: Priority-based scheduling with configurable cadences
-- **Connection Pooling**: Efficient reuse of protocol connections
-- **Resource Limits**: Configurable limits prevent resource exhaustion
-- **Improved Error Recovery**: Enhanced timeout handling and connection resilience
-
-### Key Limiting Factors
-
-1. **Network connections**: OS file descriptor limits (typically 65K)
-2. **Memory growth**: Job queues and result storage
-3. **Polling frequency**: Minimum 3-second cadence prevents overload
-4. **SNMP complexity**: Large MIB walks (mitigated with timeouts)
+- **SNMP Net-SNMP Fallback**: Automatic fallback to net-snmp when WapSNMP timeouts occur
+- **Configurable Timeouts**: Contextual cancellation for SNMP operations
+- **Job Queue Optimization**: Round-robin scheduling with configurable cadences
+- **Connection Reuse**: Protocol connections reused across multiple jobs
+- **Smooth First Collection**: Optional randomized initial timing prevents thundering herd
+- **Result Aggregation**: Batched forwarding reduces network overhead
 
 ### Horizontal Scaling
 
-The architecture scales horizontally through:
 - Multiple collector instances handling different device sets
-- Layer8 service mesh for distributed coordination  
+- Layer8 service mesh for distributed coordination
 - Load balancing across available collector nodes
-- Automatic failover and job redistribution
-
-### Code Quality Improvements
-
-The codebase has been optimized for maintainability and performance:
-
-#### String Handling Optimization (Latest Update)
-- **Unified String Concatenation**: All string concatenations replaced with `github.com/saichler/l8utils/go/utils/strings.String` package
-- **Raw Value Support**: Eliminated unnecessary `strconv.Itoa()` calls in string concatenations as the strings package natively supports raw integer values
-- **Performance Benefits**: Reduced memory allocations and improved string building performance
-- **Code Consistency**: Standardized approach to string manipulation across all protocol collectors
-
-#### Updated Components (Latest)
-- **SNMP Collector**: Enhanced timeout handling with net-snmp fallback, improved error recovery and connection resilience
-- **HostCollector**: Optimized error message construction and protocol validation using l8utils/strings
-- **SSH Collector**: Enhanced connection error handling and logging with efficient string building
-- **Kubernetes Collector**: Streamlined script generation and error message formatting
-
-#### Benefits
-- **Reduced Memory Pressure**: More efficient string concatenation reduces garbage collection overhead
-- **Improved Readability**: Consistent string handling patterns across the codebase
-- **Enhanced Performance**: Native support for various data types eliminates conversion overhead
-- **Better Maintainability**: Centralized string handling logic through utility package
+- Automatic failover and job redistribution via ExecuteService
 
 ## Supported Protocols
 
 ### SNMP v2c
 - Community-based authentication
 - Configurable timeout and retry settings
-- OID-based data collection
+- OID-based data collection with OID normalization
 - Support for SNMP walks and gets
+- Net-SNMP fallback for timeout resilience
 
 ### SSH
 - Username/password authentication
@@ -166,7 +184,6 @@ The codebase has been optimized for maintainability and performance:
 - kubectl-based data collection
 - Context-aware configuration
 - Base64-encoded kubeconfig support
-- Cluster resource monitoring
 - Dynamic parameter substitution using `$variable` syntax in commands
 
 ### REST/RESTCONF
@@ -187,24 +204,29 @@ The codebase has been optimized for maintainability and performance:
 ## Dependencies
 
 ### Core Dependencies
-- **Go 1.24.0+**: Programming language runtime
-- **github.com/gosnmp/gosnmp**: SNMP protocol implementation
-- **golang.org/x/crypto/ssh**: SSH client implementation
+- **Go 1.26.1+**: Programming language runtime
+- **github.com/cdevr/WapSNMP**: SNMP protocol implementation
+- **golang.org/x/crypto**: SSH client implementation
 - **github.com/google/uuid**: UUID generation
+- **google.golang.org/protobuf**: Protocol Buffers serialization
 
 ### Layer8 Ecosystem Dependencies
-- **l8pollaris**: Polling and data modeling framework
-- **l8services**: Service management framework
-- **l8types**: Common type definitions
-- **l8utils**: Utility libraries (including optimized string handling)
+- **l8pollaris**: Polling framework, target management, and data modeling (L8PTarget, CJob, etc.)
+- **l8bus**: Layer8 messaging bus for inter-service communication
+- **l8types**: Common type definitions and interfaces (IService, IVNic, IResources)
+- **l8utils**: Utility libraries (SyncMap, Aggregator, optimized string handling)
 - **l8srlz**: Serialization framework
-- **l8parser**: Data parsing framework
+- **l8parser**: Data parsing framework (collector forwards results here)
 - **l8web**: Web client libraries for REST and GraphQL support
+- **l8test**: Test framework with virtual network topology
+- **l8services**: Service management framework (indirect)
+- **probler**: Problem/error handling
+- **podys**: System utilities
 
 ## Installation
 
 ### Prerequisites
-- Go 1.24.0 or later
+- Go 1.26.1 or later
 - Git
 - Network access to target devices
 
@@ -234,101 +256,92 @@ chmod +x test.sh
 
 This script will:
 - Clean and reinitialize Go modules
-- Fetch dependencies
-- Run security checks
-- Execute unit tests with coverage
-- Generate coverage reports
+- Fetch and vendor dependencies
+- Run unit tests with coverage
+- Generate HTML coverage reports
 
 ## Configuration
 
-### Device Configuration
+### Target Configuration
 
-Devices are configured using the Layer8 Pollaris model with the following structure:
+Targets are configured using the Pollaris model (`L8PTarget`) with hosts and protocol-specific connections:
 
 ```go
-type Device struct {
-    DeviceId string
-    Hosts    []*Host
-    // Additional device properties
-}
-
-type Connection struct {
-    Addr           string    // Device address
-    Port           int32     // Connection port
-    Protocol       Protocol  // SNMP, SSH, K8s
-    Timeout        int32     // Connection timeout
-    ReadCommunity  string    // SNMP community (for SNMP)
-    Username       string    // SSH username
-    Password       string    // SSH password
-    KubeConfig     string    // Kubernetes config (base64 encoded)
-    KukeContext    string    // Kubernetes context
-    Prompt         []string  // SSH prompts
+target := &l8tpollaris.L8PTarget{
+    TargetId: "device-001",
+    State:    l8tpollaris.L8PTargetState_Up,
+    Hosts: []*l8tpollaris.L8PHost{
+        {
+            HostId: "host-001",
+            Protocols: []*l8tpollaris.L8PHostProtocol{
+                // Protocol-specific connection configuration
+            },
+        },
+    },
 }
 ```
 
 ### Environment Configuration
 
-The service integrates with the Layer8 ecosystem and uses the standard Layer8 configuration mechanisms:
+The service integrates with the Layer8 ecosystem and uses standard Layer8 configuration:
 
-- Service registration and discovery
-- Resource management
-- Logging configuration
-- Network interface management
+- Service registration and discovery via SLA
+- Resource management through IResources
+- Logging configuration (configurable levels)
+- Virtual network interface management (IVNic)
 
 ## Usage
 
-### Service Integration
+### Service Activation
 
-L8Collector is designed to run as a service within the Layer8 ecosystem with Service Level Agreement (SLA) support:
+L8Collector runs as a service within the Layer8 ecosystem:
 
 ```go
-// Service activation with SLA
-collectorService := &CollectorService{}
-sla := ifs.NewServiceLevelAgreement(collectorService, "collector", serviceArea, false, nil)
-err := collectorService.Activate(sla, vnic)
+// Activate collector service with Links configuration
+service.Activate(linksID, vnic)
+```
 
-// Device polling
-device := &types.Device{
-    DeviceId: "device-001",
-    Hosts: []*types.Host{
-        // Host configurations
-    },
+This internally creates a `CollectorService` with an SLA and registers the `ExecuteService` for remote job handling.
+
+### Starting/Stopping Collection
+
+Send `L8PTarget` messages to the collector service:
+
+```go
+// Start polling a device
+target := &l8tpollaris.L8PTarget{
+    TargetId: "device-001",
+    State:    l8tpollaris.L8PTargetState_Up,
+    Hosts:    hosts,
 }
+collectorService.Post(object.New(target), vnic)
 
-// Start polling
-response := collectorService.Post(object.New(device), vnic)
+// Stop polling
+target.State = l8tpollaris.L8PTargetState_Down
+collectorService.Post(object.New(target), vnic)
 ```
 
 ### Remote Job Execution
 
-The ExecuteService enables distributed job execution across cluster nodes with SLA support:
+The ExecuteService handles on-demand job execution:
 
 ```go
-// Execute a job remotely with SLA
-executeService := &ExecuteService{}
-slaExec := ifs.NewServiceLevelAgreement(executeService, "exec", serviceArea, false, nil)
-slaExec.SetArgs(collectorService)
-vnic.Resources().Services().Activate(slaExec, vnic)
-
-job := &types.CJob{
+job := &l8tpollaris.CJob{
     DeviceId: "device-001",
-    HostId: "host-001",
+    HostId:   "host-001",
     Arguments: map[string]string{
         "namespace": "kube-system",
-        "resource": "pods",
     },
 }
-
-// Submit job for execution
-response := executeService.Post(object.New(job), vnic)
+executeService.Post(object.New(job), vnic)
 ```
 
 ### Protocol-Specific Usage
 
 #### SNMP Collection
 ```go
-snmpCollector := &SNMPv2Collector{}
-snmpCollector.Init(connection, resources)
+snmpCollector := &snmp.SNMPv2Collector{}
+snmpCollector.Init(hostProtocol, resources)
 snmpCollector.Connect()
 snmpCollector.Exec(job)
 snmpCollector.Disconnect()
@@ -336,8 +349,8 @@ snmpCollector.Disconnect()
 
 #### SSH Collection
 ```go
-sshCollector := &SshCollector{}
-sshCollector.Init(connection, resources)
+sshCollector := &ssh.SshCollector{}
+sshCollector.Init(hostProtocol, resources)
 sshCollector.Connect()
 sshCollector.Exec(job)
 sshCollector.Disconnect()
@@ -345,50 +358,27 @@ sshCollector.Disconnect()
 
 #### Kubernetes Collection
 ```go
-k8sCollector := &Kubernetes{}
-k8sCollector.Init(connection, resources)
-
-// Job with parameter substitution
-job := &types.CJob{
-    Arguments: map[string]string{
-        "namespace": "default",
-        "resource": "pods",
-    },
-}
-// Command: "get pods -n $namespace" becomes "get pods -n default"
+k8sCollector := &k8s.Kubernetes{}
+k8sCollector.Init(hostProtocol, resources)
+// Commands use $variable substitution from job.Arguments
 k8sCollector.Exec(job)
 ```
 
 #### REST/RESTCONF Collection
 ```go
-restCollector := &RestCollector{}
+restCollector := &rest.RestCollector{}
 restCollector.Init(hostProtocol, resources)
 restCollector.Connect()
-
-// Execute REST job with method, endpoint, and body
-job := &types.CJob{
-    PollarisName: "devices",
-    JobName: "get-device",
-}
-// Poll format: "METHOD::endpoint::body"
-// Example: "GET::/api/devices::{"query":"filter"}"
-restCollector.Exec(job)
+restCollector.Exec(job) // Poll format: "METHOD::endpoint::body"
 restCollector.Disconnect()
 ```
 
 #### GraphQL Collection
 ```go
-graphQlCollector := &GraphQlCollector{}
+graphQlCollector := &graphql.GraphQlCollector{}
 graphQlCollector.Init(hostProtocol, resources)
 graphQlCollector.Connect()
-
-// Execute GraphQL query
-job := &types.CJob{
-    PollarisName: "devices",
-    JobName: "query-devices",
-}
-// Poll.What contains the GraphQL query string
-graphQlCollector.Exec(job)
+graphQlCollector.Exec(job) // Poll.What contains the GraphQL query
 graphQlCollector.Disconnect()
 ```
 
@@ -397,6 +387,8 @@ graphQlCollector.Disconnect()
 ### Running Tests
 
 ```bash
+cd go
+
 # Run all tests with coverage
 go test -tags=unit -v -coverpkg=./collector/... -coverprofile=cover.html ./... --failfast
 
@@ -406,17 +398,16 @@ go tool cover -html=cover.html
 
 ### Test Structure
 
-- **Unit Tests**: Located in `tests/` directory
-- **Mock Services**: Mock implementations for testing
-- **Coverage Reports**: HTML coverage reports generated
-- **Test Utilities**: Helper functions and test setup
+Tests are located in `go/tests/` and use the Layer8 test framework (`l8test`) with a 4-node virtual network topology:
 
-### Test Files
-
-- `tests/Collector_test.go`: Main collector tests
-- `tests/CollectorRest_test.go`: REST collector tests
-- `tests/TestInit.go`: Test initialization
-- `tests/utils_collector/`: Test utilities and mocks
+- `Collector_test.go` — Main collector integration tests (SNMP, SSH, K8s)
+- `CollectorRest_test.go` — REST collector protocol tests
+- `CollectorGraphQl_test.go` — GraphQL collector protocol tests
+- `EntityMib_test.go` — MIB entity testing
+- `TestInit.go` — Test environment initialization (4-node topology, opensim simulator)
+- `activate.go` — Service activation helpers
+- `utils_collector/utils.go` — Test utility functions
+- `utils_collector/mock_parser_service.go` — Mock parser service for validating data flow
 
 ## Development
 
@@ -425,74 +416,75 @@ go tool cover -html=cover.html
 ```
 l8collector/
 ├── LICENSE                 # Apache 2.0 license
-├── README.md              # This file
-├── Layer8Logo.gif         # Layer8 logo
-├── web.html               # Web interface
+├── README.md               # This file
+├── Layer8Logo.gif          # Layer8 logo
 └── go/
     ├── collector/
-    │   ├── common/        # Common interfaces and constants
-    │   ├── targets/       # Target device management
-    │   │   ├── TargetService.go       # Target management service
-    │   │   └── TargetCenter.go        # Target configuration center
-    │   ├── protocols/     # Protocol implementations
-    │   │   ├── snmp/     # SNMP v2c collector
-    │   │   ├── ssh/      # SSH collector
-    │   │   ├── k8s/      # Kubernetes collector
-    │   │   ├── rest/     # REST/RESTCONF collector
-    │   │   ├── graphql/  # GraphQL collector
-    │   │   └── Utils.go  # Protocol utilities
-    │   └── service/       # Core services
-    │       ├── CollectorService.go    # Main collection service with SLA
-    │       ├── ExecuteService.go      # Remote execution service with SLA
-    │       ├── HostCollector.go       # Host-level operations
-    │       ├── JobsQueue.go           # Job scheduling
-    │       ├── JobCadence.go          # Job cadence management
-    │       ├── StaticJobs.go          # Static job configurations
-    │       └── BootSequence.go        # Service boot sequence
-    ├── tests/             # Test files
-    │   ├── CollectorGraphQl_test.go  # GraphQL collector tests
-    │   ├── CollectorRest_test.go     # REST collector tests
-    │   └── Collector_test.go         # Main collector tests
-    ├── go.mod             # Go module definition
-    ├── go.sum             # Go module checksums
-    ├── test.sh            # Test script
-    └── vendor/            # Vendored dependencies
+    │   ├── common/         # ProtocolCollector interface, boot stage constants, utils
+    │   │   ├── interfaces.go
+    │   │   └── utils.go
+    │   ├── protocols/      # Protocol implementations
+    │   │   ├── snmp/       # SNMP v2c + net-snmp fallback
+    │   │   │   ├── SNMPv2.go
+    │   │   │   ├── SNMPv2Walk.go
+    │   │   │   └── NetSNMPv2.go
+    │   │   ├── ssh/        # SSH collector
+    │   │   │   └── Ssh.go
+    │   │   ├── k8s/        # Kubernetes collector
+    │   │   │   └── Kubernetes.go
+    │   │   ├── rest/       # REST/RESTCONF collector
+    │   │   │   └── RestCollector.go
+    │   │   ├── graphql/    # GraphQL collector
+    │   │   │   └── GraphSqlCollector.go
+    │   │   └── Utils.go    # Shared protocol utilities
+    │   └── service/        # Core services
+    │       ├── CollectorService.go  # Main collection service with SLA
+    │       ├── ExecuteService.go    # Remote execution service
+    │       ├── HostCollector.go     # Host-level operations
+    │       ├── BootSequence.go      # 5-stage boot process
+    │       ├── JobsQueue.go         # Job scheduling
+    │       ├── JobCadence.go        # Cadence management
+    │       ├── StaticJobs.go        # Static job definitions
+    │       └── hash.go              # Collector key generation
+    ├── tests/              # Integration tests
+    │   ├── Collector_test.go
+    │   ├── CollectorRest_test.go
+    │   ├── CollectorGraphQl_test.go
+    │   ├── EntityMib_test.go
+    │   ├── TestInit.go
+    │   ├── activate.go
+    │   └── utils_collector/
+    │       ├── utils.go
+    │       └── mock_parser_service.go
+    ├── go.mod              # Go module definition
+    ├── go.sum              # Go module checksums
+    ├── test.sh             # Test script
+    └── vendor/             # Vendored dependencies
 ```
 
 ### Adding New Protocols
 
 To add a new protocol collector:
 
-1. Implement the `ProtocolCollector` interface:
-   ```go
-   type ProtocolCollector interface {
-       Init(*types.Connection, ifs.IResources) error
-       Protocol() types.Protocol
-       Exec(*types.CJob)
-       Connect() error
-       Disconnect() error
-   }
-   ```
-
-2. Create the protocol-specific package under `collector/protocols/`
-3. Register the new protocol type in the Layer8 type system
+1. Implement the `ProtocolCollector` interface in a new package under `collector/protocols/`
+2. Register the new protocol type in the Layer8 type system
+3. Add the protocol case to `HostCollector.createProtocolCollectors()`
 4. Add configuration support for the new protocol
-5. Implement comprehensive tests
+5. Implement integration tests in `tests/`
 
 ### Code Style
 
 - Follow Go best practices and conventions
-- Use meaningful variable and function names
-- Include proper error handling
-- Add appropriate logging
-- Document public interfaces
+- Use `github.com/saichler/l8utils/go/utils/strings.String` for string concatenations
+- Leverage the strings package's native support for raw integer/numeric values
+- Include proper error handling and logging
 - Maintain test coverage
-- **String Handling**: Use `github.com/saichler/l8utils/go/utils/strings.String` for all string concatenations instead of native `+` operator
-- **Raw Values**: Leverage the strings package's support for raw integer/numeric values instead of manual conversions
 
 ### Building and Testing
 
 ```bash
+cd go
+
 # Format code
 go fmt ./...
 
@@ -502,7 +494,7 @@ go vet ./...
 # Run tests
 ./test.sh
 
-# Build
+# Build (verify compilation)
 go build ./...
 ```
 
@@ -527,7 +519,7 @@ go build ./...
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ```
-© 2025 Sharon Aicler (saichler@gmail.com)
+© 2025-2026 Sharon Aicler (saichler@gmail.com)
 
 Layer 8 Ecosystem is licensed under the Apache License, Version 2.0.
 You may obtain a copy of the License at:
@@ -546,63 +538,3 @@ limitations under the License.
 - [Layer8 Ecosystem](https://github.com/saichler/layer8)
 - [L8Pollaris](https://github.com/saichler/l8pollaris)
 - [L8Services](https://github.com/saichler/l8services)
-
-## Latest Updates
-
-### Recent Improvements (2024-2025)
-
-#### Apache License 2.0 Copyright Headers (December 2025)
-- **Copyright Notice**: Added comprehensive Apache License 2.0 copyright headers to all source files
-  - All 24 Go source files now include proper copyright attribution
-  - Shell scripts updated with appropriate comment-style headers
-  - Copyright holder: Sharon Aicler (saichler@gmail.com)
-- **License Compliance**: Full compliance with Apache License 2.0 requirements
-  - Clear attribution in every source file
-  - License URL reference included in headers
-  - Standard disclaimer for warranty and liability
-
-#### Service Level Agreement (SLA) Integration (October 2025)
-- **SLA Support**: Added Service Level Agreement support to core services
-  - CollectorService now activates with SLA for better service management
-  - ExecuteService integrated with SLA for remote job execution
-  - Improved service lifecycle management and monitoring
-- **Target Management Refactoring**:
-  - Introduced TargetService for centralized target device management
-  - Added TargetCenter for dynamic device configuration updates
-  - Replaced DeviceService with more flexible target-based architecture
-  - Support for L8PTarget and L8PTargetList types
-- **Enhanced Testing**: Updated test suite with SLA integration tests
-
-### Previous Improvements (2024-2025)
-
-#### New Protocol Support
-- **REST/RESTCONF Collector**: Full-featured REST API data collection with support for all HTTP methods (GET, POST, PUT, PATCH, DELETE)
-  - Token-based and basic authentication
-  - Flexible request/response handling with protobuf integration
-  - Certificate-based secure connections
-  - Configurable endpoints and HTTP prefixes
-- **GraphQL Collector**: GraphQL query execution support
-  - API key and token-based authentication
-  - Flexible query structure
-  - Typed response handling with protobuf
-  - HTTPS with certificate support
-- **Protocol Utilities**: Common utility functions for protocol implementations (SetValue, Keys for CTable/CMap operations)
-
-#### Enhanced SNMP Resilience
-- **Net-SNMP Fallback**: Automatic fallback to net-snmp when WapSNMP timeouts occur for improved OID collection reliability
-- **Configurable Timeouts**: Enhanced timeout handling with contextual cancellation for better resource management
-- **Error Recovery**: Improved connection resilience and error reporting for SNMP operations
-
-#### Performance & Stability
-- **Go 1.24.0**: Updated to latest Go version for improved performance and security
-- **Enhanced Logging**: Better error context and debugging information across all collectors
-- **Memory Optimization**: Continued string handling improvements reducing garbage collection pressure
-
-#### Dependencies Updates
-- Updated Layer8 ecosystem dependencies with latest security patches and performance improvements
-- Enhanced WapSNMP integration with fallback mechanisms
-- Added l8web package for REST and GraphQL client support
-
----
-
-For questions, issues, or contributions, please use the GitHub issue tracker or submit pull requests.
