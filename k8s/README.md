@@ -16,6 +16,7 @@ The current checked-in manifest assumes:
 - Service name: `l8collector-admission`
 - Namespace: `default`
 - Admission path: `/admission/kubernetes`
+- ClusterName: `lab`
 
 `admission-control.yaml` deploys the `go/adcon` image and exposes HTTPS on port `8443`.
 It also creates the service account, RBAC, TLS bootstrap job, and the deployment.

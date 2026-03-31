@@ -130,11 +130,14 @@ data:
       -keyout "${key}" \
       -out "${crt}" \
       -config "${csr_conf}"
+
+    chmod 0644 "${crt}" "${key}"
   apply-tls.sh: |
     #!/bin/sh
     set -eu
 
     namespace="${NAMESPACE:-default}"
+    service="${SERVICE_NAME:-l8collector-admission}"
     secret="${SECRET_NAME:-l8collector-admission-tls}"
     webhook="${WEBHOOK_NAME:-l8collector-k8s}"
     crt="/work/tls.crt"
@@ -145,10 +148,14 @@ data:
       --key="${key}" \
       --dry-run=client -o yaml | kubectl apply -f -
 
-    ca_bundle="$(base64 -w 0 < "${crt}")"
+    ca_bundle="$(base64 < "${crt}" | tr -d '\n')"
     kubectl patch validatingwebhookconfiguration "${webhook}" \
-      --type='json' \
-      -p="[{'op':'add','path':'/webhooks/0/clientConfig/caBundle','value':'${ca_bundle}'}]"
+      --type=json \
+      -p="[{\"op\":\"add\",\"path\":\"/webhooks/0/clientConfig/caBundle\",\"value\":\"${ca_bundle}\"}]"
+
+    kubectl patch validatingwebhookconfiguration "${webhook}" \
+      --type=json \
+      -p="[{\"op\":\"replace\",\"path\":\"/webhooks/0/name\",\"value\":\"${service}.${namespace}.svc\"}]"
 ---
 apiVersion: batch/v1
 kind: Job
@@ -249,6 +256,8 @@ spec:
           image: saichler/probler-admission:latest
           imagePullPolicy: Always
           env:
+            - name: ClusterName
+              value: Home
             - name: ADMISSION_HOST
               value: 0.0.0.0
             - name: ADMISSION_PORT
@@ -262,10 +271,19 @@ spec:
               containerPort: 8443
               protocol: TCP
           volumeMounts:
-            - name: tls
+            - name: data
               mountPath: /data
+            - name: tls
+              mountPath: /data/admission.crt
+              subPath: admission.crt
+              readOnly: true
+            - name: tls
+              mountPath: /data/admission.crtKey
+              subPath: admission.crtKey
               readOnly: true
       volumes:
+        - name: data
+          emptyDir: {}
         - name: tls
           secret:
             secretName: l8collector-admission-tls

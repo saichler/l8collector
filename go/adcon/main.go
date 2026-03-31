@@ -22,9 +22,11 @@ import (
 	"github.com/saichler/l8collector/go/collector/service"
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
+	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8web/go/web/server"
 	common2 "github.com/saichler/probler/go/prob/common"
+	"github.com/saichler/probler/go/prob/common/creates"
 	"os"
 	"strconv"
 )
@@ -48,6 +50,10 @@ func main() {
 	//no need to activate with links id k8s as they are the same area for collection
 	service.Activate(common2.K8sC_Links_ID, nic)
 	res.Logger().SetLogLevel(ifs.Error_Level)
+	//Here send a message to self to start collecting
+	cl := creates.CreateCluster2(os.Getenv("ClusterName"))
+	coll, _ := nic.Resources().Services().ServiceHandler(common2.AdControl_Service_Name, common2.AdControl_Service_Area)
+	coll.Post(object.New(nil, cl), nic)
 	common2.WaitForSignal(res)
 }
 
