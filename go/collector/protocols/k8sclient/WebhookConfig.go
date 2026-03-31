@@ -63,12 +63,13 @@ func ValidatingWebhookYAMLFromRules(options WebhookConfigOptions, rules []Webhoo
 }
 
 func admissionregistrationFromRules(name, serviceName, namespace, path string, rules []WebhookRule) *admissionregistrationv1.ValidatingWebhookConfiguration {
+	webhookName := serviceName + "." + namespace + ".svc"
 	return &admissionregistrationv1.ValidatingWebhookConfiguration{
 		TypeMeta:   typeMeta("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration"),
 		ObjectMeta: objectMeta(name),
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
-				Name:                    name,
+				Name:                    webhookName,
 				AdmissionReviewVersions: []string{"v1"},
 				SideEffects:             sideEffectsPtr(admissionregistrationv1.SideEffectClassNone),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{

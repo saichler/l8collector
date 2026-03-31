@@ -11,7 +11,7 @@ webhooks:
         namespace: default
         path: /admission/kubernetes
     failurePolicy: Ignore
-    name: l8collector-k8s
+    name: l8collector-admission.default.svc
     rules:
       - apiGroups:
           - apps
