@@ -202,3 +202,30 @@ func TestRulesToOperationsAndYAMLHelpers(t *testing.T) {
 		t.Fatalf("unexpected yaml: %s", string(yamlBytes))
 	}
 }
+
+func TestValidatingWebhookYAMLFromModels(t *testing.T) {
+	models := []*l8tpollaris.L8Pollaris{
+		{
+			Name: "kubernetesapi",
+			Polling: map[string]*l8tpollaris.L8Poll{
+				"pods": {
+					Name:     "pods",
+					Protocol: l8tpollaris.L8PProtocol_L8PKubernetesAPI,
+					What:     `{"result":"table","mode":"list","gvr":"v1/pods","operations":["CREATE","UPDATE"]}`,
+				},
+			},
+		},
+	}
+	rules, err := WebhookRulesFromPollarisModels(models)
+	if err != nil {
+		t.Fatalf("WebhookRulesFromPollarisModels() error = %v", err)
+	}
+	yamlBytes, err := yaml.Marshal(admissionregistrationFromRules("test-webhook", "svc", "ns", "/admission/test", rules))
+	if err != nil {
+		t.Fatalf("marshal webhook yaml: %v", err)
+	}
+	text := string(yamlBytes)
+	if !strings.Contains(text, "test-webhook") || !strings.Contains(text, "pods") || !strings.Contains(text, "/admission/test") {
+		t.Fatalf("unexpected webhook yaml: %s", text)
+	}
+}

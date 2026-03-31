@@ -47,33 +47,41 @@ func ValidatingWebhookYAML(options WebhookConfigOptions) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ValidatingWebhookYAMLFromRules(options, rules)
+}
+
+func ValidatingWebhookYAMLFromRules(options WebhookConfigOptions, rules []WebhookRule) ([]byte, error) {
 	if options.Path == "" {
 		options.Path = DefaultAdmissionPath
 	}
 	if options.FailureMode == "" {
 		options.FailureMode = admissionregistrationv1.Ignore
 	}
-	config := &admissionregistrationv1.ValidatingWebhookConfiguration{
+	config := admissionregistrationFromRules(options.Name, options.ServiceName, options.Namespace, options.Path, rules)
+	config.Webhooks[0].FailurePolicy = failurePolicyPtr(options.FailureMode)
+	return yaml.Marshal(config)
+}
+
+func admissionregistrationFromRules(name, serviceName, namespace, path string, rules []WebhookRule) *admissionregistrationv1.ValidatingWebhookConfiguration {
+	return &admissionregistrationv1.ValidatingWebhookConfiguration{
 		TypeMeta:   typeMeta("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration"),
-		ObjectMeta: objectMeta(options.Name),
+		ObjectMeta: objectMeta(name),
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
-				Name:                    options.Name,
+				Name:                    name,
 				AdmissionReviewVersions: []string{"v1"},
 				SideEffects:             sideEffectsPtr(admissionregistrationv1.SideEffectClassNone),
-				FailurePolicy:           failurePolicyPtr(options.FailureMode),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service: &admissionregistrationv1.ServiceReference{
-						Namespace: options.Namespace,
-						Name:      options.ServiceName,
-						Path:      stringPtr(options.Path),
+						Namespace: namespace,
+						Name:      serviceName,
+						Path:      stringPtr(path),
 					},
 				},
 				Rules: rulesToOperations(rules),
 			},
 		},
 	}
-	return yaml.Marshal(config)
 }
 
 func rulesToOperations(rules []WebhookRule) []admissionregistrationv1.RuleWithOperations {
