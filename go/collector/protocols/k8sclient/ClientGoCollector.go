@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -242,13 +244,39 @@ func (c *ClientGoCollector) kubeConfig() (*rest.Config, error) {
 	if err == nil {
 		return cfg, nil
 	}
-	if c.resources == nil || c.config == nil || c.config.CredId == "" {
-		return nil, err
+	if c.resources != nil && c.config != nil && c.config.CredId != "" {
+		_, _, kubeconfig, _, credErr := c.resources.Security().Credential(c.config.CredId, "kubeconfig", c.resources)
+		if credErr == nil {
+			cfg, cfgErr := restConfigFromString(kubeconfig)
+			if cfgErr == nil {
+				return cfg, nil
+			}
+			return nil, cfgErr
+		}
 	}
-	_, _, kubeconfig, _, credErr := c.resources.Security().Credential(c.config.CredId, "kubeconfig", c.resources)
-	if credErr != nil {
-		return nil, credErr
+
+	envPath := os.Getenv("KUBECONFIG")
+	if envPath != "" {
+		cfg, cfgErr := clientcmd.BuildConfigFromFlags("", envPath)
+		if cfgErr == nil {
+			return cfg, nil
+		}
 	}
+
+	for _, candidate := range []string{"admin.conf", filepath.Join("go", "admin.conf")} {
+		if _, statErr := os.Stat(candidate); statErr != nil {
+			continue
+		}
+		cfg, cfgErr := clientcmd.BuildConfigFromFlags("", candidate)
+		if cfgErr == nil {
+			return cfg, nil
+		}
+	}
+
+	return nil, err
+}
+
+func restConfigFromString(kubeconfig string) (*rest.Config, error) {
 	data, decodeErr := base64.StdEncoding.DecodeString(kubeconfig)
 	if decodeErr != nil {
 		if strings.Contains(kubeconfig, "apiVersion:") {

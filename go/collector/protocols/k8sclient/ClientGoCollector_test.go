@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -227,5 +229,82 @@ func TestValidatingWebhookYAMLFromModels(t *testing.T) {
 	text := string(yamlBytes)
 	if !strings.Contains(text, "test-webhook") || !strings.Contains(text, "pods") || !strings.Contains(text, "/admission/test") {
 		t.Fatalf("unexpected webhook yaml: %s", text)
+	}
+}
+
+func TestRestConfigFromStringSupportsPlainYaml(t *testing.T) {
+	kubeconfig := `apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://127.0.0.1:6443
+    insecure-skip-tls-verify: true
+  name: local
+contexts:
+- context:
+    cluster: local
+    user: local
+  name: local
+current-context: local
+users:
+- name: local
+  user:
+    token: test-token
+`
+	cfg, err := restConfigFromString(kubeconfig)
+	if err != nil {
+		t.Fatalf("restConfigFromString() error = %v", err)
+	}
+	if cfg.Host != "https://127.0.0.1:6443" {
+		t.Fatalf("unexpected host: %s", cfg.Host)
+	}
+}
+
+func TestKubeConfigFallsBackToAdminConf(t *testing.T) {
+	tempDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tempDir, "admin.conf")
+	kubeconfig := `apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://127.0.0.1:6443
+    insecure-skip-tls-verify: true
+  name: local
+contexts:
+- context:
+    cluster: local
+    user: local
+  name: local
+current-context: local
+users:
+- name: local
+  user:
+    token: test-token
+`
+	if err := os.WriteFile(kubeconfigPath, []byte(kubeconfig), 0o600); err != nil {
+		t.Fatalf("write admin.conf: %v", err)
+	}
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	oldEnv := os.Getenv("KUBECONFIG")
+	t.Cleanup(func() {
+		_ = os.Chdir(oldWd)
+		_ = os.Setenv("KUBECONFIG", oldEnv)
+	})
+	if err := os.Unsetenv("KUBECONFIG"); err != nil {
+		t.Fatalf("unsetenv: %v", err)
+	}
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	collector := &ClientGoCollector{}
+	cfg, err := collector.kubeConfig()
+	if err != nil {
+		t.Fatalf("kubeConfig() error = %v", err)
+	}
+	if cfg.Host != "https://127.0.0.1:6443" {
+		t.Fatalf("unexpected host: %s", cfg.Host)
 	}
 }
