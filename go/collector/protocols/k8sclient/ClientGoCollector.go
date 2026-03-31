@@ -22,6 +22,18 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var sharedRuntime struct {
+	lock           sync.Mutex
+	cache          *CollectorCache
+	restConfig     *rest.Config
+	dynamicClient  dynamic.Interface
+	warmed         map[string]bool
+	stopCh         chan struct{}
+	connected      bool
+	serverStarted  bool
+	serverStarting bool
+}
+
 // ClientGoCollector is a cache-first Kubernetes collector.
 //
 // The current repo-local implementation focuses on the cache-backed Exec(job)
@@ -42,9 +54,26 @@ type ClientGoCollector struct {
 func (c *ClientGoCollector) Init(config *l8tpollaris.L8PHostProtocol, resources ifs.IResources) error {
 	c.resources = resources
 	c.config = config
-	c.cache = NewCollectorCache()
-	c.warmed = make(map[string]bool)
-	c.stopCh = make(chan struct{})
+	sharedRuntime.lock.Lock()
+	defer sharedRuntime.lock.Unlock()
+	if sharedRuntime.cache == nil {
+		sharedRuntime.cache = NewCollectorCache()
+	}
+	if sharedRuntime.warmed == nil {
+		sharedRuntime.warmed = make(map[string]bool)
+	}
+	if sharedRuntime.stopCh == nil {
+		sharedRuntime.stopCh = make(chan struct{})
+	}
+	c.cache = sharedRuntime.cache
+	c.warmed = sharedRuntime.warmed
+	c.stopCh = sharedRuntime.stopCh
+	c.restConfig = sharedRuntime.restConfig
+	c.dynamicClient = sharedRuntime.dynamicClient
+	c.connected = sharedRuntime.connected
+	if err := c.ensureAdmissionServerStarted(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -133,15 +162,28 @@ func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
 }
 
 func (c *ClientGoCollector) Connect() error {
-	if c.cache == nil {
-		c.cache = NewCollectorCache()
+	sharedRuntime.lock.Lock()
+	if sharedRuntime.cache == nil {
+		sharedRuntime.cache = NewCollectorCache()
 	}
-	if c.warmed == nil {
-		c.warmed = make(map[string]bool)
+	if sharedRuntime.warmed == nil {
+		sharedRuntime.warmed = make(map[string]bool)
 	}
-	if c.stopCh == nil {
-		c.stopCh = make(chan struct{})
+	if sharedRuntime.stopCh == nil {
+		sharedRuntime.stopCh = make(chan struct{})
 	}
+	if sharedRuntime.connected && sharedRuntime.dynamicClient != nil {
+		c.cache = sharedRuntime.cache
+		c.warmed = sharedRuntime.warmed
+		c.stopCh = sharedRuntime.stopCh
+		c.restConfig = sharedRuntime.restConfig
+		c.dynamicClient = sharedRuntime.dynamicClient
+		c.connected = true
+		sharedRuntime.lock.Unlock()
+		return nil
+	}
+	sharedRuntime.lock.Unlock()
+
 	cfg, err := c.kubeConfig()
 	if err != nil {
 		return err
@@ -150,6 +192,33 @@ func (c *ClientGoCollector) Connect() error {
 	if err != nil {
 		return err
 	}
+
+	sharedRuntime.lock.Lock()
+	defer sharedRuntime.lock.Unlock()
+	if sharedRuntime.cache == nil {
+		sharedRuntime.cache = NewCollectorCache()
+	}
+	if sharedRuntime.warmed == nil {
+		sharedRuntime.warmed = make(map[string]bool)
+	}
+	if sharedRuntime.stopCh == nil {
+		sharedRuntime.stopCh = make(chan struct{})
+	}
+	if sharedRuntime.connected && sharedRuntime.dynamicClient != nil {
+		c.cache = sharedRuntime.cache
+		c.warmed = sharedRuntime.warmed
+		c.stopCh = sharedRuntime.stopCh
+		c.restConfig = sharedRuntime.restConfig
+		c.dynamicClient = sharedRuntime.dynamicClient
+		c.connected = true
+		return nil
+	}
+	sharedRuntime.restConfig = cfg
+	sharedRuntime.dynamicClient = client
+	sharedRuntime.connected = true
+	c.cache = sharedRuntime.cache
+	c.warmed = sharedRuntime.warmed
+	c.stopCh = sharedRuntime.stopCh
 	c.restConfig = cfg
 	c.dynamicClient = client
 	c.connected = true
@@ -158,16 +227,8 @@ func (c *ClientGoCollector) Connect() error {
 
 func (c *ClientGoCollector) Disconnect() error {
 	c.connected = false
-	if c.stopCh != nil {
-		close(c.stopCh)
-		c.stopCh = nil
-	}
 	c.resources = nil
 	c.config = nil
-	c.cache = nil
-	c.restConfig = nil
-	c.dynamicClient = nil
-	c.warmed = nil
 	return nil
 }
 
@@ -197,6 +258,57 @@ func (c *ClientGoCollector) AdmissionHandler() (http.Handler, error) {
 		return nil, err
 	}
 	return NewAdmissionHandler(rules, c.handleAdmissionEvent), nil
+}
+
+func (c *ClientGoCollector) ensureAdmissionServerStarted() error {
+	if c == nil || c.config == nil || c.config.Protocol != l8tpollaris.L8PProtocol_L8PKubernetesAPI {
+		return nil
+	}
+	if os.Getenv("ClusterName") == "" {
+		return nil
+	}
+
+	sharedRuntime.lock.Lock()
+	if sharedRuntime.serverStarted || sharedRuntime.serverStarting {
+		sharedRuntime.lock.Unlock()
+		return nil
+	}
+	sharedRuntime.serverStarting = true
+	sharedRuntime.lock.Unlock()
+
+	err := c.Connect()
+	if err == nil {
+		err = c.StartAdmissionServer(c.resources)
+	}
+
+	sharedRuntime.lock.Lock()
+	defer sharedRuntime.lock.Unlock()
+	sharedRuntime.serverStarting = false
+	if err == nil {
+		sharedRuntime.serverStarted = true
+	}
+	return err
+}
+
+func (c *ClientGoCollector) WarmUpFromBootModels() error {
+	if !c.connected {
+		if err := c.Connect(); err != nil {
+			return err
+		}
+	}
+	specs, err := CacheSpecsFromBootModels()
+	if err != nil {
+		return err
+	}
+	for _, spec := range specs {
+		if spec == nil {
+			continue
+		}
+		if err = c.ensureWarm(spec, spec.Namespace); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *ClientGoCollector) ensureWarm(spec *CacheSpec, namespace string) error {
