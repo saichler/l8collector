@@ -14,12 +14,13 @@ require (
 	github.com/saichler/l8utils v0.0.0-20260322182652-722ad1c4c3b9
 	github.com/saichler/l8web v0.0.0-20260330122707-c8713091ebe7
 	github.com/saichler/podys v0.0.0-20251006035524-5a00a37cbf93
-	github.com/saichler/probler v0.0.0-20260329010813-9614713cccc3
+	github.com/saichler/probler v0.0.0-20260331175625-ce6a090cb089
 	golang.org/x/crypto v0.49.0
 	google.golang.org/protobuf v1.36.11
 	k8s.io/api v0.35.3
 	k8s.io/apimachinery v0.35.3
 	k8s.io/client-go v0.35.3
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
@@ -63,5 +64,4 @@ require (
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
-	sigs.k8s.io/yaml v1.6.0 // indirect
 )

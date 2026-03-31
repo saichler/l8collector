@@ -1,0 +1,276 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: l8collector-admission
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: l8collector-admission-bootstrap
+  namespace: default
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - create
+      - update
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: l8collector-admission
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - nodes
+      - pods
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+      - deployments
+      - statefulsets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - networkpolicies
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
+    verbs:
+      - get
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: l8collector-admission-bootstrap
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: l8collector-admission-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: l8collector-admission
+    namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: l8collector-admission
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: l8collector-admission
+subjects:
+  - kind: ServiceAccount
+    name: l8collector-admission
+    namespace: default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: l8collector-admission-bootstrap
+  namespace: default
+data:
+  generate-cert.sh: |
+    #!/bin/sh
+    set -eu
+
+    namespace="${NAMESPACE:-default}"
+    service="${SERVICE_NAME:-l8collector-admission}"
+    tmp="/work"
+    crt="${tmp}/tls.crt"
+    key="${tmp}/tls.key"
+    csr_conf="${tmp}/csr.conf"
+
+    cat > "${csr_conf}" <<EOF
+    [req]
+    prompt = no
+    default_bits = 2048
+    distinguished_name = dn
+    x509_extensions = v3_req
+
+    [dn]
+    CN = ${service}.${namespace}.svc
+
+    [v3_req]
+    subjectAltName = @alt_names
+
+    [alt_names]
+    DNS.1 = ${service}
+    DNS.2 = ${service}.${namespace}
+    DNS.3 = ${service}.${namespace}.svc
+    EOF
+
+    openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+      -keyout "${key}" \
+      -out "${crt}" \
+      -config "${csr_conf}"
+  apply-tls.sh: |
+    #!/bin/sh
+    set -eu
+
+    namespace="${NAMESPACE:-default}"
+    secret="${SECRET_NAME:-l8collector-admission-tls}"
+    webhook="${WEBHOOK_NAME:-l8collector-k8s}"
+    crt="/work/tls.crt"
+    key="/work/tls.key"
+
+    kubectl -n "${namespace}" create secret tls "${secret}" \
+      --cert="${crt}" \
+      --key="${key}" \
+      --dry-run=client -o yaml | kubectl apply -f -
+
+    ca_bundle="$(base64 -w 0 < "${crt}")"
+    kubectl patch validatingwebhookconfiguration "${webhook}" \
+      --type='json' \
+      -p="[{'op':'add','path':'/webhooks/0/clientConfig/caBundle','value':'${ca_bundle}'}]"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: l8collector-admission-bootstrap
+  namespace: default
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: l8collector-admission-bootstrap
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: l8collector-admission
+      initContainers:
+        - name: generate-cert
+          image: alpine:3.22
+          command:
+            - /bin/sh
+            - -c
+            - apk add --no-cache openssl >/dev/null && /bootstrap/generate-cert.sh
+          env:
+            - name: NAMESPACE
+              value: default
+            - name: SERVICE_NAME
+              value: l8collector-admission
+            - name: SECRET_NAME
+              value: l8collector-admission-tls
+            - name: WEBHOOK_NAME
+              value: l8collector-k8s
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+            - name: work
+              mountPath: /work
+      containers:
+        - name: apply-secret-and-cabundle
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/sh
+            - -c
+            - /bootstrap/apply-tls.sh
+          env:
+            - name: NAMESPACE
+              value: default
+            - name: SERVICE_NAME
+              value: l8collector-admission
+            - name: SECRET_NAME
+              value: l8collector-admission-tls
+            - name: WEBHOOK_NAME
+              value: l8collector-k8s
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+            - name: work
+              mountPath: /work
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: l8collector-admission-bootstrap
+            defaultMode: 0755
+        - name: work
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: l8collector-admission
+  namespace: default
+spec:
+  selector:
+    app: l8collector-admission
+  ports:
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 8443
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: l8collector-admission
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: l8collector-admission
+  template:
+    metadata:
+      labels:
+        app: l8collector-admission
+    spec:
+      serviceAccountName: l8collector-admission
+      containers:
+        - name: admission
+          image: saichler/probler-admission:latest
+          imagePullPolicy: Always
+          env:
+            - name: ADMISSION_HOST
+              value: 0.0.0.0
+            - name: ADMISSION_PORT
+              value: "8443"
+            - name: ADMISSION_PATH
+              value: /admission/kubernetes
+            - name: ADMISSION_CERT_NAME
+              value: /data/admission
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+          volumeMounts:
+            - name: tls
+              mountPath: /data
+              readOnly: true
+      volumes:
+        - name: tls
+          secret:
+            secretName: l8collector-admission-tls
+            items:
+              - key: tls.crt
+                path: admission.crt
+              - key: tls.key
+                path: admission.crtKey
