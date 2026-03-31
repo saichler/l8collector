@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
@@ -12,6 +13,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 )
 
 func TestParseGVR(t *testing.T) {
@@ -175,5 +177,28 @@ func TestAdmissionHandlerAllowsAndCallsBack(t *testing.T) {
 	}
 	if !called {
 		t.Fatal("expected callback to be called")
+	}
+}
+
+func TestRulesToOperationsAndYAMLHelpers(t *testing.T) {
+	ops := rulesToOperations([]WebhookRule{{
+		APIGroups:   []string{""},
+		APIVersions: []string{"v1"},
+		Resources:   []string{"pods"},
+		Operations:  []string{"UPDATE", "CREATE"},
+	}})
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 rule, got %d", len(ops))
+	}
+	if len(ops[0].Operations) != 2 {
+		t.Fatalf("expected 2 operations, got %d", len(ops[0].Operations))
+	}
+
+	yamlBytes, err := yaml.Marshal(typeMeta("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration"))
+	if err != nil {
+		t.Fatalf("marshal yaml: %v", err)
+	}
+	if !strings.Contains(string(yamlBytes), "ValidatingWebhookConfiguration") {
+		t.Fatalf("unexpected yaml: %s", string(yamlBytes))
 	}
 }
