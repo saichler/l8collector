@@ -22,6 +22,7 @@ import (
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8collector/go/collector/protocols/graphql"
 	"github.com/saichler/l8collector/go/collector/protocols/k8s"
+	"github.com/saichler/l8collector/go/collector/protocols/k8sclient"
 	"github.com/saichler/l8collector/go/collector/protocols/rest"
 	"github.com/saichler/l8collector/go/collector/protocols/snmp"
 	"github.com/saichler/l8collector/go/collector/protocols/ssh"
@@ -266,6 +267,8 @@ func newProtocolCollector(config *l8tpollaris.L8PHostProtocol, resource ifs.IRes
 		protocolCollector = &snmp.SNMPv2Collector{}
 	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PKubectl {
 		protocolCollector = &k8s.Kubernetes{}
+	} else if config.Protocol == l8tpollaris.L8PProtocol_L8PKubernetesAPI {
+		protocolCollector = &k8sclient.ClientGoCollector{}
 	} else {
 		return nil, errors.New(strings.New("Unknown Protocol ", config.Protocol.String()).String())
 	}
