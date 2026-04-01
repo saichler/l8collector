@@ -94,7 +94,9 @@ func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
 		return
 	}
 
-	job.Error = ""
+	if job.Error != "" {
+		return
+	}
 	job.ErrorCount = 0
 	c.log(ifs.Debug_Level, "Exec done job=%s result-bytes=%d", job.JobName, len(job.Result))
 }
@@ -205,10 +207,21 @@ func (c *ClientGoCollector) handleAdmissionEvent(event AdmissionEvent) error {
 
 // ensureWatching starts an informer for the given GVR+namespace exactly
 // once, using sync.Once per warm key to prevent duplicate informers.
+//
+// If an all-namespace informer is already running for this GVR, a
+// namespace-specific request is a no-op (the all-namespace informer
+// already covers it). This prevents duplicate watches.
 func (c *ClientGoCollector) ensureWatching(gvrText, namespace string) error {
 	if shared.dynamicClient == nil || gvrText == "" {
 		return nil
 	}
+
+	// If an all-namespace informer already covers this GVR, skip.
+	allNsKey := cacheKey(gvrText, "", "*")
+	if namespace != "" && shared.isWarmed(allNsKey) {
+		return nil
+	}
+
 	warmKey := cacheKey(gvrText, namespace, "*")
 	if shared.isWarmed(warmKey) {
 		return nil
@@ -315,6 +328,8 @@ func normalizeObject(gvr string, item *unstructured.Unstructured, operation stri
 	if item == nil {
 		return nil
 	}
+	obj := item.DeepCopy().Object
+	enrichObject(gvr, obj)
 	return &CachedObject{
 		GVR:             gvr,
 		Namespace:       item.GetNamespace(),
@@ -322,7 +337,7 @@ func normalizeObject(gvr string, item *unstructured.Unstructured, operation stri
 		UID:             string(item.GetUID()),
 		ResourceVersion: item.GetResourceVersion(),
 		Operation:       operation,
-		Object:          item.Object,
+		Object:          obj,
 		Related:         make([]map[string]interface{}, 0),
 	}
 }
