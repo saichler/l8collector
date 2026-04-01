@@ -11,7 +11,7 @@ import (
 func main() {
 	name := flag.String("name", "l8collector-k8s", "webhook name")
 	serviceName := flag.String("service", "l8collector", "kubernetes service name")
-	namespace := flag.String("namespace", "default", "kubernetes namespace")
+	namespace := flag.String("namespace", "probler-k8s-admin", "kubernetes namespace")
 	path := flag.String("path", k8sclient.DefaultAdmissionPath, "webhook HTTP path")
 	flag.Parse()
 

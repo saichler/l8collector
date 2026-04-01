@@ -8,10 +8,10 @@ webhooks:
     clientConfig:
       service:
         name: l8collector-admission
-        namespace: default
+        namespace: probler-k8s-admin
         path: /admission/kubernetes
     failurePolicy: Ignore
-    name: l8collector-admission.default.svc
+    name: l8collector-admission.probler-k8s-admin.svc
     rules:
       - apiGroups:
           - apps

@@ -90,6 +90,9 @@ func WebhookRulesFromPollarisModels(models []*l8tpollaris.L8Pollaris) ([]Webhook
 	return result, nil
 }
 
+// NewAdmissionHandler returns an HTTP handler for Kubernetes admission reviews.
+// The handler always allows the request (Allowed: true) — it is used purely
+// for observation and cache population, never for blocking mutations.
 func NewAdmissionHandler(rules []WebhookRule, callback AdmissionCallback) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()

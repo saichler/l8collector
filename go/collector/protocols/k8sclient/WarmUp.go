@@ -8,6 +8,27 @@ import (
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 )
 
+func (c *ClientGoCollector) WarmUpFromBootModels() error {
+	if !shared.connected {
+		if err := c.Connect(); err != nil {
+			return err
+		}
+	}
+	specs, err := CacheSpecsFromBootModels()
+	if err != nil {
+		return err
+	}
+	for _, spec := range specs {
+		if spec == nil {
+			continue
+		}
+		if err = c.ensureWatching(spec.GVR, spec.Namespace); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func CacheSpecsFromBootModels() ([]*CacheSpec, error) {
 	return CacheSpecsFromPollarisModels(boot.GetAllPolarisModels())
 }

@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/saichler/l8pollaris/go/pollaris"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
@@ -15,70 +14,27 @@ import (
 	"github.com/saichler/l8types/go/ifs"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-var sharedRuntime struct {
-	lock           sync.Mutex
-	cache          *CollectorCache
-	restConfig     *rest.Config
-	dynamicClient  dynamic.Interface
-	warmed         map[string]bool
-	stopCh         chan struct{}
-	connected      bool
-	serverStarted  bool
-	serverStarting bool
-}
-
 // ClientGoCollector is a cache-first Kubernetes collector.
 //
-// The current repo-local implementation focuses on the cache-backed Exec(job)
-// path. Admission/informer cache population will be added on top of this type
-// once the external protocol and client-go dependency updates are vendored.
+// All instances share a single connection, cache, and set of informers via
+// the package-level shared runtime. Instance fields hold convenience
+// references obtained from the shared runtime at Init/Connect time.
 type ClientGoCollector struct {
-	resources     ifs.IResources
-	config        *l8tpollaris.L8PHostProtocol
-	cache         *CollectorCache
-	restConfig    *rest.Config
-	dynamicClient dynamic.Interface
-	connected     bool
-	warmMu        sync.Mutex
-	warmed        map[string]bool
-	stopCh        chan struct{}
+	resources ifs.IResources
+	config    *l8tpollaris.L8PHostProtocol
 }
 
 func (c *ClientGoCollector) Init(config *l8tpollaris.L8PHostProtocol, resources ifs.IResources) error {
 	c.resources = resources
 	c.config = config
-	c.initSharedRuntimeState()
-	if err := c.ensureAdmissionServerStarted(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *ClientGoCollector) initSharedRuntimeState() {
-	sharedRuntime.lock.Lock()
-	defer sharedRuntime.lock.Unlock()
-	if sharedRuntime.cache == nil {
-		sharedRuntime.cache = NewCollectorCache()
-	}
-	if sharedRuntime.warmed == nil {
-		sharedRuntime.warmed = make(map[string]bool)
-	}
-	if sharedRuntime.stopCh == nil {
-		sharedRuntime.stopCh = make(chan struct{})
-	}
-	c.cache = sharedRuntime.cache
-	c.warmed = sharedRuntime.warmed
-	c.stopCh = sharedRuntime.stopCh
-	c.restConfig = sharedRuntime.restConfig
-	c.dynamicClient = sharedRuntime.dynamicClient
-	c.connected = sharedRuntime.connected
+	shared.init()
+	return c.ensureAdmissionServerStarted()
 }
 
 func (c *ClientGoCollector) Protocol() l8tpollaris.L8PProtocol {
@@ -89,36 +45,38 @@ func (c *ClientGoCollector) Protocol() l8tpollaris.L8PProtocol {
 }
 
 func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
-	fmt.Println("[adcon-debug] k8sclient.Exec start pollaris=", job.PollarisName, "job=", job.JobName, "target=", job.TargetId)
-	if !c.connected {
+	c.log(ifs.Debug_Level, "Exec start pollaris=%s job=%s target=%s", job.PollarisName, job.JobName, job.TargetId)
+
+	if !shared.connected {
 		if err := c.Connect(); err != nil {
-			fmt.Println("[adcon-debug] k8sclient.Exec connect-error=", err.Error())
+			c.log(ifs.Debug_Level, "Exec connect error: %s", err.Error())
 			job.Error = err.Error()
 			job.ErrorCount++
 			return
 		}
 	}
+
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, c.resources)
 	if err != nil {
-		fmt.Println("[adcon-debug] k8sclient.Exec poll-lookup-error=", err.Error())
+		c.log(ifs.Debug_Level, "Exec poll lookup error: %s", err.Error())
 		job.Error = err.Error()
 		job.ErrorCount++
 		return
 	}
+
 	spec, err := ParseCacheSpec(poll.What, poll)
 	if err != nil {
-		fmt.Println("[adcon-debug] k8sclient.Exec parse-spec-error=", err.Error())
+		c.log(ifs.Debug_Level, "Exec parse spec error: %s", err.Error())
 		job.Error = err.Error()
 		job.ErrorCount++
 		return
 	}
+
 	namespace := resolveSpecValue(spec.Namespace, spec.NamespaceFromArg, job.Arguments)
 	name := resolveSpecValue(spec.Name, spec.NameFromArg, job.Arguments)
-	selector := resolveSpecValue(spec.Selector, spec.SelectorFromArg, job.Arguments)
-	fmt.Println("[adcon-debug] k8sclient.Exec spec gvr=", spec.GVR, "result=", spec.Result, "mode=", spec.Mode, "namespace=", namespace, "name=", name, "selector=", selector)
-	err = c.ensureWarm(spec, namespace)
-	if err != nil {
-		fmt.Println("[adcon-debug] k8sclient.Exec warm-error=", err.Error())
+
+	if err = c.ensureWatching(spec.GVR, namespace); err != nil {
+		c.log(ifs.Debug_Level, "Exec warm error: %s", err.Error())
 		job.Error = err.Error()
 		job.ErrorCount++
 		return
@@ -126,152 +84,80 @@ func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
 
 	switch spec.Result {
 	case ResultMap:
-		item, ok := c.cache.Get(spec.GVR, namespace, name)
-		if !ok {
-			fmt.Println("[adcon-debug] k8sclient.Exec cache-miss gvr=", spec.GVR, "namespace=", namespace, "name=", name)
-			job.Error = fmt.Sprintf("cache miss for %s/%s/%s", spec.GVR, namespace, name)
-			job.ErrorCount++
-			return
-		}
-		cmap, err := BuildCMap(item, spec.Fields)
-		if err != nil {
-			fmt.Println("[adcon-debug] k8sclient.Exec build-cmap-error=", err.Error())
-			job.Error = err.Error()
-			job.ErrorCount++
-			return
-		}
-		enc := object.NewEncode()
-		err = enc.Add(cmap)
-		if err != nil {
-			fmt.Println("[adcon-debug] k8sclient.Exec encode-cmap-error=", err.Error())
-			job.Error = err.Error()
-			job.ErrorCount++
-			return
-		}
-		job.Result = enc.Data()
-		fmt.Println("[adcon-debug] k8sclient.Exec cmap-result-bytes=", len(job.Result))
+		c.execMap(job, spec, namespace, name)
 	case ResultTable:
-		items := c.cache.List(spec.GVR, namespace, selector)
-		fmt.Println("[adcon-debug] k8sclient.Exec table-items=", len(items))
-		tbl, err := BuildCTable(items, spec.Fields, spec.ColumnNames)
-		if err != nil {
-			fmt.Println("[adcon-debug] k8sclient.Exec build-ctable-error=", err.Error())
-			job.Error = err.Error()
-			job.ErrorCount++
-			return
-		}
-		enc := object.NewEncode()
-		err = enc.Add(tbl)
-		if err != nil {
-			fmt.Println("[adcon-debug] k8sclient.Exec encode-ctable-error=", err.Error())
-			job.Error = err.Error()
-			job.ErrorCount++
-			return
-		}
-		job.Result = enc.Data()
-		fmt.Println("[adcon-debug] k8sclient.Exec ctable-result-bytes=", len(job.Result), "rows=", len(tbl.Rows))
+		selector := resolveSpecValue(spec.Selector, spec.SelectorFromArg, job.Arguments)
+		c.execTable(job, spec, namespace, selector)
 	default:
-		fmt.Println("[adcon-debug] k8sclient.Exec unsupported-result=", spec.Result)
 		job.Error = "unsupported cache result type " + spec.Result
 		job.ErrorCount++
 		return
 	}
+
 	job.Error = ""
 	job.ErrorCount = 0
-	fmt.Println("[adcon-debug] k8sclient.Exec done job=", job.JobName, "result-bytes=", len(job.Result))
+	c.log(ifs.Debug_Level, "Exec done job=%s result-bytes=%d", job.JobName, len(job.Result))
+}
+
+func (c *ClientGoCollector) execMap(job *l8tpollaris.CJob, spec *CacheSpec, namespace, name string) {
+	item, ok := shared.cache.Get(spec.GVR, namespace, name)
+	if !ok {
+		job.Error = fmt.Sprintf("cache miss for %s/%s/%s", spec.GVR, namespace, name)
+		job.ErrorCount++
+		return
+	}
+	cmap, err := BuildCMap(item, spec.Fields)
+	if err != nil {
+		job.Error = err.Error()
+		job.ErrorCount++
+		return
+	}
+	enc := object.NewEncode()
+	if err = enc.Add(cmap); err != nil {
+		job.Error = err.Error()
+		job.ErrorCount++
+		return
+	}
+	job.Result = enc.Data()
+}
+
+func (c *ClientGoCollector) execTable(job *l8tpollaris.CJob, spec *CacheSpec, namespace, selector string) {
+	items := shared.cache.List(spec.GVR, namespace, selector)
+	tbl, err := BuildCTable(items, spec.Fields, spec.ColumnNames)
+	if err != nil {
+		job.Error = err.Error()
+		job.ErrorCount++
+		return
+	}
+	enc := object.NewEncode()
+	if err = enc.Add(tbl); err != nil {
+		job.Error = err.Error()
+		job.ErrorCount++
+		return
+	}
+	job.Result = enc.Data()
 }
 
 func (c *ClientGoCollector) Connect() error {
-	sharedRuntime.lock.Lock()
-	if sharedRuntime.cache == nil {
-		sharedRuntime.cache = NewCollectorCache()
-	}
-	if sharedRuntime.warmed == nil {
-		sharedRuntime.warmed = make(map[string]bool)
-	}
-	if sharedRuntime.stopCh == nil {
-		sharedRuntime.stopCh = make(chan struct{})
-	}
-	if sharedRuntime.connected && sharedRuntime.dynamicClient != nil {
-		c.cache = sharedRuntime.cache
-		c.warmed = sharedRuntime.warmed
-		c.stopCh = sharedRuntime.stopCh
-		c.restConfig = sharedRuntime.restConfig
-		c.dynamicClient = sharedRuntime.dynamicClient
-		c.connected = true
-		sharedRuntime.lock.Unlock()
-		return nil
-	}
-	sharedRuntime.lock.Unlock()
-
-	cfg, err := c.kubeConfig()
-	if err != nil {
-		return err
-	}
-	client, err := dynamic.NewForConfig(cfg)
-	if err != nil {
-		return err
-	}
-
-	sharedRuntime.lock.Lock()
-	defer sharedRuntime.lock.Unlock()
-	if sharedRuntime.cache == nil {
-		sharedRuntime.cache = NewCollectorCache()
-	}
-	if sharedRuntime.warmed == nil {
-		sharedRuntime.warmed = make(map[string]bool)
-	}
-	if sharedRuntime.stopCh == nil {
-		sharedRuntime.stopCh = make(chan struct{})
-	}
-	if sharedRuntime.connected && sharedRuntime.dynamicClient != nil {
-		c.cache = sharedRuntime.cache
-		c.warmed = sharedRuntime.warmed
-		c.stopCh = sharedRuntime.stopCh
-		c.restConfig = sharedRuntime.restConfig
-		c.dynamicClient = sharedRuntime.dynamicClient
-		c.connected = true
-		return nil
-	}
-	sharedRuntime.restConfig = cfg
-	sharedRuntime.dynamicClient = client
-	sharedRuntime.connected = true
-	c.cache = sharedRuntime.cache
-	c.warmed = sharedRuntime.warmed
-	c.stopCh = sharedRuntime.stopCh
-	c.restConfig = cfg
-	c.dynamicClient = client
-	c.connected = true
-	return nil
+	shared.init()
+	_, _, err := shared.connect(c.kubeConfig)
+	return err
 }
 
 func (c *ClientGoCollector) Disconnect() error {
-	c.connected = false
+	shared.disconnect(c.logger())
 	c.resources = nil
 	c.config = nil
 	return nil
 }
 
 func (c *ClientGoCollector) Online() bool {
-	return c.connected
+	return shared.connected
 }
 
-// Upsert inserts or replaces a normalized object in the collector cache.
-func (c *ClientGoCollector) Upsert(obj *CachedObject) {
-	if c.cache == nil {
-		c.cache = NewCollectorCache()
-	}
-	c.cache.Upsert(obj)
-}
-
-// Delete removes a normalized object from the collector cache.
-func (c *ClientGoCollector) Delete(gvr, namespace, name string) {
-	if c.cache == nil {
-		return
-	}
-	c.cache.Delete(gvr, namespace, name)
-}
-
+// AdmissionHandler returns an HTTP handler that processes Kubernetes
+// admission review requests. The handler always allows the request —
+// it is used for observation/cache-population only, not for blocking.
 func (c *ClientGoCollector) AdmissionHandler() (http.Handler, error) {
 	rules, err := WebhookRulesFromBootModels()
 	if err != nil {
@@ -287,60 +173,66 @@ func (c *ClientGoCollector) ensureAdmissionServerStarted() error {
 	if os.Getenv("ClusterName") == "" {
 		return nil
 	}
-
-	sharedRuntime.lock.Lock()
-	if sharedRuntime.serverStarted || sharedRuntime.serverStarting {
-		sharedRuntime.lock.Unlock()
-		return nil
-	}
-	sharedRuntime.serverStarting = true
-	sharedRuntime.lock.Unlock()
-
-	err := c.Connect()
-	if err == nil {
-		err = c.StartAdmissionServer(c.resources)
-	}
-
-	sharedRuntime.lock.Lock()
-	defer sharedRuntime.lock.Unlock()
-	sharedRuntime.serverStarting = false
-	if err == nil {
-		sharedRuntime.serverStarted = true
-	}
-	return err
-}
-
-func (c *ClientGoCollector) WarmUpFromBootModels() error {
-	if !c.connected {
+	return shared.ensureAdmissionServer(func() error {
 		if err := c.Connect(); err != nil {
 			return err
 		}
+		return c.StartAdmissionServer(c.resources)
+	})
+}
+
+func (c *ClientGoCollector) handleAdmissionEvent(event AdmissionEvent) error {
+	gvrText := event.Version + "/" + event.Resource
+	if event.Group != "" {
+		gvrText = event.Group + "/" + gvrText
 	}
-	specs, err := CacheSpecsFromBootModels()
-	if err != nil {
+	if err := c.ensureWatching(gvrText, event.Namespace); err != nil {
 		return err
 	}
-	for _, spec := range specs {
-		if spec == nil {
-			continue
-		}
-		if err = c.ensureWarm(spec, spec.Namespace); err != nil {
-			return err
-		}
+	// The informer started by ensureWatching will observe the same
+	// mutation via the API server watch stream. We update the cache here
+	// as well for lower latency on the first event before the informer
+	// catches up.
+	if event.Operation == "DELETE" {
+		shared.cache.Delete(gvrText, event.Namespace, event.Name)
+		return nil
+	}
+	if event.Object != nil {
+		shared.cache.Upsert(normalizeObject(gvrText, event.Object, event.Operation))
 	}
 	return nil
 }
 
-func (c *ClientGoCollector) ensureWarm(spec *CacheSpec, namespace string) error {
-	if spec == nil {
+// ensureWatching starts an informer for the given GVR+namespace exactly
+// once, using sync.Once per warm key to prevent duplicate informers.
+func (c *ClientGoCollector) ensureWatching(gvrText, namespace string) error {
+	if shared.dynamicClient == nil || gvrText == "" {
 		return nil
 	}
-	return c.ensureWatching(spec.GVR, namespace)
+	warmKey := cacheKey(gvrText, namespace, "*")
+	if shared.isWarmed(warmKey) {
+		return nil
+	}
+
+	var startErr error
+	once := shared.onceForKey(warmKey)
+	once.Do(func() {
+		gvr, err := ParseGVR(gvrText)
+		if err != nil {
+			startErr = err
+			return
+		}
+		startErr = c.startInformer(gvr, gvrText, namespace, warmKey)
+		if startErr == nil {
+			shared.markWarmed(warmKey)
+		}
+	})
+	return startErr
 }
 
 func (c *ClientGoCollector) startInformer(gvr schema.GroupVersionResource, gvrText, namespace, warmKey string) error {
-	fmt.Println("[adcon-debug] k8sclient.startInformer gvr=", gvrText, "namespace=", namespace, "warmKey=", warmKey)
-	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c.dynamicClient, 0, namespace, nil)
+	c.log(ifs.Debug_Level, "startInformer gvr=%s namespace=%s", gvrText, namespace)
+	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(shared.dynamicClient, 0, namespace, nil)
 	informer := factory.ForResource(gvr).Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -348,32 +240,28 @@ func (c *ClientGoCollector) startInformer(gvr schema.GroupVersionResource, gvrTe
 			if !ok {
 				return
 			}
-			fmt.Println("[adcon-debug] k8sclient.informer add gvr=", gvrText, "ns=", item.GetNamespace(), "name=", item.GetName())
-			c.Upsert(normalizeObject(gvrText, item, "ADD"))
+			shared.cache.Upsert(normalizeObject(gvrText, item, "ADD"))
 		},
 		UpdateFunc: func(_, obj interface{}) {
 			item, ok := obj.(*unstructured.Unstructured)
 			if !ok {
 				return
 			}
-			fmt.Println("[adcon-debug] k8sclient.informer update gvr=", gvrText, "ns=", item.GetNamespace(), "name=", item.GetName())
-			c.Upsert(normalizeObject(gvrText, item, "UPDATE"))
+			shared.cache.Upsert(normalizeObject(gvrText, item, "UPDATE"))
 		},
 		DeleteFunc: func(obj interface{}) {
 			item, ok := extractDeletedObject(obj)
 			if !ok {
 				return
 			}
-			fmt.Println("[adcon-debug] k8sclient.informer delete gvr=", gvrText, "ns=", item.GetNamespace(), "name=", item.GetName())
-			c.Delete(gvrText, item.GetNamespace(), item.GetName())
+			shared.cache.Delete(gvrText, item.GetNamespace(), item.GetName())
 		},
 	})
-	factory.Start(c.stopCh)
-	if !cache.WaitForCacheSync(c.stopCh, informer.HasSynced) {
-		fmt.Println("[adcon-debug] k8sclient.startInformer sync-failed warmKey=", warmKey)
+	factory.Start(shared.stopCh)
+	if !cache.WaitForCacheSync(shared.stopCh, informer.HasSynced) {
 		return fmt.Errorf("failed to sync informer cache for %s", warmKey)
 	}
-	fmt.Println("[adcon-debug] k8sclient.startInformer synced warmKey=", warmKey)
+	c.log(ifs.Debug_Level, "startInformer synced warmKey=%s", warmKey)
 	return nil
 }
 
@@ -392,7 +280,6 @@ func (c *ClientGoCollector) kubeConfig() (*rest.Config, error) {
 			return nil, cfgErr
 		}
 	}
-
 	envPath := os.Getenv("KUBECONFIG")
 	if envPath != "" {
 		cfg, cfgErr := clientcmd.BuildConfigFromFlags("", envPath)
@@ -400,7 +287,6 @@ func (c *ClientGoCollector) kubeConfig() (*rest.Config, error) {
 			return cfg, nil
 		}
 	}
-
 	for _, candidate := range []string{"admin.conf", filepath.Join("go", "admin.conf")} {
 		if _, statErr := os.Stat(candidate); statErr != nil {
 			continue
@@ -410,7 +296,6 @@ func (c *ClientGoCollector) kubeConfig() (*rest.Config, error) {
 			return cfg, nil
 		}
 	}
-
 	return nil, err
 }
 
@@ -430,8 +315,6 @@ func normalizeObject(gvr string, item *unstructured.Unstructured, operation stri
 	if item == nil {
 		return nil
 	}
-	obj := item.Object
-	related := make([]map[string]interface{}, 0)
 	return &CachedObject{
 		GVR:             gvr,
 		Namespace:       item.GetNamespace(),
@@ -439,8 +322,8 @@ func normalizeObject(gvr string, item *unstructured.Unstructured, operation stri
 		UID:             string(item.GetUID()),
 		ResourceVersion: item.GetResourceVersion(),
 		Operation:       operation,
-		Object:          obj,
-		Related:         related,
+		Object:          item.Object,
+		Related:         make([]map[string]interface{}, 0),
 	}
 }
 
@@ -457,51 +340,30 @@ func extractDeletedObject(obj interface{}) (*unstructured.Unstructured, bool) {
 	return item, ok
 }
 
-func (c *ClientGoCollector) handleAdmissionEvent(event AdmissionEvent) error {
-	gvrText := event.Version + "/" + event.Resource
-	if event.Group != "" {
-		gvrText = event.Group + "/" + gvrText
+// log writes through the collector's resources logger if available,
+// otherwise falls back to fmt.Println.
+func (c *ClientGoCollector) log(level ifs.LogLevel, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	logger := c.logger()
+	if logger == nil {
+		fmt.Println("[k8sclient] " + msg)
+		return
 	}
-	if err := c.ensureWatching(gvrText, event.Namespace); err != nil {
-		return err
+	switch level {
+	case ifs.Error_Level:
+		logger.Error(msg)
+	case ifs.Warning_Level:
+		logger.Warning(msg)
+	case ifs.Info_Level:
+		logger.Info(msg)
+	default:
+		logger.Debug(msg)
 	}
-	if event.Operation == "DELETE" {
-		c.Delete(gvrText, event.Namespace, event.Name)
-		return nil
-	}
-	if event.Object != nil {
-		c.Upsert(normalizeObject(gvrText, event.Object, event.Operation))
-	}
-	return nil
 }
 
-func (c *ClientGoCollector) ensureWatching(gvrText, namespace string) error {
-	if c.dynamicClient == nil || gvrText == "" {
-		return nil
+func (c *ClientGoCollector) logger() ifs.ILogger {
+	if c.resources != nil {
+		return c.resources.Logger()
 	}
-	warmKey := cacheKey(gvrText, namespace, "*")
-	c.warmMu.Lock()
-	if c.warmed[warmKey] {
-		fmt.Println("[adcon-debug] k8sclient.ensureWatching already-warm=", warmKey)
-		c.warmMu.Unlock()
-		return nil
-	}
-	c.warmMu.Unlock()
-	fmt.Println("[adcon-debug] k8sclient.ensureWatching warming=", warmKey)
-
-	gvr, err := ParseGVR(gvrText)
-	if err != nil {
-		fmt.Println("[adcon-debug] k8sclient.ensureWatching parse-gvr-error=", err.Error())
-		return err
-	}
-	err = c.startInformer(gvr, gvrText, namespace, warmKey)
-	if err != nil {
-		fmt.Println("[adcon-debug] k8sclient.ensureWatching start-informer-error=", err.Error())
-		return err
-	}
-	c.warmMu.Lock()
-	c.warmed[warmKey] = true
-	c.warmMu.Unlock()
-	fmt.Println("[adcon-debug] k8sclient.ensureWatching warmed=", warmKey)
 	return nil
 }

@@ -7,14 +7,14 @@ cd go
 GOCACHE=/tmp/go-build go run ./cmd/k8s-webhook-config \
   -name l8collector-k8s \
   -service l8collector-admission \
-  -namespace default \
+  -namespace probler-k8s-admin \
   -path /admission/kubernetes
 ```
 
 The current checked-in manifest assumes:
 
 - Service name: `l8collector-admission`
-- Namespace: `default`
+- Namespace: `probler-k8s-admin`
 - Admission path: `/admission/kubernetes`
 - ClusterName: `lab`
 
@@ -28,7 +28,7 @@ The admission deployment also mirrors the base collector runtime assumptions:
 
 The bootstrap job:
 
-- generates a self-signed certificate for `l8collector-admission`, `l8collector-admission.default`, and `l8collector-admission.default.svc`
+- generates a self-signed certificate for `l8collector-admission`, `l8collector-admission.probler-k8s-admin`, and `l8collector-admission.probler-k8s-admin.svc`
 - creates or updates the `l8collector-admission-tls` secret
 - patches the `ValidatingWebhookConfiguration` with the matching `caBundle`
 

@@ -9,10 +9,10 @@ kubectl apply -f "${WEBHOOK_YAML}"
 
 # The bootstrap job is intentionally recreated on each deploy so it can
 # refresh the TLS secret and patch the webhook caBundle deterministically.
-kubectl delete job -n default l8collector-admission-bootstrap --ignore-not-found
+kubectl delete job -n probler-k8s-admin l8collector-admission-bootstrap --ignore-not-found
 
 kubectl apply -f "${ADMISSION_YAML}"
 
-kubectl wait --for=condition=complete -n default job/l8collector-admission-bootstrap --timeout=180s
-kubectl wait --for=condition=available -n default deployment/l8collector-admission --timeout=180s
+kubectl wait --for=condition=complete -n probler-k8s-admin job/l8collector-admission-bootstrap --timeout=180s
+kubectl wait --for=condition=available -n probler-k8s-admin deployment/l8collector-admission --timeout=180s
 
