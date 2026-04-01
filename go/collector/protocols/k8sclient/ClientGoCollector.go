@@ -274,7 +274,17 @@ func (c *ClientGoCollector) startInformer(gvr schema.GroupVersionResource, gvrTe
 	if !cache.WaitForCacheSync(shared.stopCh, informer.HasSynced) {
 		return fmt.Errorf("failed to sync informer cache for %s", warmKey)
 	}
-	c.log(ifs.Debug_Level, "startInformer synced warmKey=%s", warmKey)
+	// Seed the collector cache from the informer's store to guarantee all
+	// objects are available before the first poll. The async AddFunc
+	// callbacks may not have finished yet, but the store is complete.
+	for _, obj := range informer.GetStore().List() {
+		item, ok := obj.(*unstructured.Unstructured)
+		if !ok {
+			continue
+		}
+		shared.cache.Upsert(normalizeObject(gvrText, item, "ADD"))
+	}
+	c.log(ifs.Debug_Level, "startInformer synced warmKey=%s cached=%d", warmKey, len(informer.GetStore().List()))
 	return nil
 }
 
