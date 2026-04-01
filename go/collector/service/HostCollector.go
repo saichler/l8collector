@@ -215,6 +215,7 @@ func (this *HostCollector) collect() {
 			}
 
 			c.(common.ProtocolCollector).Exec(job)
+			fmt.Println("[adcon-debug] HostCollector.collect exec-done ", job.PollarisName, "/", job.JobName, "error=", job.Error, "errorCount=", job.ErrorCount, "result-bytes=", len(job.Result))
 			MarkEnded(job)
 			if this.running {
 				this.jobComplete(job)

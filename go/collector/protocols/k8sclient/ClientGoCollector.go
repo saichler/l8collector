@@ -89,8 +89,10 @@ func (c *ClientGoCollector) Protocol() l8tpollaris.L8PProtocol {
 }
 
 func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
+	fmt.Println("[adcon-debug] k8sclient.Exec start pollaris=", job.PollarisName, "job=", job.JobName, "target=", job.TargetId)
 	if !c.connected {
 		if err := c.Connect(); err != nil {
+			fmt.Println("[adcon-debug] k8sclient.Exec connect-error=", err.Error())
 			job.Error = err.Error()
 			job.ErrorCount++
 			return
@@ -98,12 +100,14 @@ func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
 	}
 	poll, err := pollaris.Poll(job.PollarisName, job.JobName, c.resources)
 	if err != nil {
+		fmt.Println("[adcon-debug] k8sclient.Exec poll-lookup-error=", err.Error())
 		job.Error = err.Error()
 		job.ErrorCount++
 		return
 	}
 	spec, err := ParseCacheSpec(poll.What, poll)
 	if err != nil {
+		fmt.Println("[adcon-debug] k8sclient.Exec parse-spec-error=", err.Error())
 		job.Error = err.Error()
 		job.ErrorCount++
 		return
@@ -111,8 +115,10 @@ func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
 	namespace := resolveSpecValue(spec.Namespace, spec.NamespaceFromArg, job.Arguments)
 	name := resolveSpecValue(spec.Name, spec.NameFromArg, job.Arguments)
 	selector := resolveSpecValue(spec.Selector, spec.SelectorFromArg, job.Arguments)
+	fmt.Println("[adcon-debug] k8sclient.Exec spec gvr=", spec.GVR, "result=", spec.Result, "mode=", spec.Mode, "namespace=", namespace, "name=", name, "selector=", selector)
 	err = c.ensureWarm(spec, namespace)
 	if err != nil {
+		fmt.Println("[adcon-debug] k8sclient.Exec warm-error=", err.Error())
 		job.Error = err.Error()
 		job.ErrorCount++
 		return
@@ -122,12 +128,14 @@ func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
 	case ResultMap:
 		item, ok := c.cache.Get(spec.GVR, namespace, name)
 		if !ok {
+			fmt.Println("[adcon-debug] k8sclient.Exec cache-miss gvr=", spec.GVR, "namespace=", namespace, "name=", name)
 			job.Error = fmt.Sprintf("cache miss for %s/%s/%s", spec.GVR, namespace, name)
 			job.ErrorCount++
 			return
 		}
 		cmap, err := BuildCMap(item, spec.Fields)
 		if err != nil {
+			fmt.Println("[adcon-debug] k8sclient.Exec build-cmap-error=", err.Error())
 			job.Error = err.Error()
 			job.ErrorCount++
 			return
@@ -135,15 +143,19 @@ func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
 		enc := object.NewEncode()
 		err = enc.Add(cmap)
 		if err != nil {
+			fmt.Println("[adcon-debug] k8sclient.Exec encode-cmap-error=", err.Error())
 			job.Error = err.Error()
 			job.ErrorCount++
 			return
 		}
 		job.Result = enc.Data()
+		fmt.Println("[adcon-debug] k8sclient.Exec cmap-result-bytes=", len(job.Result))
 	case ResultTable:
 		items := c.cache.List(spec.GVR, namespace, selector)
+		fmt.Println("[adcon-debug] k8sclient.Exec table-items=", len(items))
 		tbl, err := BuildCTable(items, spec.Fields, spec.ColumnNames)
 		if err != nil {
+			fmt.Println("[adcon-debug] k8sclient.Exec build-ctable-error=", err.Error())
 			job.Error = err.Error()
 			job.ErrorCount++
 			return
@@ -151,18 +163,22 @@ func (c *ClientGoCollector) Exec(job *l8tpollaris.CJob) {
 		enc := object.NewEncode()
 		err = enc.Add(tbl)
 		if err != nil {
+			fmt.Println("[adcon-debug] k8sclient.Exec encode-ctable-error=", err.Error())
 			job.Error = err.Error()
 			job.ErrorCount++
 			return
 		}
 		job.Result = enc.Data()
+		fmt.Println("[adcon-debug] k8sclient.Exec ctable-result-bytes=", len(job.Result), "rows=", len(tbl.Rows))
 	default:
+		fmt.Println("[adcon-debug] k8sclient.Exec unsupported-result=", spec.Result)
 		job.Error = "unsupported cache result type " + spec.Result
 		job.ErrorCount++
 		return
 	}
 	job.Error = ""
 	job.ErrorCount = 0
+	fmt.Println("[adcon-debug] k8sclient.Exec done job=", job.JobName, "result-bytes=", len(job.Result))
 }
 
 func (c *ClientGoCollector) Connect() error {
@@ -323,6 +339,7 @@ func (c *ClientGoCollector) ensureWarm(spec *CacheSpec, namespace string) error 
 }
 
 func (c *ClientGoCollector) startInformer(gvr schema.GroupVersionResource, gvrText, namespace, warmKey string) error {
+	fmt.Println("[adcon-debug] k8sclient.startInformer gvr=", gvrText, "namespace=", namespace, "warmKey=", warmKey)
 	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c.dynamicClient, 0, namespace, nil)
 	informer := factory.ForResource(gvr).Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -331,6 +348,7 @@ func (c *ClientGoCollector) startInformer(gvr schema.GroupVersionResource, gvrTe
 			if !ok {
 				return
 			}
+			fmt.Println("[adcon-debug] k8sclient.informer add gvr=", gvrText, "ns=", item.GetNamespace(), "name=", item.GetName())
 			c.Upsert(normalizeObject(gvrText, item, "ADD"))
 		},
 		UpdateFunc: func(_, obj interface{}) {
@@ -338,6 +356,7 @@ func (c *ClientGoCollector) startInformer(gvr schema.GroupVersionResource, gvrTe
 			if !ok {
 				return
 			}
+			fmt.Println("[adcon-debug] k8sclient.informer update gvr=", gvrText, "ns=", item.GetNamespace(), "name=", item.GetName())
 			c.Upsert(normalizeObject(gvrText, item, "UPDATE"))
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -345,13 +364,16 @@ func (c *ClientGoCollector) startInformer(gvr schema.GroupVersionResource, gvrTe
 			if !ok {
 				return
 			}
+			fmt.Println("[adcon-debug] k8sclient.informer delete gvr=", gvrText, "ns=", item.GetNamespace(), "name=", item.GetName())
 			c.Delete(gvrText, item.GetNamespace(), item.GetName())
 		},
 	})
 	factory.Start(c.stopCh)
 	if !cache.WaitForCacheSync(c.stopCh, informer.HasSynced) {
+		fmt.Println("[adcon-debug] k8sclient.startInformer sync-failed warmKey=", warmKey)
 		return fmt.Errorf("failed to sync informer cache for %s", warmKey)
 	}
+	fmt.Println("[adcon-debug] k8sclient.startInformer synced warmKey=", warmKey)
 	return nil
 }
 
@@ -460,21 +482,26 @@ func (c *ClientGoCollector) ensureWatching(gvrText, namespace string) error {
 	warmKey := cacheKey(gvrText, namespace, "*")
 	c.warmMu.Lock()
 	if c.warmed[warmKey] {
+		fmt.Println("[adcon-debug] k8sclient.ensureWatching already-warm=", warmKey)
 		c.warmMu.Unlock()
 		return nil
 	}
 	c.warmMu.Unlock()
+	fmt.Println("[adcon-debug] k8sclient.ensureWatching warming=", warmKey)
 
 	gvr, err := ParseGVR(gvrText)
 	if err != nil {
+		fmt.Println("[adcon-debug] k8sclient.ensureWatching parse-gvr-error=", err.Error())
 		return err
 	}
 	err = c.startInformer(gvr, gvrText, namespace, warmKey)
 	if err != nil {
+		fmt.Println("[adcon-debug] k8sclient.ensureWatching start-informer-error=", err.Error())
 		return err
 	}
 	c.warmMu.Lock()
 	c.warmed[warmKey] = true
 	c.warmMu.Unlock()
+	fmt.Println("[adcon-debug] k8sclient.ensureWatching warmed=", warmKey)
 	return nil
 }
