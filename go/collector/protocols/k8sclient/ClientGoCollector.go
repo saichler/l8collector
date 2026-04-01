@@ -54,6 +54,14 @@ type ClientGoCollector struct {
 func (c *ClientGoCollector) Init(config *l8tpollaris.L8PHostProtocol, resources ifs.IResources) error {
 	c.resources = resources
 	c.config = config
+	c.initSharedRuntimeState()
+	if err := c.ensureAdmissionServerStarted(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ClientGoCollector) initSharedRuntimeState() {
 	sharedRuntime.lock.Lock()
 	defer sharedRuntime.lock.Unlock()
 	if sharedRuntime.cache == nil {
@@ -71,10 +79,6 @@ func (c *ClientGoCollector) Init(config *l8tpollaris.L8PHostProtocol, resources 
 	c.restConfig = sharedRuntime.restConfig
 	c.dynamicClient = sharedRuntime.dynamicClient
 	c.connected = sharedRuntime.connected
-	if err := c.ensureAdmissionServerStarted(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (c *ClientGoCollector) Protocol() l8tpollaris.L8PProtocol {
