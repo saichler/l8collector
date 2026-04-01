@@ -16,10 +16,12 @@
 package main
 
 import (
+	"fmt"
 	"github.com/saichler/l8bus/go/overlay/vnic"
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8collector/go/collector/service"
 	"github.com/saichler/l8pollaris/go/pollaris"
+	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
 	"github.com/saichler/l8types/go/ifs"
 	common2 "github.com/saichler/probler/go/prob/common"
@@ -40,11 +42,14 @@ func main() {
 
 	//no need to activate with links id k8s as they are the same area for collection
 	service.Activate(common2.K8sC_Links_ID, nic)
-	res.Logger().SetLogLevel(ifs.Debug_Level)
+	res.Logger().SetLogLevel(ifs.Info_Level)
 
 	//Here send a message to self to start collecting
 	cl := creates.CreateCluster2(os.Getenv("ClusterName"))
+	cl.State = l8tpollaris.L8PTargetState_Up
 	coll, _ := nic.Resources().Services().ServiceHandler(common2.AdControl_Service_Name, common2.AdControl_Service_Area)
+	fmt.Println("Posting to the collector!")
 	coll.Post(object.New(nil, cl), nic)
+	fmt.Println("Posted!")
 	common2.WaitForSignal(res)
 }
