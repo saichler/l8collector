@@ -258,6 +258,10 @@ spec:
           env:
             - name: ClusterName
               value: Home
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
             - name: ADMISSION_HOST
               value: 0.0.0.0
             - name: ADMISSION_PORT
@@ -283,7 +287,9 @@ spec:
               readOnly: true
       volumes:
         - name: data
-          emptyDir: {}
+          hostPath:
+            path: /data
+            type: DirectoryOrCreate
         - name: tls
           secret:
             secretName: l8collector-admission-tls

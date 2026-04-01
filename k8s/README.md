@@ -21,6 +21,11 @@ The current checked-in manifest assumes:
 `admission-control.yaml` deploys the `go/adcon` image and exposes HTTPS on port `8443`.
 It also creates the service account, RBAC, TLS bootstrap job, and the deployment.
 
+The admission deployment also mirrors the base collector runtime assumptions:
+
+- `NODE_IP` is injected from the node `status.hostIP`
+- `/data` is backed by a hostPath volume at `/data`
+
 The bootstrap job:
 
 - generates a self-signed certificate for `l8collector-admission`, `l8collector-admission.default`, and `l8collector-admission.default.svc`

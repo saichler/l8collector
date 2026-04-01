@@ -40,7 +40,7 @@ func main() {
 
 	//no need to activate with links id k8s as they are the same area for collection
 	service.Activate(common2.K8sC_Links_ID, nic)
-	res.Logger().SetLogLevel(ifs.Error_Level)
+	res.Logger().SetLogLevel(ifs.Debug_Level)
 
 	//Here send a message to self to start collecting
 	cl := creates.CreateCluster2(os.Getenv("ClusterName"))
