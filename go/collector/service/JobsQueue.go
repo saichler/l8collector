@@ -18,7 +18,6 @@ package service
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -150,10 +149,8 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 	if this == nil {
 		return errors.New("Job Queue is already shutdown")
 	}
-	fmt.Println("[adcon-debug] JobsQueue.InsertJob pollaris=", polarisName)
 	jobs := this.newJobsForKey(polarisName, vendor, series, family, software, hardware, version)
 	if jobs == nil {
-		fmt.Println("[adcon-debug] JobsQueue.InsertJob no-jobs-for=", polarisName)
 		return errors.New("cannot find pollaris to create jobs")
 	}
 	this.mtx.Lock()
@@ -163,7 +160,6 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 	}
 	for _, job := range jobs {
 		if !job.Cadence.Enabled {
-			fmt.Println("[adcon-debug] JobsQueue.InsertJob disabled-job=", job.PollarisName, "/", job.JobName)
 			continue
 		}
 		jobKey := JobKey(job.PollarisName, job.JobName)
@@ -171,7 +167,6 @@ func (this *JobsQueue) InsertJob(polarisName, vendor, series, family, software, 
 		if !ok {
 			this.jobsMap[jobKey] = job
 			this.jobs = append(this.jobs, job)
-			fmt.Println("[adcon-debug] JobsQueue.InsertJob added=", job.PollarisName, "/", job.JobName)
 			this.service.vnic.Resources().Logger().Debug("Added job ", job.PollarisName, " - ", job.JobName)
 		} else {
 			old.Started = 0
@@ -198,7 +193,6 @@ func (this *JobsQueue) Pop() (*l8tpollaris.CJob, int64) {
 	this.mtx.Lock()
 	defer this.mtx.Unlock()
 	if len(this.jobs) == 0 {
-		fmt.Println("[adcon-debug] JobsQueue.Pop queue-empty target=", this.target.TargetId, "host=", this.hostId)
 		this.service.vnic.Resources().Logger().Error("Jobs Queue is empty")
 	}
 	if this.shutdown {

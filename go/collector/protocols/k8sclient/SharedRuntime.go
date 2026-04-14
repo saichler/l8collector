@@ -1,7 +1,6 @@
 package k8sclient
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/saichler/l8types/go/ifs"
@@ -151,5 +150,4 @@ func (s *sharedRuntimeState) disconnect(logger ifs.ILogger) {
 	if logger != nil {
 		logger.Info("shared runtime: disconnected")
 	}
-	fmt.Println("shared runtime: disconnected")
 }

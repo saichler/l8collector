@@ -17,7 +17,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
@@ -140,21 +139,17 @@ func (this *HostCollector) sendDeviceDown() {
 //   - Always returns nil (errors are logged but don't prevent startup)
 func (this *HostCollector) start() error {
 	host := this.target.Hosts[this.hostId]
-	fmt.Println("[adcon-debug] HostCollector.start target=", this.target.TargetId, "host=", this.hostId, "configs=", len(host.Configs))
 	for _, config := range host.Configs {
-		fmt.Println("[adcon-debug] HostCollector.start protocol=", config.Protocol.String())
 		col, err := newProtocolCollector(config, this.service.vnic.Resources())
 		if err != nil {
 			this.service.vnic.Resources().Logger().Error(err)
 		}
 		if col != nil {
-			fmt.Println("[adcon-debug] HostCollector.start collector-created protocol=", config.Protocol.String())
 			this.collectors.Put(config.Protocol, col)
 		}
 	}
 
 	this.bootStages[0] = this.newBootState(0)
-	fmt.Println("[adcon-debug] HostCollector.start boot-stage-0-jobs=", len(this.bootStages[0].jobNames))
 
 	go this.collect()
 
@@ -174,7 +169,6 @@ func (this *HostCollector) collect() {
 
 		job, waitTime = this.jobsQueue.Pop()
 		if job != nil {
-			fmt.Println("[adcon-debug] HostCollector.collect popped ", job.PollarisName, "/", job.JobName)
 			resources.Logger().Debug("Poped job ", job.PollarisName, ":", job.JobName)
 		} else {
 			resources.Logger().Debug("No Job, waitTime ", waitTime)
@@ -215,7 +209,6 @@ func (this *HostCollector) collect() {
 			}
 
 			c.(common.ProtocolCollector).Exec(job)
-			fmt.Println("[adcon-debug] HostCollector.collect exec-done ", job.PollarisName, "/", job.JobName, "error=", job.Error, "errorCount=", job.ErrorCount, "result-bytes=", len(job.Result))
 			MarkEnded(job)
 			if this.running {
 				this.jobComplete(job)

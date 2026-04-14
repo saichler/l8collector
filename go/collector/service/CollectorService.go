@@ -20,7 +20,6 @@ limitations under the License.
 package service
 
 import (
-	"fmt"
 	"github.com/saichler/l8pollaris/go/pollaris/targets"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
@@ -100,9 +99,7 @@ func (this *CollectorService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.
 // Returns:
 //   - error if any host collector fails to start
 func (this *CollectorService) startPolling(device *l8tpollaris.L8PTarget) error {
-	fmt.Println("[adcon-debug] CollectorService.startPolling target=", device.TargetId, "hosts=", len(device.Hosts))
 	for _, host := range device.Hosts {
-		fmt.Println("[adcon-debug] CollectorService.startPolling host=", host.HostId, "configs=", len(host.Configs))
 		hostCol, _ := this.hostCollector(host.HostId, device)
 		err := hostCol.start()
 		if err != nil {

@@ -16,7 +16,6 @@ limitations under the License.
 package service
 
 import (
-	"fmt"
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8parser/go/parser/boot"
 	"github.com/saichler/l8pollaris/go/pollaris"
@@ -52,27 +51,22 @@ func (this *HostCollector) newBootState(stage int) *BootState {
 	bs := &BootState{}
 	bs.stage = stage
 	bs.jobNames = make(map[string]bool)
-	fmt.Println("[adcon-debug] BootState.newBootState stage=", stage, "group=", common.BootStages[stage])
 	pollList, err := pollaris.PollarisByGroup(this.service.vnic.Resources(), common.BootStages[stage],
 		"", "", "", "", "", "")
 	if err != nil {
 		this.service.vnic.Resources().Logger().Error("Boot stage ", stage, " does not exist,skipping")
 		return bs
 	}
-	fmt.Println("[adcon-debug] BootState.newBootState pollaris-count=", len(pollList))
 	for _, pollrs := range pollList {
-		fmt.Println("[adcon-debug] BootState.newBootState pollaris=", pollrs.Name, "poll-count=", len(pollrs.Polling))
 		hasProtocol := false
 		for _, poll := range pollrs.Polling {
 			_, ok := this.collectors.Get(poll.Protocol)
-			fmt.Println("[adcon-debug] BootState.newBootState poll=", poll.Name, "protocol=", poll.Protocol.String(), "hasCollector=", ok)
 			if ok {
 				bs.jobNames[poll.Name] = false
 				hasProtocol = true
 			}
 		}
 		if hasProtocol {
-			fmt.Println("[adcon-debug] BootState.newBootState inserting pollaris=", pollrs.Name)
 			err = this.jobsQueue.InsertJob(pollrs.Name, "", "", "", "", "", "", 0, 0)
 			if err != nil {
 				this.service.vnic.Resources().Logger().Error("Error adding pollaris to boot: ", err)
