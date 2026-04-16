@@ -6,20 +6,20 @@ require (
 	github.com/cdevr/WapSNMP v0.1.0
 	github.com/google/uuid v1.6.0
 	github.com/saichler/l8bus v0.0.0-20260326134657-42f845bc01f6
-	github.com/saichler/l8parser v0.0.0-20260401112915-eb4e211d1b33
+	github.com/saichler/l8parser v0.0.0-20260414134039-2f71def5ec52
 	github.com/saichler/l8pollaris v0.0.0-20260331142743-079cf6e4e527
 	github.com/saichler/l8srlz v0.0.0-20260322124809-505a0d08f95d
 	github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89
-	github.com/saichler/l8types v0.0.0-20260413144647-e11af7b63723
-	github.com/saichler/l8utils v0.0.0-20260412044401-2462343ecbb7
+	github.com/saichler/l8types v0.0.0-20260416135603-b289e51104b3
+	github.com/saichler/l8utils v0.0.0-20260416140445-0f8f6f529581
 	github.com/saichler/l8web v0.0.0-20260414013916-c8c72b83721d
 	github.com/saichler/podys v0.0.0-20251006035524-5a00a37cbf93
-	github.com/saichler/probler v0.0.0-20260412121616-056adff8f8d0
+	github.com/saichler/probler v0.0.0-20260414135148-5afca73918ca
 	golang.org/x/crypto v0.50.0
 	google.golang.org/protobuf v1.36.11
-	k8s.io/api v0.35.3
-	k8s.io/apimachinery v0.35.3
-	k8s.io/client-go v0.35.3
+	k8s.io/api v0.35.4
+	k8s.io/apimachinery v0.35.4
+	k8s.io/client-go v0.35.4
 	sigs.k8s.io/yaml v1.6.0
 )
 
