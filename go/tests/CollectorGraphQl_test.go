@@ -30,7 +30,7 @@ import (
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8types/go/ifs"
 	"github.com/saichler/l8types/go/types/l8api"
-	"github.com/saichler/podys/go/types/taddy"
+	// "github.com/saichler/podys/go/types/taddy" // podys repo no longer available
 )
 
 // TestGraphqlCollector tests the GraphQL protocol collector functionality.
@@ -65,7 +65,7 @@ func TestGraphqlCollector(t *testing.T) {
 	host := utils_collector.CreateGraphqlHost("api.taddy.org", 443, os.Getenv("X_USER_ID"), os.Getenv("X_API_KEY"))
 
 	vnic := topo.VnicByVnetNum(2, 2)
-	vnic.Resources().Registry().Register(&taddy.TaddyResponse{})
+	// vnic.Resources().Registry().Register(&taddy.TaddyResponse{}) // podys repo no longer available
 
 	sla := ifs.NewServiceLevelAgreement(&pollaris.PollarisService{}, pollaris.ServiceName, pollaris.ServiceArea, true, nil)
 	vnic.Resources().Services().Activate(sla, vnic)
