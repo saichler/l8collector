@@ -88,8 +88,8 @@ github.com/saichler/l8web v0.0.0-20260414013916-c8c72b83721d h1:rvEEBSxNy3tnz/w7
 github.com/saichler/l8web v0.0.0-20260414013916-c8c72b83721d/go.mod h1:r2j6dgKs41L+dwaSh3hQ9OJN0RnQP0C8NWxAbAn+c8c=
 github.com/saichler/podys v0.0.0-20251006035524-5a00a37cbf93 h1:QlAtApF2RvWLajhKokDYqJv58V3xmbdXWT85DKKH1Go=
 github.com/saichler/podys v0.0.0-20251006035524-5a00a37cbf93/go.mod h1:Iq/QiaLSdx4utcE2SkOg0hEmXMFj+NT0b5pwbGaCYJw=
-github.com/saichler/probler v0.0.0-20260414135148-5afca73918ca h1:f9Ivrv1jatsbpa/HJ0UVBo3Hvh/oBvx7s3AugJnwEIg=
-github.com/saichler/probler v0.0.0-20260414135148-5afca73918ca/go.mod h1:3SmozVci2+FIzlQkm7PuXcUxfG8Qjc+Nml1/0AJPQrc=
+github.com/saichler/probler v0.0.0-20260418143026-039dfccec6e3 h1:S1HkBglTkGrWXKvjIVeMVhMm2nGGQ4a8rBJbAjn+Tf0=
+github.com/saichler/probler v0.0.0-20260418143026-039dfccec6e3/go.mod h1:3SmozVci2+FIzlQkm7PuXcUxfG8Qjc+Nml1/0AJPQrc=
 github.com/spf13/pflag v1.0.9 h1:9exaQaMOCwffKiiiYk6/BndUBv+iRViNW+4lEMi0PvY=
 github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
