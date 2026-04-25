@@ -57,7 +57,25 @@ func (this *HostCollector) newBootState(stage int) *BootState {
 		this.service.vnic.Resources().Logger().Error("Boot stage ", stage, " does not exist,skipping")
 		return bs
 	}
+	// Per-target Pollaris filter: if any Pollaris in the stage is named exactly
+	// after this target's LinksId, it means polls have been split per-PrimeObject.
+	// In that case, run only the matching Pollaris on this target — the other
+	// per-PrimeObject Pollarises belong to their own targets. If no exact match
+	// exists (legacy targets like NetDev/GPU/old K8sC), fall back to running
+	// every Pollaris in the stage as before.
+	hasLinksMatch := false
+	if this.target != nil && this.target.LinksId != "" {
+		for _, pollrs := range pollList {
+			if pollrs.Name == this.target.LinksId {
+				hasLinksMatch = true
+				break
+			}
+		}
+	}
 	for _, pollrs := range pollList {
+		if hasLinksMatch && pollrs.Name != this.target.LinksId {
+			continue
+		}
 		hasProtocol := false
 		for _, poll := range pollrs.Polling {
 			_, ok := this.collectors.Get(poll.Protocol)
