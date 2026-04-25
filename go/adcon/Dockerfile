@@ -2,7 +2,8 @@ FROM saichler/builder:latest AS build
 
 COPY main.go /home/src/github.com/saichler/build/main.go
 RUN go mod init
-RUN GOPROXY=direct GOPRIVATE=github.com go mod tidy
+#RUN GOPROXY=direct GOPRIVATE=github.com go mod tidy
+RUN GOPROXY=https://proxy.golang.org,direct GOPRIVATE=github.com go mod tidy
 RUN go build -o collector
 
 FROM saichler/probler-security:latest AS final
