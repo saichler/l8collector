@@ -1,6 +1,7 @@
 package k8sclient
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -142,6 +143,157 @@ func enrichPod(obj map[string]interface{}, out map[string]interface{}) {
 	} else {
 		out["nominatednode"] = "<none>"
 	}
+	enrichPodContainers(obj, out)
+}
+
+// podContainer is the JSON shape consumed by the UI's pod detail popup. It
+// merges declarative spec data (image, ports, env, …) with runtime status
+// (ready, state, restartCount). All fields use omitempty so the produced
+// JSON stays compact for typical pods.
+type podContainer struct {
+	Name            string                   `json:"name,omitempty"`
+	Image           string                   `json:"image,omitempty"`
+	ImagePullPolicy string                   `json:"imagePullPolicy,omitempty"`
+	Ports           []map[string]interface{} `json:"ports,omitempty"`
+	Env             []map[string]interface{} `json:"env,omitempty"`
+	Resources       map[string]interface{}   `json:"resources,omitempty"`
+	VolumeMounts    []map[string]interface{} `json:"volumeMounts,omitempty"`
+	Kind            string                   `json:"kind,omitempty"` // "container" | "init"
+	Ready           *bool                    `json:"ready,omitempty"`
+	State           string                   `json:"state,omitempty"` // "Running" | "Waiting" | "Terminated"
+	RestartCount    int                      `json:"restartCount,omitempty"`
+}
+
+// enrichPodContainers walks spec.containers + spec.initContainers and merges
+// runtime data from status.containerStatuses + status.initContainerStatuses
+// (keyed by container name). The result is JSON-encoded into
+// out["containers_json"]; the proto field K8SPod.containers_json carries it
+// to the UI which renders one card per container.
+//
+// Empty pods produce no key (the UI then renders "—"). JSON marshal failures
+// are logged via stdout — they should never happen with well-formed K8s
+// objects but the silent-fallback rule says we surface anything unexpected.
+func enrichPodContainers(obj map[string]interface{}, out map[string]interface{}) {
+	statusByName := indexContainerStatuses(obj, "containerStatuses")
+	initStatusByName := indexContainerStatuses(obj, "initContainerStatuses")
+
+	list := make([]podContainer, 0)
+	list = append(list, collectContainers(obj, "containers", "container", statusByName)...)
+	list = append(list, collectContainers(obj, "initContainers", "init", initStatusByName)...)
+
+	if len(list) == 0 {
+		return
+	}
+	buf, err := json.Marshal(list)
+	if err != nil {
+		fmt.Printf("[K8S-ENRICH-POD-ERR] containers marshal err=%s\n", err.Error())
+		return
+	}
+	out["containers_json"] = string(buf)
+	fmt.Printf("[K8S-ENRICH-POD] containers=%d jsonBytes=%d\n", len(list), len(buf))
+}
+
+func indexContainerStatuses(obj map[string]interface{}, key string) map[string]map[string]interface{} {
+	idx := map[string]map[string]interface{}{}
+	statuses, ok := nestedSlice(obj, "status", key)
+	if !ok {
+		return idx
+	}
+	for _, entry := range statuses {
+		m, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name := fmt.Sprint(m["name"])
+		if name == "" {
+			continue
+		}
+		idx[name] = m
+	}
+	return idx
+}
+
+func collectContainers(obj map[string]interface{}, specKey, kind string, statusByName map[string]map[string]interface{}) []podContainer {
+	containers, ok := nestedSlice(obj, "spec", specKey)
+	if !ok || len(containers) == 0 {
+		return nil
+	}
+	out := make([]podContainer, 0, len(containers))
+	for _, entry := range containers {
+		spec, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		c := podContainer{
+			Name:            stringOf(spec, "name"),
+			Image:           stringOf(spec, "image"),
+			ImagePullPolicy: stringOf(spec, "imagePullPolicy"),
+			Kind:            kind,
+		}
+		if ports, ok := spec["ports"].([]interface{}); ok {
+			c.Ports = mapsOf(ports)
+		}
+		if env, ok := spec["env"].([]interface{}); ok {
+			c.Env = mapsOf(env)
+		}
+		if mounts, ok := spec["volumeMounts"].([]interface{}); ok {
+			c.VolumeMounts = mapsOf(mounts)
+		}
+		if res, ok := spec["resources"].(map[string]interface{}); ok && len(res) > 0 {
+			c.Resources = res
+		}
+		// Merge runtime status (when present) for ready/state/restartCount.
+		if st, ok := statusByName[c.Name]; ok {
+			if r, ok := st["ready"].(bool); ok {
+				rc := r
+				c.Ready = &rc
+			}
+			if rc, ok := toInt(st["restartCount"]); ok {
+				c.RestartCount = rc
+			}
+			c.State = containerState(st)
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+func containerState(st map[string]interface{}) string {
+	state, ok := st["state"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	for _, k := range []string{"running", "waiting", "terminated"} {
+		if _, ok := state[k]; ok {
+			// Capitalize for display: running → Running.
+			if k == "" {
+				return ""
+			}
+			return strings.ToUpper(k[:1]) + k[1:]
+		}
+	}
+	return ""
+}
+
+func stringOf(m map[string]interface{}, key string) string {
+	v, ok := m[key]
+	if !ok || v == nil {
+		return ""
+	}
+	return fmt.Sprint(v)
+}
+
+func mapsOf(items []interface{}) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(items))
+	for _, e := range items {
+		if m, ok := e.(map[string]interface{}); ok {
+			out = append(out, m)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // --- deployment ---
