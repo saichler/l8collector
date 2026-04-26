@@ -20,6 +20,8 @@ limitations under the License.
 package service
 
 import (
+	"fmt"
+
 	"github.com/saichler/l8pollaris/go/pollaris/targets"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
@@ -175,6 +177,8 @@ func (this *CollectorService) DeActivate() error {
 //   - Empty L8PTarget response
 func (this *CollectorService) Post(pb ifs.IElements, vnic ifs.IVNic) ifs.IElements {
 	device := pb.Element().(*l8tpollaris.L8PTarget)
+	fmt.Printf("[COLLECTOR-POST] target=%s linksId=%s state=%v hosts=%d\n",
+		device.TargetId, device.LinksId, device.State, len(device.Hosts))
 	switch device.State {
 	case l8tpollaris.L8PTargetState_Up:
 		vnic.Resources().Logger().Info("Collector Service: Start polling device ", device.TargetId)

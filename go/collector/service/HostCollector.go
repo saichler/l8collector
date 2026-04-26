@@ -17,6 +17,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/saichler/l8collector/go/collector/common"
@@ -139,6 +140,8 @@ func (this *HostCollector) sendDeviceDown() {
 //   - Always returns nil (errors are logged but don't prevent startup)
 func (this *HostCollector) start() error {
 	host := this.target.Hosts[this.hostId]
+	fmt.Printf("[COLLECTOR-START] target=%s host=%s linksId=%s protocols=%d\n",
+		this.target.TargetId, this.hostId, this.target.LinksId, len(host.Configs))
 	for _, config := range host.Configs {
 		col, err := newProtocolCollector(config, this.service.vnic.Resources())
 		if err != nil {
@@ -150,6 +153,8 @@ func (this *HostCollector) start() error {
 	}
 
 	this.bootStages[0] = this.newBootState(0)
+	fmt.Printf("[COLLECTOR-BOOT] target=%s linksId=%s jobsInStage0=%d\n",
+		this.target.TargetId, this.target.LinksId, len(this.bootStages[0].jobNames))
 
 	go this.collect()
 
@@ -208,7 +213,11 @@ func (this *HostCollector) collect() {
 				continue
 			}
 
+			fmt.Printf("[COLLECTOR-EXEC] target=%s linksId=%s pollaris=%s job=%s\n",
+				job.TargetId, job.LinksId, job.PollarisName, job.JobName)
 			c.(common.ProtocolCollector).Exec(job)
+			fmt.Printf("[COLLECTOR-EXEC-DONE] target=%s linksId=%s job=%s err=%q resultBytes=%d\n",
+				job.TargetId, job.LinksId, job.JobName, job.Error, len(job.Result))
 			MarkEnded(job)
 			if this.running {
 				this.jobComplete(job)
@@ -292,6 +301,8 @@ func (this *HostCollector) jobComplete(job *l8tpollaris.CJob) {
 	}
 
 	pService, pArea := targets.Links.Parser(job.LinksId)
+	fmt.Printf("[COLLECTOR-FWD-PARSER] target=%s linksId=%s job=%s -> parser=(%s,%d)\n",
+		job.TargetId, job.LinksId, job.JobName, pService, pArea)
 	this.service.agg.AddElement(job, ifs.Proximity, "", pService, pArea, ifs.POST)
 	//err := this.service.vnic.Proximity(pService, pArea, ifs.POST, job)
 	//if err != nil {
