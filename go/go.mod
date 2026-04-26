@@ -40,7 +40,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/saichler/l8orm v0.0.0-20260425043220-78e9b42b67da // indirect
-	github.com/saichler/l8ql v0.0.0-20260322130921-a31581a0ab5f // indirect
+	github.com/saichler/l8ql v0.0.0-20260426044151-a58aa7f009dd // indirect
 	github.com/saichler/l8reflect v0.0.0-20260414115258-300dd0000aca // indirect
 	github.com/saichler/l8services v0.0.0-20260426032214-4df514457e11 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
