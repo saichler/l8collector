@@ -55,6 +55,33 @@ func enrichNode(obj map[string]interface{}, out map[string]interface{}) {
 	out["roles"] = nodeRoles(obj)
 	out["internalip"] = nodeAddress(obj, "InternalIP")
 	out["externalip"] = nodeAddress(obj, "ExternalIP")
+	out["status"] = nodeReadyStatus(obj)
+}
+
+// nodeReadyStatus mirrors `kubectl get nodes`' STATUS column. It reads
+// status.conditions[type=Ready].status and returns "Ready" / "NotReady".
+// "Unknown" is returned only when the conditions array is absent or the
+// Ready condition cannot be located — never as a silent fallback for an
+// unrecognized value.
+func nodeReadyStatus(obj map[string]interface{}) string {
+	conditions, ok := nestedSlice(obj, "status", "conditions")
+	if !ok || len(conditions) == 0 {
+		return "Unknown"
+	}
+	for _, entry := range conditions {
+		m, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if fmt.Sprint(m["type"]) != "Ready" {
+			continue
+		}
+		if fmt.Sprint(m["status"]) == "True" {
+			return "Ready"
+		}
+		return "NotReady"
+	}
+	return "Unknown"
 }
 
 func nodeRoles(obj map[string]interface{}) string {
@@ -123,6 +150,13 @@ func enrichDeployment(obj map[string]interface{}, out map[string]interface{}) {
 	replicas := intOr(obj, 0, "spec", "replicas")
 	readyReplicas := intOr(obj, 0, "status", "readyReplicas")
 	out["ready"] = fmt.Sprintf("%d/%d", readyReplicas, replicas)
+	// Pre-stringify updatedReplicas / availableReplicas. K8s omits these
+	// JSON fields when they are zero, which would leave the proto string
+	// fields empty; intOr(0) substitutes a real "0". The enrichment also
+	// sidesteps the int64 → string assignment path in the parser, which
+	// previously emitted rune characters or "[]" for these counts.
+	out["uptodate"] = fmt.Sprint(intOr(obj, 0, "status", "updatedReplicas"))
+	out["available"] = fmt.Sprint(intOr(obj, 0, "status", "availableReplicas"))
 	enrichPodTemplate(obj, out)
 	out["selector"] = matchLabelsString(obj, "spec", "selector", "matchLabels")
 }
@@ -139,6 +173,14 @@ func enrichStatefulSet(obj map[string]interface{}, out map[string]interface{}) {
 // --- daemonset ---
 
 func enrichDaemonSet(obj map[string]interface{}, out map[string]interface{}) {
+	// Same int → string normalization rationale as enrichDeployment: K8s
+	// returns these as int64, but the proto fields are `string`, and the
+	// parser's int64 → string fallback emits rune garbage or "[]" when the
+	// JSON key is missing. Pre-stringifying here gives the parser plain
+	// strings end-to-end.
+	out["desired"] = fmt.Sprint(intOr(obj, 0, "status", "desiredNumberScheduled"))
+	out["current"] = fmt.Sprint(intOr(obj, 0, "status", "currentNumberScheduled"))
+	out["ready"] = fmt.Sprint(intOr(obj, 0, "status", "numberReady"))
 	out["uptodate"] = fmt.Sprint(intOr(obj, 0, "status", "updatedNumberScheduled"))
 	out["available"] = fmt.Sprint(intOr(obj, 0, "status", "numberAvailable"))
 	out["nodeselector"] = nodeSelectorString(obj)
