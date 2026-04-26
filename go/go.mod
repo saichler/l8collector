@@ -6,7 +6,7 @@ require (
 	github.com/cdevr/WapSNMP v0.1.0
 	github.com/google/uuid v1.6.0
 	github.com/saichler/l8bus v0.0.0-20260426032250-7d34418825a0
-	github.com/saichler/l8parser v0.0.0-20260426041719-ab0c4454ffbd
+	github.com/saichler/l8parser v0.0.0-20260426042630-78d915e469b8
 	github.com/saichler/l8pollaris v0.0.0-20260418233826-378ba5e9453a
 	github.com/saichler/l8srlz v0.0.0-20260322124809-505a0d08f95d
 	github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89
