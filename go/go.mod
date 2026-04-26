@@ -5,7 +5,7 @@ go 1.26.1
 require (
 	github.com/cdevr/WapSNMP v0.1.0
 	github.com/google/uuid v1.6.0
-	github.com/saichler/l8bus v0.0.0-20260326134657-42f845bc01f6
+	github.com/saichler/l8bus v0.0.0-20260426032250-7d34418825a0
 	github.com/saichler/l8parser v0.0.0-20260426012724-e2708a92e4da
 	github.com/saichler/l8pollaris v0.0.0-20260418233826-378ba5e9453a
 	github.com/saichler/l8srlz v0.0.0-20260322124809-505a0d08f95d
@@ -42,7 +42,7 @@ require (
 	github.com/saichler/l8orm v0.0.0-20260425043220-78e9b42b67da // indirect
 	github.com/saichler/l8ql v0.0.0-20260322130921-a31581a0ab5f // indirect
 	github.com/saichler/l8reflect v0.0.0-20260414115258-300dd0000aca // indirect
-	github.com/saichler/l8services v0.0.0-20260405154617-7a86405cc5e2 // indirect
+	github.com/saichler/l8services v0.0.0-20260426032214-4df514457e11 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
