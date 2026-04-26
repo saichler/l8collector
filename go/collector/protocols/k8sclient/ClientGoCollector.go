@@ -125,12 +125,22 @@ func (c *ClientGoCollector) execMap(job *l8tpollaris.CJob, spec *CacheSpec, name
 
 func (c *ClientGoCollector) execTable(job *l8tpollaris.CJob, spec *CacheSpec, namespace, selector string) {
 	items := shared.cache.List(spec.GVR, namespace, selector)
+	fmt.Printf("[K8S-COLLECTOR-LIST] target=%s linksId=%s job=%s gvr=%s namespace=%q selector=%q items=%d\n",
+		job.TargetId, job.LinksId, job.JobName, spec.GVR, namespace, selector, len(items))
 	tbl, err := BuildCTable(items, spec.Fields, spec.ColumnNames)
 	if err != nil {
+		fmt.Printf("[K8S-COLLECTOR-CTABLE-ERR] target=%s linksId=%s job=%s err=%s\n",
+			job.TargetId, job.LinksId, job.JobName, err.Error())
 		job.Error = err.Error()
 		job.ErrorCount++
 		return
 	}
+	rowCount := 0
+	if tbl != nil {
+		rowCount = len(tbl.Rows)
+	}
+	fmt.Printf("[K8S-COLLECTOR-CTABLE] target=%s linksId=%s job=%s rows=%d cols=%d\n",
+		job.TargetId, job.LinksId, job.JobName, rowCount, len(spec.Fields))
 	enc := object.NewEncode()
 	if err = enc.Add(tbl); err != nil {
 		job.Error = err.Error()
