@@ -74,12 +74,12 @@ github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89 h1:G3cHYkdzEoJb5Bt
 github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89/go.mod h1:C4B8Zpv0L/Di/qB0lOWHOXF3r3Pz/6Oabu730TthWsc=
 github.com/saichler/l8types v0.0.0-20260419163606-4750d0cd36e2 h1:wx2isr09YTfN1b+qz46pxX0/YFZNdB7TK+g2yqI/h54=
 github.com/saichler/l8types v0.0.0-20260419163606-4750d0cd36e2/go.mod h1:0+Snl9PYq+caqTu6OBVaw7mQVn0TrRY9OJz+GelHuM4=
-github.com/saichler/l8utils v0.0.0-20260419163521-a6e3d46508db h1:VKYjvHHJrzJvQcKST3aX2yMnz40aPxfwkwgdepnIVyI=
-github.com/saichler/l8utils v0.0.0-20260419163521-a6e3d46508db/go.mod h1:nKdvYAEGLyHfxPg09oR6OfkJ0SniSbPb+Zi6wr/D5LU=
+github.com/saichler/l8utils v0.0.0-20260426024101-88d41a6b1943 h1:AIF6tMKGyZflJ+Abkpfh0yzos8hJGnD2dKhXWqYt5Uo=
+github.com/saichler/l8utils v0.0.0-20260426024101-88d41a6b1943/go.mod h1:nKdvYAEGLyHfxPg09oR6OfkJ0SniSbPb+Zi6wr/D5LU=
 github.com/saichler/l8web v0.0.0-20260414013916-c8c72b83721d h1:rvEEBSxNy3tnz/w7ka8tjtZNscVJ5d+mC3UVCgtJ4ys=
 github.com/saichler/l8web v0.0.0-20260414013916-c8c72b83721d/go.mod h1:r2j6dgKs41L+dwaSh3hQ9OJN0RnQP0C8NWxAbAn+c8c=
-github.com/saichler/probler v0.0.0-20260425192704-1a468c508b2d h1:qlumyJHhIja01X3IJ4SOw+aTo0I6wNtUsgBJBGOIEMM=
-github.com/saichler/probler v0.0.0-20260425192704-1a468c508b2d/go.mod h1:3SmozVci2+FIzlQkm7PuXcUxfG8Qjc+Nml1/0AJPQrc=
+github.com/saichler/probler v0.0.0-20260426024413-3abbb694dd29 h1:unmKsVvAmgIoGp1ekl+oxkENl7rrct2//ZligaLUow4=
+github.com/saichler/probler v0.0.0-20260426024413-3abbb694dd29/go.mod h1:3SmozVci2+FIzlQkm7PuXcUxfG8Qjc+Nml1/0AJPQrc=
 github.com/spf13/pflag v1.0.9 h1:9exaQaMOCwffKiiiYk6/BndUBv+iRViNW+4lEMi0PvY=
 github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
