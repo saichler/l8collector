@@ -298,6 +298,7 @@ func (this *RestCollector) Exec(job *l8tpollaris.CJob) {
 	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
 
 	// Inject CSRF token if present
 	if this.csrfToken != "" {
