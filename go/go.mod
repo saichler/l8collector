@@ -6,14 +6,14 @@ require (
 	github.com/cdevr/WapSNMP v0.1.0
 	github.com/google/uuid v1.6.0
 	github.com/saichler/l8bus v0.0.0-20260426032250-7d34418825a0
-	github.com/saichler/l8parser v0.0.0-20260427183634-3a25a311f212
+	github.com/saichler/l8parser v0.0.0-20260428030211-8c5df7eca4db
 	github.com/saichler/l8pollaris v0.0.0-20260418233826-378ba5e9453a
 	github.com/saichler/l8srlz v0.0.0-20260322124809-505a0d08f95d
 	github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89
 	github.com/saichler/l8types v0.0.0-20260419163606-4750d0cd36e2
 	github.com/saichler/l8utils v0.0.0-20260426024101-88d41a6b1943
 	github.com/saichler/l8web v0.0.0-20260414013916-c8c72b83721d
-	github.com/saichler/probler v0.0.0-20260427075745-62e505e2e290
+	github.com/saichler/probler v0.0.0-20260428021042-0dd96db7f364
 	golang.org/x/crypto v0.50.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	k8s.io/api v0.36.0
