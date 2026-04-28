@@ -284,6 +284,11 @@ func (this *RestCollector) Exec(job *l8tpollaris.CJob) {
 		return
 	}
 
+	// Substitute $symbol with the target ID in the endpoint
+	if job.TargetId != "" {
+		endpoint = strings.ReplaceAll(endpoint, "$symbol", job.TargetId)
+	}
+
 	fullURL := this.baseURL + endpoint
 	var reqBody io.Reader
 	if body != "" {
