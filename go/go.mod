@@ -11,7 +11,7 @@ require (
 	github.com/saichler/l8srlz v0.0.0-20260322124809-505a0d08f95d
 	github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89
 	github.com/saichler/l8types v0.0.0-20260419163606-4750d0cd36e2
-	github.com/saichler/l8utils v0.0.0-20260426024101-88d41a6b1943
+	github.com/saichler/l8utils v0.0.0-20260430115554-03fa73ed44eb
 	github.com/saichler/l8web v0.0.0-20260414013916-c8c72b83721d
 	github.com/saichler/probler v0.0.0-20260429122841-f44dbcb2d47e
 	golang.org/x/crypto v0.50.0
