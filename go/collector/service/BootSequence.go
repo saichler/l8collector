@@ -16,7 +16,6 @@ limitations under the License.
 package service
 
 import (
-	"fmt"
 
 	"github.com/saichler/l8collector/go/collector/common"
 	"github.com/saichler/l8parser/go/parser/boot"
@@ -59,8 +58,6 @@ func (this *HostCollector) newBootState(stage int) *BootState {
 		this.service.vnic.Resources().Logger().Error("Boot stage ", stage, " does not exist,skipping")
 		return bs
 	}
-	fmt.Printf("[COLLECTOR-BOOTSEQ] target=%s linksId=%s stage=%d pollarisInStage=%d\n",
-		this.target.TargetId, this.target.LinksId, stage, len(pollList))
 	// Per-target Pollaris filter: if any Pollaris in the stage is named exactly
 	// after this target's LinksId, it means polls have been split per-PrimeObject.
 	// In that case, run only the matching Pollaris on this target — the other
@@ -89,8 +86,6 @@ func (this *HostCollector) newBootState(stage int) *BootState {
 			}
 		}
 		if hasProtocol {
-			fmt.Printf("[COLLECTOR-BOOTSEQ-MATCH] target=%s linksId=%s -> pollaris=%s\n",
-				this.target.TargetId, this.target.LinksId, pollrs.Name)
 			err = this.jobsQueue.InsertJob(pollrs.Name, "", "", "", "", "", "", 0, 0)
 			if err != nil {
 				this.service.vnic.Resources().Logger().Error("Error adding pollaris to boot: ", err)

@@ -1,7 +1,6 @@
 package k8sclient
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -84,8 +83,6 @@ func (c *CollectorCache) List(gvr, namespace, selector string) []*CachedObject {
 		matchedSel++
 		result = append(result, obj)
 	}
-	fmt.Printf("[K8S-CACHE-LIST] gvr=%s namespace=%q selector=%q totalCacheSize=%d scanned=%d matchedGVR=%d matchedNS=%d matchedSelector=%d returned=%d\n",
-		gvr, namespace, selector, len(c.objects), totalScanned, matchedGVR, matchedNS, matchedSel, len(result))
 	return result
 }
 

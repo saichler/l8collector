@@ -186,11 +186,9 @@ func enrichPodContainers(obj map[string]interface{}, out map[string]interface{})
 	}
 	buf, err := json.Marshal(list)
 	if err != nil {
-		fmt.Printf("[K8S-ENRICH-POD-ERR] containers marshal err=%s\n", err.Error())
 		return
 	}
 	out["containers_json"] = string(buf)
-	fmt.Printf("[K8S-ENRICH-POD] containers=%d jsonBytes=%d\n", len(list), len(buf))
 }
 
 func indexContainerStatuses(obj map[string]interface{}, key string) map[string]map[string]interface{} {
