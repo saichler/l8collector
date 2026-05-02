@@ -12,7 +12,7 @@ require (
 	github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89
 	github.com/saichler/l8types v0.0.0-20260502164503-192680a11be2
 	github.com/saichler/l8utils v0.0.0-20260502161822-79172501e734
-	github.com/saichler/l8web v0.0.0-20260502164705-17b58226fdcb
+	github.com/saichler/l8web v0.0.0-20260502183355-93884cadd3af
 	github.com/saichler/probler v0.0.0-20260501233752-21aa4eeb27fe
 	golang.org/x/crypto v0.50.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af

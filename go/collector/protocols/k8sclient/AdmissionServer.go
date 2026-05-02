@@ -1,6 +1,7 @@
 package k8sclient
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -14,12 +15,23 @@ func (c *ClientGoCollector) StartAdmissionServer(resources ifs.IResources) error
 		return err
 	}
 
+	certDir := envString("ADMISSION_CERT_DIR", "/data/admission")
+	certData, err := os.ReadFile(certDir + "/tls.crt")
+	if err != nil {
+		return fmt.Errorf("failed to read TLS certificate: %w", err)
+	}
+	keyData, err := os.ReadFile(certDir + "/tls.key")
+	if err != nil {
+		return fmt.Errorf("failed to read TLS private key: %w", err)
+	}
+
 	serverConfig := &server.RestServerConfig{
 		Host:           envString("ADMISSION_HOST", "0.0.0.0"),
 		Port:           port,
 		Authentication: false,
 		Prefix:         "",
-		CertName:       envString("ADMISSION_CERT_NAME", "/data/admission"),
+		CertDomain:     string(certData),
+		CertPrivate:    string(keyData),
 	}
 	svr, err := server.NewRestServer(serverConfig)
 	if err != nil {
