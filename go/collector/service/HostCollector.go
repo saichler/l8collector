@@ -55,6 +55,7 @@ type HostCollector struct {
 	currentBootStage int                    // Current boot stage index (0-4)
 	bootStages       []*BootState           // Boot state tracking for each stage
 	pollarisName     string                 // Identified device pollaris profile name
+	admissionCh      chan struct{}           // Receives signals on K8s admission events
 }
 
 // newHostCollector creates a new HostCollector instance for the specified host.
@@ -104,6 +105,10 @@ func (this *HostCollector) update() error {
 func (this *HostCollector) stop() {
 	this.sendDeviceDown()
 	this.running = false
+	if this.admissionCh != nil {
+		k8sclient.UnsubscribeAdmissionEvents(this.admissionCh)
+		this.admissionCh = nil
+	}
 	this.collectors.Iterate(func(k, v interface{}) {
 		c := v.(common.ProtocolCollector)
 		c.Disconnect()
@@ -150,6 +155,13 @@ func (this *HostCollector) start() error {
 	}
 
 	this.bootStages[0] = this.newBootState(0)
+
+	for _, config := range host.Configs {
+		if config.Protocol == l8tpollaris.L8PProtocol_L8PKubernetesAPI {
+			this.admissionCh = k8sclient.SubscribeAdmissionEvents()
+			break
+		}
+	}
 
 	go this.collect()
 
@@ -230,7 +242,16 @@ func (this *HostCollector) collect() {
 			}
 		} else {
 			resources.Logger().Debug("No more jobs, next job in ", waitTime, " seconds.")
-			time.Sleep(time.Second * time.Duration(waitTime))
+			if this.admissionCh != nil {
+				select {
+				case <-time.After(time.Second * time.Duration(waitTime)):
+				case <-this.admissionCh:
+					resources.Logger().Debug("Woken by admission event, expediting jobs")
+					this.jobsQueue.Expedite()
+				}
+			} else {
+				time.Sleep(time.Second * time.Duration(waitTime))
+			}
 		}
 	}
 	resources.Logger().Debug("Host collection for device ", targetId, " host ", hostId, " has ended.")

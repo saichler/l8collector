@@ -180,6 +180,25 @@ func (this *JobsQueue) DisableJob(job *l8tpollaris.CJob) {
 	job.Cadence.Enabled = false
 }
 
+// Expedite resets the Ended timestamp on all enabled jobs so that Pop()
+// returns them immediately on the next call.
+func (this *JobsQueue) Expedite() {
+	if this == nil {
+		return
+	}
+	this.mtx.Lock()
+	defer this.mtx.Unlock()
+	if this.shutdown {
+		return
+	}
+	for _, job := range this.jobs {
+		if !job.Cadence.Enabled {
+			continue
+		}
+		job.Ended = 0
+	}
+}
+
 // Pop returns the next job that is ready for execution based on its cadence.
 // If no job is ready, it returns the time until the next job should execute.
 //

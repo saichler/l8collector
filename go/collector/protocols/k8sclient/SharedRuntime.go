@@ -21,6 +21,7 @@ type sharedRuntimeState struct {
 	stopCh        chan struct{}
 	connected     bool
 	serverStarted bool
+	subscribers   map[chan struct{}]struct{}
 }
 
 var shared = &sharedRuntimeState{}
@@ -39,6 +40,9 @@ func (s *sharedRuntimeState) init() {
 	}
 	if s.stopCh == nil {
 		s.stopCh = make(chan struct{})
+	}
+	if s.subscribers == nil {
+		s.subscribers = make(map[chan struct{}]struct{})
 	}
 }
 
@@ -125,6 +129,51 @@ func (s *sharedRuntimeState) isWarmed(key string) bool {
 	return s.warmed[key]
 }
 
+func (s *sharedRuntimeState) subscribe() chan struct{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ch := make(chan struct{}, 1)
+	if s.subscribers == nil {
+		s.subscribers = make(map[chan struct{}]struct{})
+	}
+	s.subscribers[ch] = struct{}{}
+	return ch
+}
+
+func (s *sharedRuntimeState) unsubscribe(ch chan struct{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.subscribers == nil {
+		return
+	}
+	if _, ok := s.subscribers[ch]; ok {
+		delete(s.subscribers, ch)
+		close(ch)
+	}
+}
+
+func (s *sharedRuntimeState) notifySubscribers() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for ch := range s.subscribers {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
+}
+
+// SubscribeAdmissionEvents returns a channel that receives a signal
+// whenever an admission webhook event updates the cache.
+func SubscribeAdmissionEvents() chan struct{} {
+	return shared.subscribe()
+}
+
+// UnsubscribeAdmissionEvents removes the subscription and closes the channel.
+func UnsubscribeAdmissionEvents(ch chan struct{}) {
+	shared.unsubscribe(ch)
+}
+
 // disconnect tears down the shared connection. All informers are stopped.
 func (s *sharedRuntimeState) disconnect(logger ifs.ILogger) {
 	s.mu.Lock()
@@ -140,6 +189,10 @@ func (s *sharedRuntimeState) disconnect(logger ifs.ILogger) {
 			}
 		}
 	}
+	for ch := range s.subscribers {
+		close(ch)
+	}
+	s.subscribers = nil
 	s.connected = false
 	s.dynamicClient = nil
 	s.restConfig = nil

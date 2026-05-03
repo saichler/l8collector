@@ -202,6 +202,7 @@ func (c *ClientGoCollector) handleAdmissionEvent(event AdmissionEvent) error {
 	if event.Object != nil {
 		shared.cache.Upsert(normalizeObject(gvrText, event.Object, event.Operation))
 	}
+	shared.notifySubscribers()
 	return nil
 }
 
