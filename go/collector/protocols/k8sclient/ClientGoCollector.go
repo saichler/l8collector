@@ -197,6 +197,9 @@ func (c *ClientGoCollector) handleAdmissionEvent(event AdmissionEvent) error {
 	// catches up.
 	if event.Operation == "DELETE" {
 		shared.cache.Delete(gvrText, event.Namespace, event.Name)
+		if shared.onDelete != nil {
+			shared.onDelete(gvrText, event.Namespace, event.Name)
+		}
 		return nil
 	}
 	if event.Object != nil {
@@ -269,6 +272,9 @@ func (c *ClientGoCollector) startInformer(gvr schema.GroupVersionResource, gvrTe
 				return
 			}
 			shared.cache.Delete(gvrText, item.GetNamespace(), item.GetName())
+			if shared.onDelete != nil {
+				shared.onDelete(gvrText, item.GetNamespace(), item.GetName())
+			}
 		},
 	})
 	factory.Start(shared.stopCh)

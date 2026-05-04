@@ -20,7 +20,10 @@ limitations under the License.
 package service
 
 import (
+	"fmt"
+	"os"
 
+	"github.com/saichler/l8collector/go/collector/protocols/k8sclient"
 	"github.com/saichler/l8pollaris/go/pollaris/targets"
 	"github.com/saichler/l8pollaris/go/types/l8tpollaris"
 	"github.com/saichler/l8srlz/go/serialize/object"
@@ -28,6 +31,7 @@ import (
 	"github.com/saichler/l8utils/go/utils/aggregator"
 	"github.com/saichler/l8utils/go/utils/maps"
 	"github.com/saichler/l8utils/go/utils/strings"
+	"google.golang.org/protobuf/proto"
 )
 
 // CollectorService is the main service that manages data collection from
@@ -83,11 +87,43 @@ func (this *CollectorService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.
 	vnic.Resources().Registry().Register(&l8tpollaris.CTable{})
 	vnic.Resources().Registry().Register(&l8tpollaris.CJob{})
 
+	k8sclient.RegisterDeleteCallback(func(gvrText, namespace, name string) {
+		this.handleK8sDelete(gvrText, namespace, name)
+	})
+
 	slaExec := ifs.NewServiceLevelAgreement(&ExecuteService{}, "exec", sla.ServiceArea(), false, nil)
 	slaExec.SetArgs(this)
 	vnic.Resources().Services().Activate(slaExec, vnic)
 
 	return nil
+}
+
+func (this *CollectorService) handleK8sDelete(gvrText, namespace, name string) {
+	linksId := k8sclient.GVRToLinksId(gvrText)
+	if linksId == "" {
+		return
+	}
+
+	cmap := &l8tpollaris.CMap{Data: map[string][]byte{
+		"namespace": []byte(namespace),
+		"name":      []byte(name),
+	}}
+	result, err := proto.Marshal(cmap)
+	if err != nil {
+		this.vnic.Resources().Logger().Error("handleK8sDelete marshal: ", err.Error())
+		return
+	}
+
+	job := &l8tpollaris.CJob{
+		LinksId: linksId,
+		HostId:  os.Getenv("ClusterName"),
+		Result:  result,
+	}
+
+	pService, pArea := targets.Links.Parser(linksId)
+	fmt.Printf("[COLLECTOR-FWD-DELETE] gvr=%s linksId=%s ns=%s name=%s -> parser=(%s,%d)\n",
+		gvrText, linksId, namespace, name, pService, pArea)
+	this.agg.AddElement(job, ifs.Proximity, "", pService, pArea, ifs.DELETE)
 }
 
 // startPolling initiates data collection for all hosts in a device target.

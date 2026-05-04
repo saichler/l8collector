@@ -22,6 +22,7 @@ type sharedRuntimeState struct {
 	connected     bool
 	serverStarted bool
 	subscribers   map[chan struct{}]struct{}
+	onDelete      func(gvrText, namespace, name string)
 }
 
 var shared = &sharedRuntimeState{}
@@ -172,6 +173,15 @@ func SubscribeAdmissionEvents() chan struct{} {
 // UnsubscribeAdmissionEvents removes the subscription and closes the channel.
 func UnsubscribeAdmissionEvents(ch chan struct{}) {
 	shared.unsubscribe(ch)
+}
+
+// RegisterDeleteCallback sets a function that will be called whenever a K8s
+// resource is deleted (via informer or admission webhook). The CollectorService
+// registers this at activation time to forward deletes to the parser.
+func RegisterDeleteCallback(fn func(gvrText, namespace, name string)) {
+	shared.mu.Lock()
+	defer shared.mu.Unlock()
+	shared.onDelete = fn
 }
 
 // disconnect tears down the shared connection. All informers are stopped.
