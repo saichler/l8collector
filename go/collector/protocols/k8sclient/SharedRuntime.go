@@ -21,6 +21,7 @@ type sharedRuntimeState struct {
 	stopCh        chan struct{}
 	connected     bool
 	serverStarted bool
+	reaperStarted bool
 	subscribers   map[chan struct{}]struct{}
 	onDelete      func(gvrText, namespace, name string)
 }
@@ -210,6 +211,7 @@ func (s *sharedRuntimeState) disconnect(logger ifs.ILogger) {
 	s.warmOnce = nil
 	s.stopCh = nil
 	s.serverStarted = false
+	s.reaperStarted = false
 	if logger != nil {
 		logger.Info("shared runtime: disconnected")
 	}

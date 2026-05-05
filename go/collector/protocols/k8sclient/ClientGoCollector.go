@@ -179,6 +179,7 @@ func (c *ClientGoCollector) ensureAdmissionServerStarted() error {
 		if err := c.Connect(); err != nil {
 			return err
 		}
+		shared.startReaper()
 		return c.StartAdmissionServer(c.resources)
 	})
 }
@@ -196,10 +197,7 @@ func (c *ClientGoCollector) handleAdmissionEvent(event AdmissionEvent) error {
 	// as well for lower latency on the first event before the informer
 	// catches up.
 	if event.Operation == "DELETE" {
-		shared.cache.Delete(gvrText, event.Namespace, event.Name)
-		if shared.onDelete != nil {
-			shared.onDelete(gvrText, event.Namespace, event.Name)
-		}
+		handleResourceDeletion(gvrText, event.Namespace, event.Name)
 		return nil
 	}
 	if event.Object != nil {
@@ -271,10 +269,7 @@ func (c *ClientGoCollector) startInformer(gvr schema.GroupVersionResource, gvrTe
 			if !ok {
 				return
 			}
-			shared.cache.Delete(gvrText, item.GetNamespace(), item.GetName())
-			if shared.onDelete != nil {
-				shared.onDelete(gvrText, item.GetNamespace(), item.GetName())
-			}
+			handleResourceDeletion(gvrText, item.GetNamespace(), item.GetName())
 		},
 	})
 	factory.Start(shared.stopCh)
