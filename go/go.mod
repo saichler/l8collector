@@ -43,7 +43,7 @@ require (
 	github.com/saichler/l8orm v0.0.0-20260505134642-266c2aacdf3e // indirect
 	github.com/saichler/l8ql v0.0.0-20260505111526-897c5e0ff9a4 // indirect
 	github.com/saichler/l8reflect v0.0.0-20260414115258-300dd0000aca // indirect
-	github.com/saichler/l8services v0.0.0-20260505133530-95676b18110b // indirect
+	github.com/saichler/l8services v0.0.0-20260507104132-1658bd7baa30 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
