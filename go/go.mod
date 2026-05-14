@@ -16,9 +16,9 @@ require (
 	github.com/saichler/probler v0.0.0-20260508110701-3398a61aa6f3
 	golang.org/x/crypto v0.51.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
-	k8s.io/api v0.36.0
-	k8s.io/apimachinery v0.36.0
-	k8s.io/client-go v0.36.0
+	k8s.io/api v0.36.1
+	k8s.io/apimachinery v0.36.1
+	k8s.io/client-go v0.36.1
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -41,7 +41,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/saichler/l8orm v0.0.0-20260510153853-58c11517f1c8 // indirect
-	github.com/saichler/l8ql v0.0.0-20260505111526-897c5e0ff9a4 // indirect
+	github.com/saichler/l8ql v0.0.0-20260514214457-3255783ba023 // indirect
 	github.com/saichler/l8reflect v0.0.0-20260510153526-a40cb00e4db2 // indirect
 	github.com/saichler/l8services v0.0.0-20260507104132-1658bd7baa30 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
