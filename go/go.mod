@@ -10,11 +10,11 @@ require (
 	github.com/saichler/l8pollaris v0.0.0-20260418233826-378ba5e9453a
 	github.com/saichler/l8srlz v0.0.0-20260322124809-505a0d08f95d
 	github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89
-	github.com/saichler/l8types v0.0.0-20260505122705-baebc9fce998
-	github.com/saichler/l8utils v0.0.0-20260505131226-f546f8717d26
+	github.com/saichler/l8types v0.0.0-20260523165750-476130c0d811
+	github.com/saichler/l8utils v0.0.0-20260523164237-1ceabdf92c0d
 	github.com/saichler/l8web v0.0.0-20260508110248-236a0cd55e74
-	github.com/saichler/probler v0.0.0-20260508110701-3398a61aa6f3
-	golang.org/x/crypto v0.51.0
+	github.com/saichler/probler v0.0.0-20260523194022-a99896a9e09c
+	golang.org/x/crypto v0.52.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	k8s.io/api v0.36.1
 	k8s.io/apimachinery v0.36.1
@@ -48,9 +48,9 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/net v0.54.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
