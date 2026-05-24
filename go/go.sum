@@ -56,8 +56,8 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRI
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
-github.com/saichler/l8bus v0.0.0-20260507121220-fb7db984917c h1:O2F3w7Ir6Ugn3dSFaKXP/O8RUEhvDl7ghkFpvgn+JXA=
-github.com/saichler/l8bus v0.0.0-20260507121220-fb7db984917c/go.mod h1:ZK1m4Zqy9WhGVZXl5znHTr7+/r19rOytqwBqhH02Ui8=
+github.com/saichler/l8bus v0.0.0-20260524152159-cc0b5c210821 h1:+K+ssINcre9LsPlNYUeXHwgPRAFbw1JdBzSZbRFVJ84=
+github.com/saichler/l8bus v0.0.0-20260524152159-cc0b5c210821/go.mod h1:ZK1m4Zqy9WhGVZXl5znHTr7+/r19rOytqwBqhH02Ui8=
 github.com/saichler/l8orm v0.0.0-20260510153853-58c11517f1c8 h1:mqONmZq56mprk8wKwM+d1hZIH4cT3K2B/z5uAHfTBUw=
 github.com/saichler/l8orm v0.0.0-20260510153853-58c11517f1c8/go.mod h1:FYnievTs9ZZ3WE8pjDC1y2Mu+SnNJa7rPY5q1LJbn+A=
 github.com/saichler/l8parser v0.0.0-20260504014757-63e78ee52fb3 h1:yiz8eETWQQFOEleXnm7tJJv+KsQ/ZZpKF8h0eYVgzak=
@@ -78,8 +78,8 @@ github.com/saichler/l8types v0.0.0-20260523165750-476130c0d811 h1:y4iJkueo7/TLrd
 github.com/saichler/l8types v0.0.0-20260523165750-476130c0d811/go.mod h1:0+Snl9PYq+caqTu6OBVaw7mQVn0TrRY9OJz+GelHuM4=
 github.com/saichler/l8utils v0.0.0-20260523164237-1ceabdf92c0d h1:ORmKWmC09UrDmXjXCPL6OftktGirDg71BPH9TtYNz0c=
 github.com/saichler/l8utils v0.0.0-20260523164237-1ceabdf92c0d/go.mod h1:nKdvYAEGLyHfxPg09oR6OfkJ0SniSbPb+Zi6wr/D5LU=
-github.com/saichler/l8web v0.0.0-20260508110248-236a0cd55e74 h1:kBp/rM4IY/z7Jk2dBeW6e7uueskuAjWihpOrGYENMdc=
-github.com/saichler/l8web v0.0.0-20260508110248-236a0cd55e74/go.mod h1:r2j6dgKs41L+dwaSh3hQ9OJN0RnQP0C8NWxAbAn+c8c=
+github.com/saichler/l8web v0.0.0-20260524131739-60a309c9f4c2 h1:Lp2A+q4u/9dCXolE7i7t3HfpTl/RN7qJzOBxuOX5R3o=
+github.com/saichler/l8web v0.0.0-20260524131739-60a309c9f4c2/go.mod h1:r2j6dgKs41L+dwaSh3hQ9OJN0RnQP0C8NWxAbAn+c8c=
 github.com/saichler/probler v0.0.0-20260523194022-a99896a9e09c h1:zrcj7qa4/CJJUOJP6N6l03OUHL7g4vRCa42DKXSIWGg=
 github.com/saichler/probler v0.0.0-20260523194022-a99896a9e09c/go.mod h1:3SmozVci2+FIzlQkm7PuXcUxfG8Qjc+Nml1/0AJPQrc=
 github.com/spf13/pflag v1.0.9 h1:9exaQaMOCwffKiiiYk6/BndUBv+iRViNW+4lEMi0PvY=
