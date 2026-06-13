@@ -10,15 +10,15 @@ require (
 	github.com/saichler/l8pollaris v0.0.0-20260418233826-378ba5e9453a
 	github.com/saichler/l8srlz v0.0.0-20260322124809-505a0d08f95d
 	github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89
-	github.com/saichler/l8types v0.0.0-20260523165750-476130c0d811
-	github.com/saichler/l8utils v0.0.0-20260524201519-41f1e46c80e1
+	github.com/saichler/l8types v0.0.0-20260613132908-67f2c0477ead
+	github.com/saichler/l8utils v0.0.0-20260613135317-d1acbebf90f1
 	github.com/saichler/l8web v0.0.0-20260524131739-60a309c9f4c2
 	github.com/saichler/probler v0.0.0-20260523194022-a99896a9e09c
-	golang.org/x/crypto v0.52.0
+	golang.org/x/crypto v0.53.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
-	k8s.io/api v0.36.1
-	k8s.io/apimachinery v0.36.1
-	k8s.io/client-go v0.36.1
+	k8s.io/api v0.36.2
+	k8s.io/apimachinery v0.36.2
+	k8s.io/client-go v0.36.2
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -41,18 +41,18 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/saichler/l8orm v0.0.0-20260510153853-58c11517f1c8 // indirect
-	github.com/saichler/l8ql v0.0.0-20260514214457-3255783ba023 // indirect
+	github.com/saichler/l8ql v0.0.0-20260613133019-24b364d1e3d8 // indirect
 	github.com/saichler/l8reflect v0.0.0-20260510153526-a40cb00e4db2 // indirect
 	github.com/saichler/l8services v0.0.0-20260507104132-1658bd7baa30 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.54.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/term v0.43.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
