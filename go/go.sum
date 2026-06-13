@@ -58,8 +58,8 @@ github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0t
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
 github.com/saichler/l8bus v0.0.0-20260524152159-cc0b5c210821 h1:+K+ssINcre9LsPlNYUeXHwgPRAFbw1JdBzSZbRFVJ84=
 github.com/saichler/l8bus v0.0.0-20260524152159-cc0b5c210821/go.mod h1:ZK1m4Zqy9WhGVZXl5znHTr7+/r19rOytqwBqhH02Ui8=
-github.com/saichler/l8orm v0.0.0-20260613141908-6b4b22a827f7 h1:iaMipjFZ9cZM3QOd5iAvptZA5Bp8WvgYmGikk727HaI=
-github.com/saichler/l8orm v0.0.0-20260613141908-6b4b22a827f7/go.mod h1:FYnievTs9ZZ3WE8pjDC1y2Mu+SnNJa7rPY5q1LJbn+A=
+github.com/saichler/l8orm v0.0.0-20260613145442-8ef992eb7bcb h1:rqZTun08f4IOnxXPvXr5Kvhg2MJFSrXOXOskfLnziCE=
+github.com/saichler/l8orm v0.0.0-20260613145442-8ef992eb7bcb/go.mod h1:FYnievTs9ZZ3WE8pjDC1y2Mu+SnNJa7rPY5q1LJbn+A=
 github.com/saichler/l8parser v0.0.0-20260504014757-63e78ee52fb3 h1:yiz8eETWQQFOEleXnm7tJJv+KsQ/ZZpKF8h0eYVgzak=
 github.com/saichler/l8parser v0.0.0-20260504014757-63e78ee52fb3/go.mod h1:PRw7kEhr7ciL/ERg0SqG80SWd1k1NRZoRY7bTKiibxc=
 github.com/saichler/l8pollaris v0.0.0-20260418233826-378ba5e9453a h1:kRhMgzkwvc+Odh/LpTObaaar1ffCkTEeZPXlSB1smfI=

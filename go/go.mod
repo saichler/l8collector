@@ -40,7 +40,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/saichler/l8orm v0.0.0-20260613141908-6b4b22a827f7 // indirect
+	github.com/saichler/l8orm v0.0.0-20260613145442-8ef992eb7bcb // indirect
 	github.com/saichler/l8ql v0.0.0-20260613133019-24b364d1e3d8 // indirect
 	github.com/saichler/l8reflect v0.0.0-20260510153526-a40cb00e4db2 // indirect
 	github.com/saichler/l8services v0.0.0-20260507104132-1658bd7baa30 // indirect
