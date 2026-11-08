@@ -1,6 +1,6 @@
 module github.com/saichler/l8collector/go
 
-go 1.26.1
+go 1.27.3
 
 require (
 	github.com/cdevr/WapSNMP v0.1.0
@@ -8,17 +8,17 @@ require (
 	github.com/saichler/l8bus v0.0.0-20260920024857-555f4a280346
 	github.com/saichler/l8parser v0.0.0-20260504014757-63e78ee52fb3
 	github.com/saichler/l8pollaris v0.0.0-20260418233826-378ba5e9453a
-	github.com/saichler/l8srlz v0.0.0-20260920123539-54414e15e38b
+	github.com/saichler/l8srlz v0.0.0-20261107231636-a9b4921c0ee0
 	github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89
-	github.com/saichler/l8types v0.0.0-20260913222005-0b4a31604ebc
-	github.com/saichler/l8utils v0.0.0-20260920140320-672b09d6da31
-	github.com/saichler/l8web v0.0.0-20260920002634-0e48182bb933
+	github.com/saichler/l8types v0.0.0-20261107231618-28d4716170d0
+	github.com/saichler/l8utils v0.0.0-20261107231638-3e5a83f61e0d
+	github.com/saichler/l8web v0.0.0-20261107231640-842566c04cb9
 	github.com/saichler/probler v0.0.0-20260921143133-14eada7b7c40
 	golang.org/x/crypto v0.58.0
 	google.golang.org/protobuf v1.36.12
-	k8s.io/api v0.37.1
-	k8s.io/apimachinery v0.37.1
-	k8s.io/client-go v0.37.1
+	k8s.io/api v0.37.2
+	k8s.io/apimachinery v0.37.2
+	k8s.io/client-go v0.37.2
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -50,7 +50,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/saichler/l8orm v0.0.0-20260916142109-e7f0284c95ee // indirect
-	github.com/saichler/l8ql v0.0.0-20260921131529-5b079580f08c // indirect
+	github.com/saichler/l8ql v0.0.0-20261107231634-fb9ba4743fd2 // indirect
 	github.com/saichler/l8reflect v0.0.0-20260926132352-647e2d1c16a7 // indirect
 	github.com/saichler/l8services v0.0.0-20260920123629-ec54a5cef7e1 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
