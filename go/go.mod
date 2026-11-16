@@ -1,20 +1,20 @@
 module github.com/saichler/l8collector/go
 
-go 1.27.3
+go 1.26.1
 
 require (
 	github.com/cdevr/WapSNMP v0.1.0
 	github.com/google/uuid v1.6.0
-	github.com/saichler/l8bus v0.0.0-20260920024857-555f4a280346
+	github.com/saichler/l8bus v0.0.0-20261116005700-9f9c2eb35d21
 	github.com/saichler/l8parser v0.0.0-20260504014757-63e78ee52fb3
 	github.com/saichler/l8pollaris v0.0.0-20260418233826-378ba5e9453a
 	github.com/saichler/l8srlz v0.0.0-20261107231636-a9b4921c0ee0
 	github.com/saichler/l8test v0.0.0-20260412034023-fd4cffd34f89
-	github.com/saichler/l8types v0.0.0-20261107231618-28d4716170d0
-	github.com/saichler/l8utils v0.0.0-20261107231638-3e5a83f61e0d
+	github.com/saichler/l8types v0.0.0-20261116193143-e8991291d0bb
+	github.com/saichler/l8utils v0.0.0-20261116193146-00da90a0487e
 	github.com/saichler/l8web v0.0.0-20261107231640-842566c04cb9
 	github.com/saichler/probler v0.0.0-20260921143133-14eada7b7c40
-	golang.org/x/crypto v0.58.0
+	golang.org/x/crypto v0.59.0
 	google.golang.org/protobuf v1.36.12
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
@@ -52,16 +52,16 @@ require (
 	github.com/saichler/l8orm v0.0.0-20260916142109-e7f0284c95ee // indirect
 	github.com/saichler/l8ql v0.0.0-20261107231634-fb9ba4743fd2 // indirect
 	github.com/saichler/l8reflect v0.0.0-20260926132352-647e2d1c16a7 // indirect
-	github.com/saichler/l8services v0.0.0-20260920123629-ec54a5cef7e1 // indirect
+	github.com/saichler/l8services v0.0.0-20261116193145-301d82daa2d0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/term v0.47.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
