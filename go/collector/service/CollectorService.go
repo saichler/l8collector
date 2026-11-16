@@ -81,7 +81,7 @@ func Activate(linksID string, vnic ifs.IVNic) {
 func (this *CollectorService) Activate(sla *ifs.ServiceLevelAgreement, vnic ifs.IVNic) error {
 	this.hostCollectors = maps.NewSyncMap()
 	this.vnic = vnic
-	this.agg = aggregator.NewAggregator(vnic, 5, 30)
+	this.agg = aggregator.NewAggregator(vnic, 5, 0, 30)
 	vnic.Resources().Registry().Register(&l8tpollaris.L8PTarget{})
 	vnic.Resources().Registry().Register(&l8tpollaris.CMap{})
 	vnic.Resources().Registry().Register(&l8tpollaris.CTable{})
